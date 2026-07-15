@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "НейроХакинг"
+version = "1.0.0"
+id = "artifacts/neurohacking"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 23158
+
+[services.development]
+run = "pnpm --filter @workspace/neurohacking run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/neurohacking", "run", "build" ]
+publicDir = "artifacts/neurohacking/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "23158"
+BASE_PATH = "/"

@@ -143,17 +143,6 @@ export default function History() {
                           ))}
                         </div>
                       )}
-
-                      {entry.type === 'hobby' && entry.details.hobbyChallenge && (
-                        <div className="mt-3 pl-11">
-                          <p className="body-s text-tertiary leading-relaxed">
-                            🎯 Вызов: «{entry.details.hobbyChallenge}»
-                          </p>
-                          <p className="body-s text-tertiary mt-1">
-                            Результат: {entry.details.challengeResult === 'done' ? 'Выполнен' : entry.details.challengeResult === 'partial' ? 'В процессе' : 'Не выполнено'}
-                          </p>
-                        </div>
-                      )}
                     </div>
                   );
                 })}

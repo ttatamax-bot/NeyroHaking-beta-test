@@ -29,7 +29,7 @@ const MAX_KEYS = 60;
 const SOURCE = 'Техника: Хобби';
 
 export default function Hobby() {
-  const { hobbyList, hobbyChallenges, updateState, keysHistory, potentialHistory, todayTechniques, attentionRemindersEnabled, attentionReminderInterval, timerWarningShown } = useAppStore();
+  const { hobbyList, updateState, keysHistory, potentialHistory, todayTechniques, attentionRemindersEnabled, attentionReminderInterval, timerWarningShown } = useAppStore();
   const [, setLocation] = useLocation();
 
   const todayEarned = getTodayKeysFromSource(keysHistory, SOURCE);
@@ -46,11 +46,6 @@ export default function Hobby() {
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [showTimerWarning, setShowTimerWarning] = useState(false);
   const pendingDurRef = useRef<typeof DURATION_OPTIONS[0] | null>(null);
-
-  const [challengeStep, setChallengeStep] = useState<"setup" | null>(null);
-  const [challengeInput, setChallengeInput] = useState("");
-  const [challengeQuestion, setChallengeQuestion] = useState(false);
-  const pendingSessionRef = useRef<typeof DURATION_OPTIONS[0] | null>(null);
 
   const completedRef = useRef(false);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -73,61 +68,33 @@ export default function Hobby() {
   const reminderIntervalRef = useRef(attentionReminderInterval);
   reminderIntervalRef.current = attentionReminderInterval;
 
-  const finalizeSession = useCallback((dur: typeof DURATION_OPTIONS[0], challengeResult?: 'done' | 'partial' | 'none') => {
+  const doComplete = useCallback((dur: typeof DURATION_OPTIONS[0]) => {
+    if (completedRef.current) return;
+    completedRef.current = true;
+    clearTimer();
+    clearReminder();
     const now = new Date().toISOString();
-    const hobbyName = selectedHobby ?? '';
-    const activeChallengeText = (hobbyChallenges || {})[hobbyName];
-    let challengeBonus = 0;
-    if (challengeResult === 'done') challengeBonus = 0.2;
-    else if (challengeResult === 'partial') challengeBonus = 0.1;
     updateState(prev => {
       const keysActual = Math.min(dur.keys, Math.max(0, MAX_KEYS - getTodayKeysFromSource(prev.keysHistory, SOURCE)));
       const prevTodayPot = getTodayPotentialFromSource(prev.potentialHistory, SOURCE);
-      const potActual = Math.max(0, (dur.potential + challengeBonus) - prevTodayPot);
+      const potActual = Math.max(0, dur.potential - prevTodayPot);
       const streakUpdate = computeStreakUpdate(prev);
-      const updatedChallenges = { ...(prev.hobbyChallenges || {}) };
-      if (challengeResult === 'done') {
-        delete updatedChallenges[hobbyName];
-      }
       return {
         todayTechniques: { ...prev.todayTechniques, T5: true },
         keys: prev.keys + keysActual,
         potential: potActual > 0 ? Math.min(100, prev.potential + potActual) : prev.potential,
         keysHistory: keysActual > 0 ? [{ date: now, source: SOURCE, amount: keysActual, type: 'earn' as const }, ...prev.keysHistory] : prev.keysHistory,
         potentialHistory: potActual > 0 ? [{ date: now, source: SOURCE, amount: potActual }, ...prev.potentialHistory] : prev.potentialHistory,
-        hobbyChallenges: updatedChallenges,
         activityLog: [
-          { id: `act_${Date.now()}`, date: now, type: 'hobby' as const, keysGained: keysActual, potentialGained: potActual, details: { hobbyName, durationLabel: dur.label, hobbyChallenge: activeChallengeText, challengeResult } },
+          { id: `act_${Date.now()}`, date: now, type: 'hobby' as const, keysGained: keysActual, potentialGained: potActual, details: { hobbyName: selectedHobby ?? '', durationLabel: dur.label } },
           ...prev.activityLog,
         ],
         ...streakUpdate,
       };
     });
     setCompletedKeys(dur.keys);
-    setChallengeQuestion(false);
-    pendingSessionRef.current = null;
-  }, [updateState, selectedHobby, hobbyChallenges]);
-
-  const doComplete = useCallback((dur: typeof DURATION_OPTIONS[0]) => {
-    if (completedRef.current) return;
-    completedRef.current = true;
-    clearTimer();
-    clearReminder();
     setRunning(false);
-    const activeChallengeText = selectedHobby ? (hobbyChallenges || {})[selectedHobby] : undefined;
-    if (activeChallengeText) {
-      pendingSessionRef.current = dur;
-      setChallengeQuestion(true);
-    } else {
-      finalizeSession(dur);
-    }
-  }, [clearTimer, clearReminder, selectedHobby, hobbyChallenges, finalizeSession]);
-
-  const answerChallenge = (result: 'done' | 'partial' | 'none') => {
-    const dur = pendingSessionRef.current;
-    if (!dur) return;
-    finalizeSession(dur, result);
-  };
+  }, [clearTimer, clearReminder, updateState, selectedHobby]);
 
   useEffect(() => {
     if (!running) return;
@@ -197,56 +164,12 @@ export default function Hobby() {
     if (selectedHobby === name) setSelectedHobby(null);
   };
 
-  const selectHobbyCard = (name: string) => {
-    setSelectedHobby(name);
-    const hasChallenge = !!(hobbyChallenges || {})[name];
-    setChallengeInput("");
-    setChallengeStep(hasChallenge ? null : 'setup');
-  };
-
-  const saveChallenge = () => {
-    const t = challengeInput.trim();
-    if (!t || !selectedHobby) return;
-    updateState(prev => ({ hobbyChallenges: { ...(prev.hobbyChallenges || {}), [selectedHobby]: t } }));
-    setChallengeInput("");
-    setChallengeStep(null);
-  };
-
-  const skipChallenge = () => {
-    setChallengeInput("");
-    setChallengeStep(null);
-  };
-
   const formatTime = (s: number) =>
     `${Math.floor(s / 60).toString().padStart(2, '0')}:${(s % 60).toString().padStart(2, '0')}`;
 
   const totalSeconds = selectedDur?.seconds ?? 1;
   const progress = running ? 1 - timeLeft / totalSeconds : 0;
   const list = hobbyList || [];
-
-  if (challengeQuestion) {
-    const challengeText = selectedHobby ? (hobbyChallenges || {})[selectedHobby] : undefined;
-    return (
-      <div className="flex flex-col h-[100dvh] items-center justify-center relative overflow-hidden px-8">
-        <div className="relative z-10 text-center w-full max-w-[340px]">
-          <p className="title-s text-primary mb-2">Стало ли лучше получаться с:</p>
-          <p className="body text-secondary mb-8">«{challengeText}»?</p>
-          <button onClick={() => answerChallenge('done')}
-            className="w-full h-[52px] rounded-[14px] btn-grad btn-shimmer text-white title-s mb-3">
-            ✅ Да
-          </button>
-          <button onClick={() => answerChallenge('partial')}
-            className="w-full h-[52px] rounded-[14px] bg-surface-1 border border-border text-primary body mb-3 active:opacity-70">
-            🔄 Частично
-          </button>
-          <button onClick={() => answerChallenge('none')}
-            className="w-full h-[52px] rounded-[14px] bg-surface-1 border border-border text-secondary body active:opacity-70">
-            ❌ Нет
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   if (completedKeys !== null) {
     return (
@@ -279,11 +202,6 @@ export default function Hobby() {
           style={{ background: 'radial-gradient(circle, rgba(37,99,235,0.1) 0%, transparent 65%)' }} />
         <div className="relative z-10 flex flex-col items-center w-full px-8">
           <h2 className="title-s text-secondary mb-1">{selectedHobby}</h2>
-          {selectedHobby && (hobbyChallenges || {})[selectedHobby] && (
-            <p className="body-s text-warning mb-2 text-center">
-              🎯 Твой вызов: «{(hobbyChallenges || {})[selectedHobby]}»
-            </p>
-          )}
           {paused && (
             <div className="mb-4 mt-2 px-4 py-2 rounded-[10px] bg-surface-2 border border-[rgba(245,158,11,0.3)]">
               <span className="caption text-warning">Пауза</span>
@@ -337,56 +255,18 @@ export default function Hobby() {
     );
   }
 
-  if (selectedHobby && challengeStep === 'setup' && !selectedDur) {
-    return (
-      <div className="flex flex-col h-[100dvh] relative overflow-hidden">
-        <div className="relative z-10 flex flex-col h-full">
-          <div className="flex items-center px-4 pt-6 pb-4">
-            <button onClick={() => { setSelectedHobby(null); setChallengeStep(null); }} className="p-1 text-tertiary mr-3">
-              <ChevronLeft size={28} />
-            </button>
-            <h1 className="title-l text-primary">{selectedHobby}</h1>
-          </div>
-          <div className="flex-1 flex flex-col justify-center px-4 pb-4">
-            <p className="title-s text-primary mb-4">Что у тебя не получается в этом хобби?</p>
-            <Input value={challengeInput} onChange={e => setChallengeInput(e.target.value)}
-              placeholder="Например: взять аккорд F" autoFocus
-              onKeyDown={e => e.key === 'Enter' && saveChallenge()}
-              className="h-[48px] bg-surface-1 border-border text-primary body mb-4" />
-            <div className="flex gap-2">
-              <button onClick={saveChallenge} disabled={!challengeInput.trim()}
-                className="flex-1 h-[52px] rounded-[14px] btn-grad btn-shimmer text-white title-s disabled:opacity-40">
-                Сохранить
-              </button>
-              <button onClick={skipChallenge}
-                className="h-[52px] px-5 rounded-[14px] bg-surface-1 border border-border text-secondary body active:opacity-70">
-                Пропустить
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   if (selectedHobby && !selectedDur) {
     const remaining = MAX_KEYS - todayEarned;
-    const activeChallenge = (hobbyChallenges || {})[selectedHobby];
     return (
       <div className="flex flex-col h-[100dvh] relative overflow-hidden">
         <div className="relative z-10 flex flex-col h-full">
           <div className="flex items-center px-4 pt-6 pb-4">
-            <button onClick={() => { setSelectedHobby(null); setChallengeStep(null); }} className="p-1 text-tertiary mr-3">
+            <button onClick={() => setSelectedHobby(null)} className="p-1 text-tertiary mr-3">
               <ChevronLeft size={28} />
             </button>
             <h1 className="title-l text-primary">{selectedHobby}</h1>
           </div>
           <div className="flex-1 flex flex-col justify-center px-4 overflow-y-auto pb-4">
-            {activeChallenge && (
-              <div className="mb-6 px-4 py-3 rounded-[12px]" style={{ background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)' }}>
-                <p className="caption text-warning">🎯 Твой вызов: «{activeChallenge}»</p>
-              </div>
-            )}
             {todayEarned > 0 && !isMaxedOut && (
               <div className="mb-6 px-4 py-3 rounded-[12px] bg-blue-ultra-soft border border-[rgba(37,99,235,0.2)]">
                 <p className="caption text-blue-light">Сегодня: {todayEarned} / {MAX_KEYS} ключей</p>
@@ -455,26 +335,18 @@ export default function Hobby() {
             </p>
           )}
           <div className="space-y-2 mb-4">
-            {list.map(name => {
-              const challenge = (hobbyChallenges || {})[name];
-              return (
-                <motion.div key={name} whileTap={{ scale: 0.98 }}
-                  className="flex items-center bg-surface-1 border border-border rounded-[14px] overflow-hidden">
-                  <button onClick={() => selectHobbyCard(name)} className="flex-1 min-h-[56px] flex flex-col items-start justify-center px-4 py-2.5 text-left">
-                    <span className="title-s text-primary">{name}</span>
-                    {challenge ? (
-                      <span className="caption text-warning mt-0.5 truncate max-w-[240px]">🎯 {challenge}</span>
-                    ) : (
-                      <span className="caption text-tertiary mt-0.5">Нет активного вызова</span>
-                    )}
-                  </button>
-                  <button onClick={() => removeHobby(name)}
-                    className="w-12 h-[56px] flex items-center justify-center text-tertiary active:opacity-60 shrink-0">
-                    <X size={18} />
-                  </button>
-                </motion.div>
-              );
-            })}
+            {list.map(name => (
+              <motion.div key={name} whileTap={{ scale: 0.98 }}
+                className="flex items-center bg-surface-1 border border-border rounded-[14px] overflow-hidden">
+                <button onClick={() => setSelectedHobby(name)} className="flex-1 h-[56px] flex items-center px-4 text-left">
+                  <span className="title-s text-primary">{name}</span>
+                </button>
+                <button onClick={() => removeHobby(name)}
+                  className="w-12 h-[56px] flex items-center justify-center text-tertiary active:opacity-60 shrink-0">
+                  <X size={18} />
+                </button>
+              </motion.div>
+            ))}
           </div>
           {addingNew ? (
             <div className="bg-surface-1 border border-border rounded-[14px] p-4">
