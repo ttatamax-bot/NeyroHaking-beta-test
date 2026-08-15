@@ -4,6 +4,10 @@ type HealthResponse = {
   };
 };
 
+declare const process: {
+  env: Record<string, string | undefined>;
+};
+
 export default function healthz(_req: unknown, res: HealthResponse) {
   res.status(200).json({
     status: "ok",
