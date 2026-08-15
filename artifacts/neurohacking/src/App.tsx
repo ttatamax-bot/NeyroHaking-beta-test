@@ -335,6 +335,8 @@ function AppLogic() {
   const [location] = useLocation();
   const storeRef = useRef(store);
   storeRef.current = store;
+  // Prevent duplicate redirect after we already decided to navigate away.
+  const redirectingRef = useRef(false);
 
   useEffect(() => {
     document.documentElement.classList.add('dark');
@@ -342,57 +344,51 @@ function AppLogic() {
 
   // Guests keep their first results locally, but server-backed progress starts
   // with Clerk registration. New guests are sent to sign-up after their first
-  // completed technique; returning guests with existing progress see it on the
-  // next app visit.
+  // completed technique; returning guests with existing progress see sign-up
+  // on the next app visit.
   useEffect(() => {
-    if (!isAuthLoaded || isSignedIn) return;
+    if (!isAuthLoaded || isSignedIn || redirectingRef.current) return;
+
     const basePath = import.meta.env.BASE_URL.replace(/\/$/, '');
-    const signInPath = `${basePath}/sign-in` || '/sign-in';
-    const signUpPath = `${basePath}/sign-up` || '/sign-up';
-    const currentPath = window.location.pathname;
+    const signUpPath = `${basePath}/sign-up`;
+
+    // Don't redirect when already on an auth page.
     if (
       location.startsWith('/sign-in') ||
-      location.startsWith('/sign-up') ||
-      currentPath === signInPath ||
-      currentPath.startsWith(`${signInPath}/`) ||
-      currentPath === signUpPath ||
-      currentPath.startsWith(`${signUpPath}/`)
+      location.startsWith('/sign-up')
     ) return;
 
-    const hasStateProgress = (snapshot: Partial<AppState> | null) => {
+    const hasProgress = (snapshot: Partial<AppState> | null): boolean => {
       if (!snapshot) return false;
       return (
         (snapshot.activityLog?.length ?? 0) > 0 ||
         (snapshot.keysHistory?.length ?? 0) > 0 ||
         (snapshot.potentialHistory?.length ?? 0) > 0 ||
-        (snapshot.history?.length ?? 0) > 0 ||
         Boolean(snapshot.lastCompletedDate)
       );
     };
 
-    let persistedState: Partial<AppState> | null = null;
-    try {
-      const saved = localStorage.getItem('neyro_state');
-      persistedState = saved ? JSON.parse(saved) as Partial<AppState> : null;
-    } catch {
-      persistedState = null;
-    }
-
+    // Check in-memory store first (covers new guests right after completing
+    // their first technique), then fall back to the persisted snapshot (covers
+    // returning guests who had progress before Clerk was introduced).
     const hasGuestProgress =
-      hasStateProgress(store) ||
-      hasStateProgress(persistedState);
+      hasProgress(store) ||
+      (() => {
+        try {
+          const raw = localStorage.getItem('neyro_state');
+          return hasProgress(raw ? JSON.parse(raw) as Partial<AppState> : null);
+        } catch {
+          return false;
+        }
+      })();
 
-    if (hasGuestProgress) {
-      // Use a full route navigation here rather than relying on the router's
-      // in-memory transition. This also covers the first render after loading
-      // an existing guest snapshot and works consistently on Vercel rewrites.
-      const target = signUpPath || '/sign-up';
-      if (currentPath !== target) {
-        const redirectTimer = window.setTimeout(() => window.location.assign(target), 0);
-        return () => window.clearTimeout(redirectTimer);
-      }
+    if (hasGuestProgress && window.location.pathname !== signUpPath) {
+      // Navigate immediately — do NOT wrap in setTimeout+cleanup, because
+      // React may clear the cleanup before the timer fires when multiple
+      // state updates trigger effect re-runs in quick succession.
+      redirectingRef.current = true;
+      window.location.assign(signUpPath);
     }
-    return undefined;
   }, [
     isAuthLoaded,
     isSignedIn,
@@ -400,7 +396,6 @@ function AppLogic() {
     store.activityLog.length,
     store.keysHistory.length,
     store.potentialHistory.length,
-    store.history.length,
     store.lastCompletedDate,
   ]);
 

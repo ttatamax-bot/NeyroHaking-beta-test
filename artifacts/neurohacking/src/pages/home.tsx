@@ -1,7 +1,7 @@
 import { useAppStore } from "@/lib/store";
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
-import { Sparkles, ChevronRight, Target, Map, Eye, Brain } from "lucide-react";
+import { Sparkles, ChevronRight, Target, Map, Eye, Brain, LogIn } from "lucide-react";
 
 const NEWS_ITEMS = [
   { id: '1', title: "Новая техника нейровизуализации", description: "Обновлён алгоритм прохождения техники T2 — визуализация теперь более структурированная и точная.", date: "28.05.2026" },
@@ -78,6 +78,14 @@ export default function Home() {
               }}
             >
               Изучить систему <ChevronRight size={20} />
+            </button>
+            <button
+              className="w-full h-[50px] rounded-[16px] body flex items-center justify-center gap-2 mt-3"
+              style={{ border: '1px solid rgba(100,160,230,0.25)', color: 'rgba(147,197,253,0.75)' }}
+              onClick={() => setLocation('/sign-in')}
+            >
+              <LogIn size={17} />
+              Уже есть аккаунт? Войти
             </button>
           </motion.div>
         </div>
