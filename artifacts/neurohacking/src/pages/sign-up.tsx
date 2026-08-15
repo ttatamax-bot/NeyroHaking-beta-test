@@ -5,13 +5,16 @@ import { EmailCodeAuthCard, type EmailLinkAuthStep } from "@/components/EmailCod
 
 function getClerkErrorMessage(error: unknown): string {
   const e = error as { errors?: Array<{ longMessage?: string; message?: string }>; message?: string; longMessage?: string };
-  return (
+  const message =
     e.errors?.[0]?.longMessage ??
     e.errors?.[0]?.message ??
     e.longMessage ??
     e.message ??
-    "Не удалось отправить ссылку. Попробуй ещё раз."
-  );
+    "Не удалось отправить ссылку. Попробуй ещё раз.";
+  if (message.includes("email_link") && message.includes("allowed")) {
+    return "В Clerk не включены ссылки для подтверждения email. Включи стратегию Email link в настройках User & authentication.";
+  }
+  return message;
 }
 
 function withAuthTimeout<T>(promise: Promise<T>, timeoutMs = 15000): Promise<T> {

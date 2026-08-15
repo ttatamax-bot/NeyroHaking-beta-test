@@ -41,6 +41,49 @@ import ProfileSetup from "@/pages/profile-setup";
 
 const queryClient = new QueryClient();
 
+function hasProgressSnapshot(snapshot: Partial<AppState> | null): boolean {
+  if (!snapshot) return false;
+  return (
+    (snapshot.userState !== undefined && snapshot.userState !== 'new') ||
+    Boolean(snapshot.email) ||
+    Boolean(snapshot.onboardingComplete) ||
+    (snapshot.keys ?? 0) > 0 ||
+    (snapshot.potential ?? 0) > 0 ||
+    (snapshot.streak ?? 0) > 0 ||
+    (snapshot.activityLog?.length ?? 0) > 0 ||
+    (snapshot.keysHistory?.length ?? 0) > 0 ||
+    (snapshot.potentialHistory?.length ?? 0) > 0 ||
+    (snapshot.streakHistory?.length ?? 0) > 0 ||
+    (snapshot.history?.length ?? 0) > 0 ||
+    (snapshot.goals?.length ?? 0) > 0 ||
+    (snapshot.scenes?.length ?? 0) > 0 ||
+    (snapshot.plannerTasks?.length ?? 0) > 0 ||
+    (snapshot.readArticles?.length ?? 0) > 0 ||
+    (snapshot.unlockedArticles?.length ?? 0) > 1 ||
+    (snapshot.purchaseHistory?.length ?? 0) > 0 ||
+    Boolean(snapshot.lastCompletedDate) ||
+    Boolean(snapshot.lastSessionDate)
+  );
+}
+
+function hasStoredGuestProgress(): boolean {
+  try {
+    for (const key of Object.keys(localStorage)) {
+      if (key === 'neyro_legacy_migration_key' || key.startsWith('neyro_notif_')) continue;
+      const raw = localStorage.getItem(key);
+      if (!raw) continue;
+      try {
+        if (hasProgressSnapshot(JSON.parse(raw) as Partial<AppState>)) return true;
+      } catch {
+        // Ignore non-JSON local storage values such as install-prompt flags.
+      }
+    }
+  } catch {
+    return false;
+  }
+  return false;
+}
+
 const TECH_MESSAGES: { text: string; highlight: string[] }[] = [
   { text: 'Техники — твой главный инструмент', highlight: [] },
   { text: 'Все изменения начинаются здесь.', highlight: [] },
@@ -359,68 +402,41 @@ function AppLogic() {
       location.startsWith('/sign-up')
     ) return;
 
-    const hasProgress = (snapshot: Partial<AppState> | null): boolean => {
-      if (!snapshot) return false;
-      return (
-        (snapshot.userState !== undefined && snapshot.userState !== 'new') ||
-        Boolean(snapshot.email) ||
-        Boolean(snapshot.onboardingComplete) ||
-        (snapshot.keys ?? 0) > 0 ||
-        (snapshot.potential ?? 0) > 0 ||
-        (snapshot.streak ?? 0) > 0 ||
-        (snapshot.activityLog?.length ?? 0) > 0 ||
-        (snapshot.keysHistory?.length ?? 0) > 0 ||
-        (snapshot.potentialHistory?.length ?? 0) > 0 ||
-        (snapshot.streakHistory?.length ?? 0) > 0 ||
-        (snapshot.history?.length ?? 0) > 0 ||
-        (snapshot.goals?.length ?? 0) > 0 ||
-        (snapshot.scenes?.length ?? 0) > 0 ||
-        (snapshot.plannerTasks?.length ?? 0) > 0 ||
-        (snapshot.readArticles?.length ?? 0) > 0 ||
-        (snapshot.unlockedArticles?.length ?? 0) > 1 ||
-        (snapshot.purchaseHistory?.length ?? 0) > 0 ||
-        Boolean(snapshot.lastCompletedDate) ||
-        Boolean(snapshot.lastSessionDate)
-      );
-    };
-
     // Check in-memory store first (covers new guests right after completing
     // their first technique), then fall back to the persisted snapshot (covers
     // returning guests who had progress before Clerk was introduced).
     const hasGuestProgress =
-      hasProgress(store) ||
-      (() => {
-        try {
-          const savedKeys = ['neyro_state', 'neuro_state', 'neurohacking_state'];
-          return savedKeys.some((key) => {
-            const raw = localStorage.getItem(key);
-            if (!raw) return false;
-            try {
-              return hasProgress(JSON.parse(raw) as Partial<AppState>);
-            } catch {
-              return false;
-            }
-          });
-        } catch {
-          return false;
-        }
-      })();
+      hasProgressSnapshot(store) ||
+      hasStoredGuestProgress();
 
-    if (hasGuestProgress && window.location.pathname !== signUpPath) {
-      // Navigate immediately — do NOT wrap in setTimeout+cleanup, because
-      // React may clear the cleanup before the timer fires when multiple
-      // state updates trigger effect re-runs in quick succession.
+    if (hasGuestProgress && location !== '/sign-up') {
+      // Give AppProvider's persistence effect a tick to save the latest guest
+      // completion before the full navigation reloads the app.
       redirectingRef.current = true;
-      window.location.assign(signUpPath);
+      window.setTimeout(() => window.location.assign(signUpPath), 50);
     }
   }, [
     isAuthLoaded,
     isSignedIn,
     location,
+    store.userState,
+    store.email,
+    store.onboardingComplete,
+    store.keys,
+    store.potential,
+    store.streak,
     store.activityLog.length,
     store.keysHistory.length,
     store.potentialHistory.length,
     store.lastCompletedDate,
+    store.lastSessionDate,
+    store.history.length,
+    store.goals.length,
+    store.scenes.length,
+    store.plannerTasks.length,
+    store.unlockedArticles.length,
+    store.readArticles.length,
+    store.purchaseHistory.length,
   ]);
 
   // Global Wake Lock — keep screen on while app is open

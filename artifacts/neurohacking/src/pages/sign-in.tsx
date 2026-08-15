@@ -4,13 +4,16 @@ import { useEffect, useState } from "react";
 import { EmailCodeAuthCard, type EmailLinkAuthStep } from "@/components/EmailCodeAuthCard";
 function getClerkErrorMessage(error: unknown): string {
   const e = error as { errors?: Array<{ longMessage?: string; message?: string }>; message?: string; longMessage?: string };
-  return (
+  const message =
     e.errors?.[0]?.longMessage ??
     e.errors?.[0]?.message ??
     e.longMessage ??
     e.message ??
-    "Не удалось отправить ссылку. Проверь email и попробуй ещё раз."
-  );
+    "Не удалось отправить ссылку. Проверь email и попробуй ещё раз.";
+  if (message.includes("email_link") && message.includes("allowed")) {
+    return "В Clerk не включены ссылки для входа. Включи стратегию Email link в настройках User & authentication.";
+  }
+  return message;
 }
 
 function withAuthTimeout<T>(promise: Promise<T>, timeoutMs = 15000): Promise<T> {
