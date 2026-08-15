@@ -1,6 +1,5 @@
 import { getAuth } from "@clerk/express";
-import { and, eq } from "drizzle-orm";
-import { db, usersTable } from "@workspace/db";
+import { and, db, eq, usersTable } from "@workspace/db";
 import { z } from "zod";
 import {
   isTechniqueId,

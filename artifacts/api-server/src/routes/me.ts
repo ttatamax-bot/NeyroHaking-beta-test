@@ -1,11 +1,15 @@
 import { getAuth } from "@clerk/express";
-import { and as drizzleAnd, desc as drizzleDesc, eq as drizzleEq, ilike as drizzleIlike, sql as drizzleSql } from "drizzle-orm";
 import {
+  and,
   completedTechniquesTable,
   db,
+  desc,
+  eq,
+  ilike,
   keyTransactionsTable,
   legacyMigrationsTable,
   potentialTransactionsTable,
+  sql,
   updateUserProfileSchema,
   userProfilesTable,
   userStatesTable,
@@ -18,12 +22,6 @@ import {
 import { createCompatibleRouter } from "./compatRouter.js";
 
 const router = createCompatibleRouter();
-
-const and: any = drizzleAnd;
-const desc: any = drizzleDesc;
-const eq: any = drizzleEq;
-const ilike: any = drizzleIlike;
-const sql: any = drizzleSql;
 
 function clerkUserId(req: any): string | null {
   const auth = getAuth(req);
