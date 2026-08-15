@@ -1,5 +1,5 @@
 import { integer, jsonb, pgTable, serial, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
-import { usersTable } from "./users";
+import { usersTable } from "./users.js";
 
 export const legacyMigrationsTable = pgTable("legacy_migrations", {
   id: serial("id").primaryKey(),

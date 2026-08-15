@@ -1,6 +1,5 @@
-import { type Request, type Response } from "express";
 import { getAuth } from "@clerk/express";
-import { and, desc, eq, ilike, sql } from "drizzle-orm";
+import { and as drizzleAnd, desc as drizzleDesc, eq as drizzleEq, ilike as drizzleIlike, sql as drizzleSql } from "drizzle-orm";
 import {
   completedTechniquesTable,
   db,
@@ -20,12 +19,18 @@ import { createCompatibleRouter } from "./compatRouter.js";
 
 const router = createCompatibleRouter();
 
-function clerkUserId(req: Request): string | null {
+const and: any = drizzleAnd;
+const desc: any = drizzleDesc;
+const eq: any = drizzleEq;
+const ilike: any = drizzleIlike;
+const sql: any = drizzleSql;
+
+function clerkUserId(req: any): string | null {
   const auth = getAuth(req);
   return auth?.userId || (auth?.sessionClaims?.userId as string | undefined) || null;
 }
 
-function requireUser(req: Request, res: Response): string | null {
+function requireUser(req: any, res: any): string | null {
   const id = clerkUserId(req);
   if (!id) res.status(401).json({ error: "Unauthorized" });
   return id;
@@ -228,7 +233,7 @@ router.post("/me/articles/:articleId/purchase", async (req, res) => {
     });
     const currentState = objectBody(row?.state) ? row.state : {};
     const currentUnlocked = Array.isArray(currentState.unlockedArticles)
-      ? currentState.unlockedArticles.filter((id): id is string => typeof id === "string")
+      ? currentState.unlockedArticles.filter((id: unknown): id is string => typeof id === "string")
       : ["A1"];
     if (currentUnlocked.includes(articleId)) {
       return { profile, state: currentState, alreadyUnlocked: true };

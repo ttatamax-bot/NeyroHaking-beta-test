@@ -1,6 +1,6 @@
 import { date, integer, pgTable, serial, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 import { z } from "zod";
-import { usersTable } from "./users";
+import { usersTable } from "./users.js";
 
 export const streakHistoryTable = pgTable("streak_history", {
   id: serial("id").primaryKey(),

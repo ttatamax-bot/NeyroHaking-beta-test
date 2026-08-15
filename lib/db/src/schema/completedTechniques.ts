@@ -1,6 +1,6 @@
 import { integer, jsonb, pgTable, real, serial, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 import { z } from "zod";
-import { usersTable } from "./users";
+import { usersTable } from "./users.js";
 
 export const completedTechniquesTable = pgTable("completed_techniques", {
   id: serial("id").primaryKey(),
