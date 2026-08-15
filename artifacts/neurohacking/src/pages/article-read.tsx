@@ -1,5 +1,6 @@
 import { useParams, useLocation } from "wouter";
 import { useAppStore } from "@/lib/store";
+import { completeArticleRead, ApiError } from "@/lib/api";
 import { ChevronLeft } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -701,33 +702,42 @@ function renderBlock(block: string, i: number) {
 export default function ArticleRead() {
   const { id } = useParams<{ id: string }>();
   const [, setLocation] = useLocation();
-  const { readArticles, updateState } = useAppStore();
+  const { readArticles, updateState, isSignedIn, refreshProfile } = useAppStore();
 
   const article = ARTICLES_DATA[id || ''];
   const alreadyRewarded = readArticles.includes(id || '');
 
-  const handleFinish = () => {
+  const handleFinish = async () => {
     if (!alreadyRewarded) {
       const now = new Date().toISOString();
-      updateState(prev => ({
-        potential: Math.min(100, prev.potential + POTENTIAL_REWARD),
-        readArticles: [...prev.readArticles, id || ''],
-        potentialHistory: [
-          { date: now, source: `Статья: ${article?.title ?? id}`, amount: POTENTIAL_REWARD },
-          ...prev.potentialHistory,
-        ],
-        activityLog: [
-          {
-            id: `act_${Date.now()}`,
-            date: now,
-            type: 'article' as const,
-            keysGained: 0,
-            potentialGained: POTENTIAL_REWARD,
-            details: { articleTitle: article?.title ?? id },
-          },
-          ...prev.activityLog,
-        ],
-      }));
+      try {
+        const serverReward = isSignedIn ? await completeArticleRead(id || '') : null;
+        if (isSignedIn) await refreshProfile();
+        updateState(prev => ({
+          ...(isSignedIn ? {} : { potential: Math.min(100, prev.potential + POTENTIAL_REWARD) }),
+          readArticles: [...prev.readArticles, id || ''],
+          potentialHistory: [
+            { date: now, source: `Статья: ${article?.title ?? id}`, amount: serverReward?.potential ?? POTENTIAL_REWARD },
+            ...prev.potentialHistory,
+          ],
+          activityLog: [
+            {
+              id: `act_${Date.now()}`,
+              date: now,
+              type: 'article' as const,
+              keysGained: 0,
+              potentialGained: serverReward?.potential ?? POTENTIAL_REWARD,
+              details: { articleTitle: article?.title ?? id },
+            },
+            ...prev.activityLog,
+          ],
+        }));
+      } catch (error) {
+        window.alert(error instanceof ApiError && error.status === 403
+          ? "Сначала открой статью."
+          : "Не удалось сохранить чтение статьи. Проверь соединение и попробуй ещё раз.");
+        return;
+      }
     }
     setLocation('/academy');
   };

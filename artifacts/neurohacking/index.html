@@ -9,7 +9,6 @@
     <meta property="og:title" content="НейроХакинг" />
     <meta property="og:description" content="НейроХакинг — приложение для раскрытия потенциала твоего мозга. Техники, база знаний, путь к целям и изменениям." />
     <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://neyrohaking.vercel.app" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="НейроХакинг" />
     <meta name="twitter:description" content="НейроХакинг — приложение для раскрытия потенциала твоего мозга. Техники, база знаний, путь к целям и изменениям." />
@@ -29,15 +28,14 @@
     <script>
       window.OneSignalDeferred = window.OneSignalDeferred || [];
       OneSignalDeferred.push(async function(OneSignal) {
+        if (window.location.hostname !== "neyrohaking.vercel.app") {
+          return;
+        }
+
         await OneSignal.init({
           appId: "122e7ca3-56bf-459a-8bd6-768820630bb7",
-          // Не показывать встроенную кнопку OneSignal — используем свой UI
-          notifyButton: {
-            enable: false,
-          },
-          // Разрешить localhost для разработки
+          notifyButton: { enable: false },
           allowLocalhostAsSecureOrigin: true,
-          // Safari Push требует serviceWorkerParam (не autoRegister)
           serviceWorkerParam: { scope: "/" },
         });
       });

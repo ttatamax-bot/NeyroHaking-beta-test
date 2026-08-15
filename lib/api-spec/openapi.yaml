@@ -1,36 +1,359 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Neurohacking account, migration and technique API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
-    description: Health operations
+  - name: account
+  - name: techniques
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
-      summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
           content:
             application/json:
+              schema: { $ref: "#/components/schemas/HealthStatus" }
+  /me:
+    get:
+      operationId: getMe
+      tags: [account]
+      responses:
+        "200":
+          description: Authenticated account state
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ServerMe" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /me/profile:
+    get:
+      operationId: getMyProfile
+      tags: [account]
+      responses:
+        "200":
+          description: Profile
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/UserProfile" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      operationId: updateMyProfile
+      tags: [account]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ProfileUpdateInput" }
+      responses:
+        "200":
+          description: Updated profile
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/UserProfile" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "409": { $ref: "#/components/responses/Conflict" }
+  /me/history:
+    get:
+      operationId: getMyTechniqueHistory
+      tags: [account]
+      parameters:
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
+      responses:
+        "200":
+          description: Server-verified technique history
+          content:
+            application/json:
               schema:
-                $ref: "#/components/schemas/HealthStatus"
+                type: array
+                items: { $ref: "#/components/schemas/CompletedTechnique" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /me/transactions:
+    get:
+      operationId: getMyTransactions
+      tags: [account]
+      parameters:
+        - name: type
+          in: query
+          schema: { type: string, enum: [keys, potential] }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
+      responses:
+        "200":
+          description: Server-verified resource transactions
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TransactionsResponse" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /me/state:
+    post:
+      operationId: saveMyState
+      tags: [account]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ClientState" }
+      responses:
+        "200":
+          description: Stored non-authoritative state
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SavedState" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /me/articles/{articleId}/purchase:
+    post:
+      operationId: purchaseArticle
+      tags: [account]
+      parameters:
+        - name: articleId
+          in: path
+          required: true
+          schema: { type: string, enum: [A2, A3, A4, A5] }
+      responses:
+        "200":
+          description: Server-authorized article unlock
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ArticlePurchaseResult" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "409": { $ref: "#/components/responses/Conflict" }
+  /me/articles/{articleId}/read:
+    post:
+      operationId: completeArticleRead
+      tags: [account]
+      parameters:
+        - name: articleId
+          in: path
+          required: true
+          schema: { type: string, pattern: "^A[1-5]$" }
+      responses:
+        "200":
+          description: Server-authorized article reading reward
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ArticleReadResult" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Conflict" }
+  /me/services/{serviceId}/purchase:
+    post:
+      operationId: purchaseService
+      tags: [account]
+      parameters:
+        - name: serviceId
+          in: path
+          required: true
+          schema: { type: string, enum: [consultation, mentoring] }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [purchaseKey]
+              properties:
+                purchaseKey: { type: string, minLength: 16, maxLength: 128 }
+      responses:
+        "200":
+          description: Server-authorized service purchase
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ServicePurchaseResult" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "409": { $ref: "#/components/responses/Conflict" }
+  /me/migrate-legacy:
+    post:
+      operationId: migrateLegacyState
+      tags: [account]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/LegacyMigrationInput" }
+      responses:
+        "200":
+          description: Audited one-time migration result
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/LegacyMigrationResult" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /techniques/complete:
+    post:
+      operationId: completeTechnique
+      tags: [techniques]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/TechniqueCompletionInput" }
+      responses:
+        "200":
+          description: Server-calculated reward; repeat requests are idempotent
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TechniqueCompletionResult" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
 components:
+  responses:
+    BadRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+    Unauthorized:
+      description: Authentication required
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+    Conflict:
+      description: Conflict
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
   schemas:
     HealthStatus:
       type: object
+      required: [status]
       properties:
-        status:
-          type: string
-      required:
-        - status
-
+        status: { type: string }
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error: { type: string }
+    ServerUser:
+      type: object
+      required: [id, clerkId, email]
+      properties:
+        id: { type: integer }
+        clerkId: { type: string }
+        email: { type: ["string", "null"] }
+    UserProfile:
+      type: object
+      required: [id, userId, nickname, displayName, bio, avatarUrl, totalKeys, totalPotential, currentStreak, longestStreak, createdAt, updatedAt]
+      properties:
+        id: { type: integer }
+        userId: { type: integer }
+        nickname: { type: ["string", "null"] }
+        displayName: { type: ["string", "null"] }
+        bio: { type: ["string", "null"] }
+        avatarUrl: { type: ["string", "null"] }
+        totalKeys: { type: integer }
+        totalPotential: { type: number }
+        currentStreak: { type: integer }
+        longestStreak: { type: integer }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    ServerMe:
+      type: object
+      required: [user, state, profile]
+      properties:
+        user: { $ref: "#/components/schemas/ServerUser" }
+        state: { type: ["object", "null"], additionalProperties: true }
+        profile: { $ref: "#/components/schemas/UserProfile" }
+    ProfileUpdateInput:
+      type: object
+      properties:
+        nickname: { type: string, minLength: 3, maxLength: 32 }
+        displayName: { type: string, maxLength: 100 }
+        bio: { type: string, maxLength: 500 }
+        avatarUrl: { type: string, format: uri, maxLength: 2048 }
+    LegacyMigrationInput:
+      type: object
+      required: [migrationKey, state]
+      properties:
+        migrationKey: { type: string, minLength: 16, maxLength: 128 }
+        state: { type: object, additionalProperties: true }
+    MigrationAudit:
+      type: object
+      additionalProperties: true
+    LegacyMigrationResult:
+      type: object
+      required: [status, audit, state, profile]
+      properties:
+        status: { type: string, enum: [imported, imported_with_warnings, already_imported] }
+        audit: { $ref: "#/components/schemas/MigrationAudit" }
+        state: { type: object, additionalProperties: true }
+        profile: { $ref: "#/components/schemas/UserProfile" }
+    CompletedTechnique:
+      type: object
+      additionalProperties: true
+      required: [id, userId, techniqueId, appDay, idempotencyKey, completedAt, keysAwarded, potentialAwarded]
+    Transaction:
+      type: object
+      additionalProperties: true
+    TransactionsResponse:
+      type: object
+      required: [keys, potential]
+      properties:
+        keys: { type: array, items: { $ref: "#/components/schemas/Transaction" } }
+        potential: { type: array, items: { $ref: "#/components/schemas/Transaction" } }
+    ClientState:
+      type: object
+      additionalProperties: true
+    SavedState:
+      type: object
+      required: [state]
+      properties:
+        state: { type: object, additionalProperties: true }
+        profile: { $ref: "#/components/schemas/UserProfile" }
+    ArticlePurchaseResult:
+      type: object
+      required: [articleId, alreadyUnlocked, keys, state, profile]
+      properties:
+        articleId: { type: string }
+        alreadyUnlocked: { type: boolean }
+        keys: { type: integer }
+        state: { type: object, additionalProperties: true }
+        profile: { $ref: "#/components/schemas/UserProfile" }
+    ArticleReadResult:
+      type: object
+      required: [articleId, alreadyRead, potential, state, profile]
+      properties:
+        articleId: { type: string }
+        alreadyRead: { type: boolean }
+        potential: { type: number }
+        state: { type: object, additionalProperties: true }
+        profile: { $ref: "#/components/schemas/UserProfile" }
+    ServicePurchaseResult:
+      type: object
+      required: [serviceId, alreadyPurchased, profile]
+      properties:
+        serviceId: { type: string }
+        alreadyPurchased: { type: boolean }
+        profile: { $ref: "#/components/schemas/UserProfile" }
+    TechniqueCompletionInput:
+      type: object
+      required: [techniqueId, clientDate, idempotencyKey, metadata]
+      properties:
+        techniqueId: { type: string, enum: [T1, T2, T3, T4, T5, T6] }
+        clientDate: { type: string, pattern: "^\\d{4}-\\d{2}-\\d{2}$" }
+        idempotencyKey: { type: string, minLength: 16, maxLength: 128 }
+        timezoneOffsetMinutes: { type: integer, minimum: -840, maximum: 840, default: 0 }
+        metadata: { type: object, additionalProperties: true }
+    TechniqueCompletionResult:
+      type: object
+      additionalProperties: true
+      required: [keys, potential, completedTechniqueId, newStreak, longestStreak, totalKeys, totalPotential]
+      properties:
+        keys: { type: integer }
+        potential: { type: number }
+        completedTechniqueId: { type: integer }
+        newStreak: { type: integer }
+        longestStreak: { type: integer }
+        totalKeys: { type: integer }
+        totalPotential: { type: number }

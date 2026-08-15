@@ -38,7 +38,7 @@ function getNextMilestone(steps: number) {
 }
 
 export default function Walk() {
-  const { keysHistory, updateState, walkWarningShown } = useAppStore();
+  const { keysHistory, updateState, walkWarningShown, isSignedIn, completeTechnique } = useAppStore();
   const [, setLocation] = useLocation();
 
   const todayEarned = getTodayKeysFromSource(keysHistory, SOURCE);
@@ -103,7 +103,7 @@ export default function Walk() {
     updateState({ walkWarningShown: true });
   };
 
-  const doComplete = useCallback(() => {
+  const doComplete = useCallback(async () => {
     if (steps < MIN_STEPS_TO_COMPLETE) {
       setShowMinStepsAlert(true);
       setTimeout(() => setShowMinStepsAlert(false), 3500);
@@ -111,6 +111,17 @@ export default function Walk() {
     }
 
     const reward = getRewardForSteps(steps);
+    if (isSignedIn) {
+      try {
+        await completeTechnique("T4", { steps });
+        setCompleted(true);
+        setRunning(false);
+        releaseWakeLock();
+      } catch {
+        window.alert("Не удалось сохранить результат. Проверь соединение и попробуй ещё раз.");
+      }
+      return;
+    }
     const now = new Date().toISOString();
 
     updateState(prev => {
@@ -145,7 +156,7 @@ export default function Walk() {
     setCompleted(true);
     setRunning(false);
     releaseWakeLock();
-  }, [updateState, steps, releaseWakeLock]);
+  }, [updateState, steps, releaseWakeLock, isSignedIn, completeTechnique]);
 
   const startSession = async () => {
     setSteps(0);

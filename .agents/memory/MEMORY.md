@@ -1,0 +1,2 @@
+- [Legacy migration integrity](legacy-migration-integrity.md) — legacy totals are audit-only; authoritative balances come from server-verified activity metadata.
+- [OpenAPI Zod compatibility](openapi-zod-compatibility.md) — Orval 8 Zod output requires the workspace Zod catalog to stay on Zod 4.

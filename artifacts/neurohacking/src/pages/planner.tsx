@@ -7,7 +7,7 @@ import { ScreenTransition } from "@/components/ScreenTransition";
 import { BackButton } from "@/components/BackButton";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { Plus, X, Clock, Pause, Play, Target, ChevronLeft, Pencil } from "lucide-react";
+import { Plus, X, Clock, Pause, Play, Target, ChevronLeft } from "lucide-react";
 
 function fmtDur(min: number) {
   if (min < 60) return `${min} мин`;
@@ -21,10 +21,6 @@ function fmtSec(s: number) {
   if (m < 60) return `${m}:${sec.toString().padStart(2,'0')}`;
   const h = Math.floor(m / 60);
   return `${h}:${(m % 60).toString().padStart(2,'0')}:${sec.toString().padStart(2,'0')}`;
-}
-
-function isToday(dateStr: string) {
-  return new Date(dateStr).toDateString() === new Date().toDateString();
 }
 
 const DURATION_OPTIONS = [
@@ -109,18 +105,13 @@ function getAccuracyLabel(actualMin: number, estimatedMin: number): { text: stri
 }
 
 export default function Planner() {
-  const { goals, plannerTasks, updateState, timerWarningShown } = useAppStore();
+  const { goals, plannerTasks, updateState, timerWarningShown, isSignedIn, completeTechnique } = useAppStore();
   const [, setLocation] = useLocation();
 
   const [showForm, setShowForm] = useState(false);
   const [taskText, setTaskText] = useState("");
   const [selectedGoalId, setSelectedGoalId] = useState("");
   const [selectedDuration, setSelectedDuration] = useState<typeof DURATION_OPTIONS[0] | null>(null);
-
-  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
-  const [editText, setEditText] = useState("");
-  const [editGoalId, setEditGoalId] = useState("");
-  const [editDuration, setEditDuration] = useState<typeof DURATION_OPTIONS[0] | null>(null);
 
   const [activeTask, setActiveTask] = useState<ActiveTask | null>(null);
   const [elapsed, setElapsed] = useState(0);
@@ -137,21 +128,14 @@ export default function Planner() {
   activeRef.current = activeTask;
 
   const activeGoals = goals.filter(g => g.status === 'active');
-
-  const displayTasks = plannerTasks.filter(t => {
-    if (!t.completed) return true;
-    if (t.completedAt) return isToday(t.completedAt);
-    return isToday(t.createdAt);
-  });
-
-  const activeTasks = displayTasks.filter(t => !t.completed);
+  const activeTasks = plannerTasks.filter(t => !t.completed);
   const canAddTask = activeTasks.length < MAX_ACTIVE_TASKS;
 
   const clearTimer = useCallback(() => {
     if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null; }
   }, []);
 
-  const doComplete = useCallback((elapsedSec: number) => {
+  const doComplete = useCallback(async (elapsedSec: number) => {
     const task = activeRef.current;
     if (!task || completedRef.current) return;
     completedRef.current = true;
@@ -161,11 +145,39 @@ export default function Planner() {
     const { keys: keysEarned, potential: potentialEarned, accuracyPercent } =
       calculateT1Reward(actualMinutes, task.estimatedMinutes);
 
+    if (isSignedIn) {
+      try {
+        const result = await completeTechnique("T1", {
+          actualSeconds: Math.max(0, Math.round(elapsedSec)),
+          estimatedSeconds: task.totalSeconds,
+          taskText: task.text,
+          durationMin: task.estimatedMinutes,
+        });
+        updateState(prev => ({
+          plannerTasks: prev.plannerTasks.map(t => t.id === task.taskId ? { ...t, completed: true } : t),
+        }));
+        setCompletionResult({
+          taskText: task.text,
+          predictedSec: task.totalSeconds,
+          actualSec: elapsedSec,
+          keysEarned: result.keys,
+          potentialEarned: result.potential,
+          accuracyPercent,
+        });
+        setActiveTask(null);
+        setElapsed(0);
+      } catch {
+        completedRef.current = false;
+        window.alert("Не удалось сохранить результат. Проверь соединение и попробуй ещё раз.");
+      }
+      return;
+    }
+
     const now = new Date().toISOString();
     updateState(prev => {
       const streakUpdate = computeStreakUpdate(prev);
       return {
-        plannerTasks: prev.plannerTasks.map(t => t.id === task.taskId ? { ...t, completed: true, completedAt: now } : t),
+        plannerTasks: prev.plannerTasks.map(t => t.id === task.taskId ? { ...t, completed: true } : t),
         keys: prev.keys + keysEarned,
         potential: potentialEarned > 0 ? Math.min(100, prev.potential + potentialEarned) : prev.potential,
         todayTechniques: { ...prev.todayTechniques, T1: prev.todayTechniques.T1 || keysEarned >= 1 },
@@ -185,7 +197,7 @@ export default function Planner() {
     setCompletionResult({ taskText: task.text, predictedSec: task.totalSeconds, actualSec: elapsedSec, keysEarned, potentialEarned, accuracyPercent });
     setActiveTask(null);
     setElapsed(0);
-  }, [clearTimer, updateState]);
+  }, [clearTimer, updateState, isSignedIn, completeTechnique]);
 
   const doStartTask = (task: typeof plannerTasks[0]) => {
     completedRef.current = false;
@@ -212,33 +224,15 @@ export default function Planner() {
     }
   };
 
-  const openEdit = (task: typeof plannerTasks[0]) => {
-    setEditingTaskId(task.id);
-    setEditText(task.text);
-    setEditGoalId(task.goalId);
-    setEditDuration(DURATION_OPTIONS.find(d => d.minutes === task.durationMin) ?? null);
-  };
-
-  const handleSaveEdit = () => {
-    if (!editText.trim() || !editGoalId || !editDuration || !editingTaskId) return;
-    updateState(prev => ({
-      plannerTasks: prev.plannerTasks.map(t =>
-        t.id === editingTaskId
-          ? { ...t, text: editText.trim(), goalId: editGoalId, durationMin: editDuration.minutes }
-          : t
-      ),
-    }));
-    setEditingTaskId(null);
-    setEditText("");
-    setEditGoalId("");
-    setEditDuration(null);
-  };
-
   useEffect(() => {
     if (!activeTask) return;
     intervalRef.current = setInterval(() => {
       if (pausedRef.current) return;
-      setElapsed(e => e + 1);
+      setElapsed(e => {
+        const next = e + 1;
+        if (next >= activeRef.current!.totalSeconds) { doComplete(next); return next; }
+        return next;
+      });
     }, 1000);
     return clearTimer;
   }, [activeTask?.taskId, doComplete, clearTimer]);
@@ -351,79 +345,12 @@ export default function Planner() {
             </button>
             <button onClick={() => doComplete(elapsed)}
               className="h-[52px] px-8 rounded-[14px] title-s flex items-center justify-center gap-2"
-              style={{ background: 'linear-gradient(135deg, rgba(34,197,94,0.3) 0%, rgba(34,197,94,0.15) 100%)', border: '1px solid rgba(34,197,94,0.5)', color: '#86EFAC' }}>
-              Завершить
+              style={{ background: 'linear-gradient(135deg, rgba(245,158,11,0.22) 0%, rgba(245,158,11,0.08) 100%)', border: '1px solid rgba(245,158,11,0.35)', color: 'rgba(255,255,255,0.9)' }}>
+              Готово
             </button>
           </div>
         </div>
       </div>
-    );
-  }
-
-  if (editingTaskId) {
-    const editGoals = goals.filter(g => g.status === 'active');
-    return (
-      <ScreenTransition className="pt-[56px] px-4 pb-24">
-        <div className="flex items-center gap-3 mt-4 mb-8">
-          <button onClick={() => setEditingTaskId(null)} className="p-1 text-tertiary"><X size={24} /></button>
-          <h1 className="title-l text-primary">Редактировать задачу</h1>
-        </div>
-        <div className="space-y-5">
-          <div>
-            <label className="caption text-secondary mb-2 block">Цель</label>
-            <div className="space-y-2">
-              {editGoals.map(g => (
-                <button key={g.id} onClick={() => setEditGoalId(g.id)}
-                  className={`w-full text-left p-3 rounded-[12px] border transition-colors ${editGoalId === g.id ? 'border-blue-core bg-blue-ultra-soft text-primary' : 'border-border bg-surface-1 text-secondary'} body-s`}>
-                  {g.name}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div>
-            <label className="caption text-secondary mb-2 block">Задача</label>
-            <Input placeholder="Что нужно сделать?" value={editText} onChange={e => setEditText(e.target.value)}
-              className="h-[52px] bg-surface-1 border-border text-primary body" autoFocus />
-          </div>
-          <div>
-            <label className="caption text-secondary mb-2 block">
-              Предсказание времени
-              <span className="ml-2 text-tertiary" style={{ fontSize: 11, fontWeight: 400 }}>Сколько ты думаешь, займёт эта задача?</span>
-            </label>
-            <div className="grid grid-cols-3 gap-2">
-              {DURATION_OPTIONS.map(opt => (
-                <button key={opt.label} onClick={() => setEditDuration(opt)}
-                  className="h-[44px] rounded-[10px] transition-all body-s"
-                  style={editDuration?.minutes === opt.minutes ? {
-                    background: 'linear-gradient(135deg, rgba(245,158,11,0.35) 0%, rgba(245,158,11,0.18) 100%)',
-                    border: '1.5px solid rgba(245,158,11,0.8)', color: '#FDE68A', fontWeight: 600,
-                  } : {
-                    background: 'linear-gradient(135deg, rgba(245,158,11,0.12) 0%, rgba(245,158,11,0.04) 100%)',
-                    border: '1px solid rgba(245,158,11,0.25)', color: 'var(--text-secondary)',
-                  }}>
-                  {opt.label}
-                </button>
-              ))}
-            </div>
-          </div>
-          {editDuration && (
-            <div className="rounded-[12px] p-3 flex justify-between items-center"
-              style={{ background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.2)' }}>
-              <span className="caption text-secondary">Максимальная награда</span>
-              <div className="flex items-center gap-3">
-                <span className="caption" style={{ color: '#F59E0B' }}>+{editDuration.keys} ключей</span>
-                <span className="caption" style={{ color: '#60A5FA' }}>+{editDuration.potential.toFixed(2)}% пот.</span>
-              </div>
-            </div>
-          )}
-          <button onClick={handleSaveEdit}
-            disabled={!editText.trim() || !editGoalId || !editDuration}
-            className="btn-grad btn-shimmer w-full h-[52px] rounded-[14px] title-s text-white disabled:opacity-40"
-            style={!editText.trim() || !editGoalId || !editDuration ? { background: 'var(--bg-surface-2)', boxShadow: 'none' } : {}}>
-            Сохранить изменения
-          </button>
-        </div>
-      </ScreenTransition>
     );
   }
 
@@ -516,13 +443,13 @@ export default function Planner() {
         </div>
       ) : (
         <>
-          {displayTasks.length === 0 ? (
+          {plannerTasks.length === 0 ? (
             <div className="bg-surface-1 border border-border rounded-[16px] p-8 text-center mb-4">
               <p className="body-s text-secondary">Добавь задачу к одной из своих целей</p>
             </div>
           ) : (
             <div className="space-y-3 mb-4">
-              {displayTasks.map(task => {
+              {plannerTasks.map(task => {
                 const goal = goals.find(g => g.id === task.goalId);
                 const opt = DURATION_OPTIONS.find(d => d.minutes === task.durationMin);
                 return (
@@ -542,18 +469,11 @@ export default function Planner() {
                           {opt && <span className="caption" style={{ color: 'rgba(96,165,250,0.7)' }}>до +{opt.potential.toFixed(2)}% пот.</span>}
                         </div>
                         {!task.completed && (
-                          <div className="flex items-center gap-2">
-                            <button onClick={() => openEdit(task)}
-                              className="w-[30px] h-[30px] rounded-[8px] flex items-center justify-center active:opacity-70"
-                              style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.5)' }}>
-                              <Pencil size={13} />
-                            </button>
-                            <button onClick={() => startTask(task)}
-                              className="h-[30px] px-3 rounded-[8px] caption active:opacity-70"
-                              style={{ background: 'linear-gradient(135deg, rgba(245,158,11,0.3) 0%, rgba(245,158,11,0.15) 100%)', border: '1px solid rgba(245,158,11,0.5)', color: '#FDE68A', fontWeight: 600 }}>
-                              Старт
-                            </button>
-                          </div>
+                          <button onClick={() => startTask(task)}
+                            className="h-[30px] px-3 rounded-[8px] caption active:opacity-70"
+                            style={{ background: 'linear-gradient(135deg, rgba(245,158,11,0.3) 0%, rgba(245,158,11,0.15) 100%)', border: '1px solid rgba(245,158,11,0.5)', color: '#FDE68A', fontWeight: 600 }}>
+                            Старт
+                          </button>
                         )}
                       </div>
                     </div>
@@ -576,7 +496,7 @@ export default function Planner() {
           )}
         </>
       )}
-      <MaximInfoModal show={showTimerWarning} message={"Из-за технических ограничений таймер в приложении не работает фоном, пожалуйста, не закрывай приложение."} onClose={handleTimerWarningClose} />
+      <MaximInfoModal show={showTimerWarning} message={"Из-за технических ограничений приложение не работает в фоне.\nЧтобы таймер продолжал считать, экран не должен быть заблокирован."} onClose={handleTimerWarningClose} />
     </ScreenTransition>
   );
 }

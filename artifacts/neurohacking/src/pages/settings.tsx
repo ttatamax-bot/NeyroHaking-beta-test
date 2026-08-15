@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
+import { useUser, SignOutButton } from "@clerk/react";
 import { useAppStore } from "@/lib/store";
 import { ScreenTransition } from "@/components/ScreenTransition";
 import { BackButton } from "@/components/BackButton";
-import { ChevronRight, Pencil, Bell } from "lucide-react";
+import { ChevronRight, Bell, User } from "lucide-react";
 
 function subscribeOneSignal() {
   const win = window as any;
@@ -62,9 +63,9 @@ function NotificationConfirmDialog({ open, onClose, onConfirm }: { open: boolean
 }
 
 export default function Settings() {
-  const { email } = useAppStore();
   const [, setLocation] = useLocation();
   const [showConfirm, setShowConfirm] = useState(false);
+  const { isSignedIn, user } = useUser();
 
   return (
     <ScreenTransition className="pt-[56px] px-4 pb-24">
@@ -72,20 +73,47 @@ export default function Settings() {
       <h1 className="title-l text-primary mt-4 mb-6">Настройки</h1>
 
       <div className="bg-surface-1 border border-border rounded-[16px] overflow-hidden mb-4">
-        <button
-          onClick={() => setLocation('/onboarding/email')}
-          className="w-full p-4 border-b border-border flex justify-between items-center active:bg-surface-2 transition-colors text-left"
-        >
-          <div>
-            <div className="body text-primary">Email</div>
-            <div className="body-s text-secondary mt-0.5">{email || 'Не указан'}</div>
+        {isSignedIn ? (
+          <div className="p-4 flex justify-between items-center">
+            <div className="flex items-center gap-3">
+              <div
+                className="w-10 h-10 rounded-[12px] flex items-center justify-center shrink-0"
+                style={{ background: 'rgba(37,99,235,0.18)', border: '1px solid rgba(37,99,235,0.35)' }}
+              >
+                <User size={18} className="text-blue-light" />
+              </div>
+              <div className="text-left">
+                <div className="body text-primary">Аккаунт</div>
+                <div className="body-s text-secondary mt-0.5">{user?.primaryEmailAddress?.emailAddress || 'Вход выполнен'}</div>
+              </div>
+            </div>
+            <SignOutButton>
+              <button className="body-s text-blue-light active:opacity-70 transition-opacity">Выйти</button>
+            </SignOutButton>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="body-s text-blue-light">Изменить</span>
-            <Pencil size={15} className="text-blue-light" />
-          </div>
-        </button>
+        ) : (
+          <button
+            onClick={() => setLocation('/sign-in')}
+            className="w-full p-4 flex justify-between items-center active:bg-surface-2 transition-colors text-left"
+          >
+            <div className="flex items-center gap-3">
+              <div
+                className="w-10 h-10 rounded-[12px] flex items-center justify-center shrink-0"
+                style={{ background: 'rgba(37,99,235,0.18)', border: '1px solid rgba(37,99,235,0.35)' }}
+              >
+                <User size={18} className="text-blue-light" />
+              </div>
+              <div>
+                <div className="body text-primary">Аккаунт</div>
+                <div className="body-s text-secondary mt-0.5">Войдите, чтобы сохранить прогресс</div>
+              </div>
+            </div>
+            <span className="body-s text-blue-light">Войти</span>
+          </button>
+        )}
+      </div>
 
+      <div className="bg-surface-1 border border-border rounded-[16px] overflow-hidden mb-4">
         <button
           onClick={() => setLocation('/notifications')}
           className="w-full p-4 flex justify-between items-center active:bg-surface-2 transition-colors text-left border-b border-border"

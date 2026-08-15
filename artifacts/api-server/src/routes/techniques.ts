@@ -1,0 +1,80 @@
+import { Router } from "express";
+import { getAuth } from "@clerk/express";
+import { and, eq } from "drizzle-orm";
+import { db, usersTable } from "@workspace/db";
+import { z } from "zod";
+import {
+  isTechniqueId,
+  recordTechniqueCompletion,
+  type TechniqueId,
+  type TechniqueMetadata,
+} from "../services/techniqueRewards";
+
+const router = Router();
+
+const metadataSchemas: Record<TechniqueId, z.ZodTypeAny> = {
+  T1: z.object({
+    actualSeconds: z.number().int().min(0).max(86400),
+    estimatedSeconds: z.number().int().min(1).max(86400),
+    taskText: z.string().trim().min(1).max(1000),
+    durationMin: z.number().int().min(1).max(1440),
+  }),
+  T2: z.object({
+    goalId: z.string().trim().min(1).max(128),
+    answers: z.array(z.string().trim().min(20).max(5000)).min(5).max(20),
+  }),
+  T3: z.object({ durationLabel: z.string().trim().min(1).max(32) }),
+  T4: z.object({ steps: z.number().int().min(0).max(200000) }),
+  T5: z.object({
+    hobbyName: z.string().trim().min(1).max(200),
+    durationLabel: z.string().trim().min(1).max(32),
+    challengeResult: z.enum(["done", "partial", "none"]).optional(),
+  }),
+  T6: z.object({
+    sleepTime: z.string().trim().min(1).max(64),
+    timezoneOffsetMinutes: z.number().int().min(-840).max(840).optional(),
+  }),
+};
+
+router.post("/techniques/complete", async (req, res) => {
+  const auth = getAuth(req);
+  const clerkId = auth?.userId || (auth?.sessionClaims?.userId as string | undefined);
+  if (!clerkId) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+  const parsed = z.object({
+    techniqueId: z.string(),
+    // Kept for compatibility with the static client. It is never used for rewards or app-day.
+    clientDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    idempotencyKey: z.string().trim().min(16).max(128),
+    timezoneOffsetMinutes: z.number().int().min(-840).max(840).default(0),
+    metadata: z.record(z.string(), z.any()),
+  }).safeParse(req.body);
+  if (!parsed.success || !isTechniqueId(parsed.data?.techniqueId ?? "")) {
+    res.status(400).json({ error: "Invalid payload" });
+    return;
+  }
+  const techniqueId = parsed.data.techniqueId as TechniqueId;
+  const metadata = metadataSchemas[techniqueId].safeParse(parsed.data.metadata);
+  if (!metadata.success) {
+    res.status(400).json({ error: "Invalid technique metadata" });
+    return;
+  }
+  const user = await db.query.usersTable.findFirst({
+    where: eq(usersTable.clerkId, clerkId),
+  }) ?? (await db.insert(usersTable).values({ clerkId })
+    .onConflictDoNothing()
+    .returning())[0] ?? (await db.query.usersTable.findFirst({
+    where: eq(usersTable.clerkId, clerkId),
+  }))!;
+  res.json(await recordTechniqueCompletion(
+    user.id,
+    techniqueId,
+    metadata.data as TechniqueMetadata,
+    parsed.data.timezoneOffsetMinutes,
+    parsed.data.idempotencyKey,
+  ));
+});
+
+export default router;

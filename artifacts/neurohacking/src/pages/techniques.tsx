@@ -10,6 +10,7 @@ const TECHNIQUES = [
     color: '#F59E0B',
     bg: 'linear-gradient(135deg, rgba(245,158,11,0.22) 0%, rgba(245,158,11,0.08) 100%)',
     border: 'rgba(245,158,11,0.28)', glow: 'rgba(245,158,11,0.18)',
+    repeatable: false,
   },
   {
     id: 'T2', title: 'Нейровизуализация', desc: 'Визуализируй цели',
@@ -17,6 +18,7 @@ const TECHNIQUES = [
     color: '#C084FC',
     bg: 'linear-gradient(135deg, rgba(192,132,252,0.22) 0%, rgba(192,132,252,0.08) 100%)',
     border: 'rgba(192,132,252,0.28)', glow: 'rgba(192,132,252,0.18)',
+    repeatable: true,
   },
   {
     id: 'T3', title: 'Нейромедитация', desc: 'Квадратное дыхание',
@@ -24,6 +26,7 @@ const TECHNIQUES = [
     color: '#06B6D4',
     bg: 'linear-gradient(135deg, rgba(6,182,212,0.22) 0%, rgba(6,182,212,0.08) 100%)',
     border: 'rgba(6,182,212,0.28)', glow: 'rgba(6,182,212,0.18)',
+    repeatable: true,
   },
   {
     id: 'T4', title: 'Прогулка', desc: 'Мин. 20 минут',
@@ -31,6 +34,7 @@ const TECHNIQUES = [
     color: '#22C55E',
     bg: 'linear-gradient(135deg, rgba(34,197,94,0.22) 0%, rgba(34,197,94,0.08) 100%)',
     border: 'rgba(34,197,94,0.28)', glow: 'rgba(34,197,94,0.18)',
+    repeatable: true,
   },
   {
     id: 'T5', title: 'Хобби', desc: 'Любимое занятие',
@@ -38,6 +42,7 @@ const TECHNIQUES = [
     color: '#F43F5E',
     bg: 'linear-gradient(135deg, rgba(244,63,94,0.22) 0%, rgba(244,63,94,0.08) 100%)',
     border: 'rgba(244,63,94,0.28)', glow: 'rgba(244,63,94,0.18)',
+    repeatable: true,
   },
   {
     id: 'T6', title: 'Сон', desc: 'Завершай день',
@@ -45,6 +50,7 @@ const TECHNIQUES = [
     color: '#3B82F6',
     bg: 'linear-gradient(135deg, rgba(59,130,246,0.22) 0%, rgba(59,130,246,0.08) 100%)',
     border: 'rgba(59,130,246,0.28)', glow: 'rgba(59,130,246,0.18)',
+    repeatable: false,
   },
 ];
 
@@ -63,9 +69,10 @@ export default function Techniques() {
   const hasHighlight = isOnboarding && onboardingHighlight.length > 0;
   const doneCount = TECHNIQUES.filter(t => todayTechniques[t.id as keyof typeof todayTechniques]).length;
 
-  const handleTap = (route: string) => {
+  const handleTap = (route: string, isDone: boolean, repeatable: boolean) => {
     if (userState === 'new') return;
     if (isOnboarding) return;
+    if (isDone && !repeatable) return;
     setLocation(route);
   };
 
@@ -100,8 +107,8 @@ export default function Techniques() {
                 : { opacity: 1, y: 0, scale: isHighlighted ? 1.03 : 1 }
               }
               transition={{ delay: isOnboarding ? 0 : idx * 0.07, duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-              whileTap={isOnboarding ? {} : { scale: 1.04, boxShadow: `0 0 0 2px ${t.border}, 0 0 32px rgba(255,255,255,0.15)` }}
-              onClick={() => handleTap(t.route)}
+              whileTap={isOnboarding || isDone ? {} : { scale: 1.04, boxShadow: `0 0 0 2px ${t.border}, 0 0 32px rgba(255,255,255,0.15)` }}
+              onClick={() => handleTap(t.route, isDone, t.repeatable)}
               className="relative rounded-[20px] p-4 text-left flex flex-col overflow-hidden btn-shimmer"
               style={{
                 background: isDone
@@ -114,6 +121,7 @@ export default function Techniques() {
                   ? `0 4px 20px ${t.glow}, 0 1px 0 rgba(255,255,255,0.06) inset, 0 8px 32px rgba(0,0,0,0.68)`
                   : `0 8px 32px rgba(0,0,0,0.68), 0 1px 0 rgba(255,255,255,0.04) inset`,
                 minHeight: 130,
+                cursor: isDone ? 'default' : 'pointer',
               }}
             >
 

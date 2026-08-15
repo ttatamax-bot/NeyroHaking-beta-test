@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useLocation } from "wouter";
 import { useAppStore, computeStreakUpdate, getTodayKeysFromSource } from "@/lib/store";
 import { TechniqueIntroPanel } from "@/components/TechniqueIntroPanel";
@@ -23,9 +22,8 @@ function isTooEarlyForSleep(): boolean {
 }
 
 export default function Sleep() {
-  const { todayTechniques, updateState } = useAppStore();
+  const { todayTechniques, updateState, isSignedIn, completeTechnique } = useAppStore();
   const [, setLocation] = useLocation();
-  const [confirmed, setConfirmed] = useState(false);
 
   const activeTechniquesCount = Object.values(todayTechniques).filter(Boolean).length;
   const reward = getSleepReward();
@@ -33,10 +31,21 @@ export default function Sleep() {
   const tooEarly = isTooEarlyForSleep();
   const isTooLate = isTooLateForSleep();
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     if (tooEarly) return;
     const now = new Date();
     const nowISO = now.toISOString();
+    if (isSignedIn) {
+      try {
+        await completeTechnique("T6", {
+          sleepTime: nowISO,
+          timezoneOffsetMinutes: now.getTimezoneOffset(),
+        });
+      } catch {
+        window.alert("Не удалось сохранить результат. Проверь соединение и попробуй ещё раз.");
+      }
+      return;
+    }
 
     updateState(prev => {
       const streakUpdate = computeStreakUpdate(prev);
@@ -83,10 +92,9 @@ export default function Sleep() {
         lastCompletedDate: nowISO,
       };
     });
-    setConfirmed(true);
   };
 
-  if (isDone || confirmed) {
+  if (isDone) {
     return (
       <div className="flex flex-col h-[100dvh] items-center justify-center relative overflow-hidden">
         <div className="relative z-10 text-center px-8 w-full max-w-[390px]">
@@ -109,7 +117,7 @@ export default function Sleep() {
             )}
             <div className="flex justify-between items-center">
               <span className="body-s text-secondary">Техник выполнено</span>
-              <span className="title-s text-primary">{activeTechniquesCount + (confirmed ? 1 : 0)}/6</span>
+              <span className="title-s text-primary">{activeTechniquesCount}/6</span>
             </div>
           </div>
 

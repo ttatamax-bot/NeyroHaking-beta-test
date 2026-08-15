@@ -1,6 +1,15 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react';
+import { useUser } from '@clerk/react';
+import {
+  getServerState,
+  saveServerState,
+  migrateLegacyState,
+  completeTechnique as apiCompleteTechnique,
+  type CompleteTechniqueResult,
+  type ServerProfile,
+} from './api';
 
-export type UserState = 'new' | 'onboarding' | 'email' | 'active' | 'dayDone';
+export type UserState = 'new' | 'onboarding' | 'active' | 'dayDone';
 
 export interface Goal {
   id: string;
@@ -82,7 +91,6 @@ export interface PlannerTask {
   durationMin: number;
   completed: boolean;
   createdAt: string;
-  completedAt?: string;
 }
 
 export interface AppState {
@@ -99,6 +107,7 @@ export interface AppState {
   };
   lastCompletedDate: string | null;
   lastSessionDate: string | null;
+  todayTechniquesDate: string | null;
   goals: Goal[];
   scenes: Scene[];
   history: DayRecord[];
@@ -126,9 +135,10 @@ export interface AppState {
   coachingShown: string[];
   timerWarningShown: boolean;
   walkWarningShown: boolean;
+  profile?: ServerProfile | null;
 }
 
-const defaultState: AppState = {
+export const defaultState: AppState = {
   userState: 'new',
   onboardingStep: 0,
   onboardingHighlight: [],
@@ -142,6 +152,7 @@ const defaultState: AppState = {
   },
   lastCompletedDate: null,
   lastSessionDate: null,
+  todayTechniquesDate: null,
   goals: [],
   scenes: [],
   history: [],
@@ -169,42 +180,72 @@ const defaultState: AppState = {
   coachingShown: [],
   timerWarningShown: false,
   walkWarningShown: false,
+  profile: null,
 };
 
 type UpdateFn = Partial<AppState> | ((prev: AppState) => Partial<AppState>);
 
 interface AppContextType extends AppState {
+  isSignedIn: boolean;
   updateState: (updates: UpdateFn) => void;
+  completeTechnique: (techniqueId: string, metadata: Record<string, unknown>) => Promise<CompleteTechniqueResult>;
+  refreshProfile: () => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
 
-export function getTodayKeysFromSource(keysHistory: KeyEntry[], source: string): number {
-  const today = new Date().toDateString();
+export const TECHNIQUE_SOURCES: Record<string, string> = {
+  T1: 'Техника: Планер',
+  T2: 'Техника: Визуализация',
+  T3: 'Техника: Медитация',
+  T4: 'Техника: Прогулка',
+  T5: 'Техника: Хобби',
+  T6: 'Техника: Сон',
+};
+
+// The app day starts at 05:00 local time. Sleeping before 23:00 locks the app
+// until the next 05:00, so the "today" boundary must be 05:00, not midnight.
+export function getAppDayStart(date: Date = new Date()): Date {
+  const d = new Date(date);
+  if (d.getHours() < 5) {
+    d.setDate(d.getDate() - 1);
+  }
+  d.setHours(5, 0, 0, 0);
+  return d;
+}
+
+export function getAppDayKey(date: Date = new Date()): string {
+  return getAppDayStart(date).toDateString();
+}
+
+export function getTodayKeysFromSource(keysHistory: KeyEntry[], source: string, now: Date = new Date()): number {
+  const todayKey = getAppDayKey(now);
   return keysHistory
-    .filter(e => e.type === 'earn' && e.source === source && new Date(e.date).toDateString() === today)
+    .filter(e => e.type === 'earn' && e.source === source && getAppDayKey(new Date(e.date)) === todayKey)
     .reduce((sum, e) => sum + e.amount, 0);
 }
 
-export function getTodayPotentialFromSource(potentialHistory: ResourceEntry[], source: string): number {
-  const today = new Date().toDateString();
+export function getTodayPotentialFromSource(potentialHistory: ResourceEntry[], source: string, now: Date = new Date()): number {
+  const todayKey = getAppDayKey(now);
   return potentialHistory
-    .filter(e => e.source === source && new Date(e.date).toDateString() === today)
+    .filter(e => e.source === source && getAppDayKey(new Date(e.date)) === todayKey)
     .reduce((sum, e) => sum + e.amount, 0);
 }
 
-export function computeStreakUpdate(prev: AppState): Partial<AppState> {
-  const today = new Date().toDateString();
-  if (prev.lastCompletedDate && new Date(prev.lastCompletedDate).toDateString() === today) {
+export function computeStreakUpdate(prev: AppState, now: Date = new Date()): Partial<AppState> {
+  const todayStart = getAppDayStart(now);
+  const yesterdayStart = new Date(todayStart);
+  yesterdayStart.setDate(yesterdayStart.getDate() - 1);
+
+  const lastCompleted = prev.lastCompletedDate ? getAppDayStart(new Date(prev.lastCompletedDate)) : null;
+
+  if (lastCompleted && lastCompleted.getTime() === todayStart.getTime()) {
     return {};
   }
-  const yesterday = new Date();
-  yesterday.setDate(yesterday.getDate() - 1);
-  const wasYesterday = prev.lastCompletedDate &&
-    new Date(prev.lastCompletedDate).toDateString() === yesterday.toDateString();
-  const missedDays = prev.lastCompletedDate &&
-    new Date(prev.lastCompletedDate).toDateString() !== yesterday.toDateString() &&
-    new Date(prev.lastCompletedDate).toDateString() !== today;
+
+  const wasYesterday = lastCompleted && lastCompleted.getTime() === yesterdayStart.getTime();
+  const missedDays = lastCompleted && lastCompleted.getTime() < yesterdayStart.getTime();
+
   const newStreak = wasYesterday
     ? prev.streak + 1
     : missedDays
@@ -212,40 +253,253 @@ export function computeStreakUpdate(prev: AppState): Partial<AppState> {
       : !prev.lastCompletedDate
         ? 1
         : prev.streak;
-  const now = new Date().toISOString();
+
+  const nowISO = now.toISOString();
   return {
     streak: newStreak,
-    lastCompletedDate: now,
-    streakHistory: [{ date: now, value: newStreak }, ...prev.streakHistory],
+    lastCompletedDate: nowISO,
+    streakHistory: [{ date: nowISO, value: newStreak }, ...prev.streakHistory],
   };
+}
+
+export function applyServerCompletion(
+  prev: AppState,
+  techniqueId: string,
+  result: CompleteTechniqueResult,
+  metadata: Record<string, unknown>,
+): Partial<AppState> {
+  const now = new Date();
+  const nowISO = now.toISOString();
+  const source = TECHNIQUE_SOURCES[techniqueId] ?? techniqueId;
+  const updates: Partial<AppState> = {
+    keys: result.totalKeys,
+    potential: Math.min(100, result.totalPotential),
+    streak: result.newStreak,
+    todayTechniques: { ...prev.todayTechniques, [techniqueId]: true },
+    keysHistory: result.keys > 0
+      ? [{ date: nowISO, source, amount: result.keys, type: 'earn' as const }, ...prev.keysHistory]
+      : prev.keysHistory,
+    potentialHistory: result.potential > 0
+      ? [{ date: nowISO, source, amount: result.potential }, ...prev.potentialHistory]
+      : prev.potentialHistory,
+    activityLog: [
+      {
+        id: `act_${Date.now()}`,
+        date: nowISO,
+        type: (techniqueId === 'T1' ? 'planner' : techniqueId === 'T2' ? 'visualization' : techniqueId === 'T3' ? 'meditation' : techniqueId === 'T4' ? 'walk' : techniqueId === 'T5' ? 'hobby' : 'sleep') as ActivityEntry['type'],
+        keysGained: result.keys,
+        potentialGained: result.potential,
+        details: metadata as ActivityEntry['details'],
+      },
+      ...prev.activityLog,
+    ],
+    lastCompletedDate: nowISO,
+    streakHistory: [{ date: nowISO, value: result.newStreak }, ...prev.streakHistory],
+  };
+
+  if (techniqueId === 'T6') {
+    updates.userState = 'dayDone';
+    updates.history = [
+      {
+        date: nowISO,
+        potential: result.potential,
+        keys: result.keys,
+        streak: result.newStreak,
+        techniques: { ...prev.todayTechniques, T6: true },
+      },
+      ...prev.history,
+    ];
+  }
+
+  return updates;
 }
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<AppState>(() => {
     const saved = localStorage.getItem('neyro_state');
+    const todayKey = getAppDayKey();
     if (saved) {
       try {
-        return { ...defaultState, ...JSON.parse(saved) };
+        const parsed = JSON.parse(saved);
+         const merged = {
+           ...defaultState,
+           ...parsed,
+           userState: parsed.userState === 'email' ? 'active' : parsed.userState,
+         } as AppState;
+        const savedDate = merged.todayTechniquesDate
+          ? getAppDayKey(new Date(merged.todayTechniquesDate))
+          : null;
+        if (savedDate !== todayKey) {
+          return {
+            ...merged,
+            userState: merged.userState === 'dayDone' ? 'active' : merged.userState,
+            todayTechniques: { T1: false, T2: false, T3: false, T4: false, T5: false, T6: false },
+            todayTechniquesDate: getAppDayStart().toISOString(),
+          };
+        }
+        return merged;
       } catch {
         return defaultState;
       }
     }
-    return defaultState;
+    return { ...defaultState, todayTechniquesDate: getAppDayStart().toISOString() };
   });
 
+  const { isLoaded, isSignedIn, user } = useUser();
+  const userId = user?.id ?? null;
+  const hydratedUserRef = useRef<string | null>(null);
+  const hydrationRequestRef = useRef<string | null>(null);
+  const stateRef = useRef(state);
+  stateRef.current = state;
+
   useEffect(() => {
-    localStorage.setItem('neyro_state', JSON.stringify(state));
-  }, [state]);
+    // Once an account has hydrated, local storage is no longer an authority.
+    // It remains available only for an unauthenticated guest snapshot that
+    // can be migrated on the first successful sign-in.
+    if (!isSignedIn || !hydratedUserRef.current) {
+      localStorage.setItem('neyro_state', JSON.stringify(state));
+    }
+  }, [state, isSignedIn]);
+
+  useEffect(() => {
+    if (!isLoaded) return;
+    if (!isSignedIn || !userId) {
+      hydrationRequestRef.current = null;
+      hydratedUserRef.current = null;
+      const saved = localStorage.getItem('neyro_state');
+      if (saved) {
+        try {
+          setState({ ...defaultState, ...JSON.parse(saved) } as AppState);
+        } catch {
+          setState({ ...defaultState, todayTechniquesDate: getAppDayStart().toISOString() });
+        }
+      }
+      return;
+    }
+    if (hydratedUserRef.current === userId || hydrationRequestRef.current === userId) return;
+    hydrationRequestRef.current = userId;
+    const guestSnapshot = stateRef.current;
+    getServerState()
+      .then(({ state: serverState, profile }) => {
+        if (hydrationRequestRef.current !== userId) return;
+        const applyServer = (nextState: Record<string, unknown>, nextProfile: ServerProfile | null) => {
+          hydratedUserRef.current = userId;
+          setState(prev => ({
+            ...prev,
+            ...(nextState as Partial<AppState>),
+            ...(nextProfile
+              ? {
+                  keys: nextProfile.totalKeys,
+                  potential: Math.min(100, nextProfile.totalPotential),
+                  streak: nextProfile.currentStreak,
+                  profile: nextProfile,
+                }
+              : {}),
+          }));
+        };
+        if (serverState !== null && Object.keys(serverState).length > 0) {
+          applyServer(serverState, profile);
+          localStorage.removeItem('neyro_legacy_migration_key');
+          return;
+        }
+
+        const existingMigrationKey = localStorage.getItem('neyro_legacy_migration_key');
+        const migrationKey = existingMigrationKey ?? `legacy:${crypto.randomUUID()}`;
+        localStorage.setItem('neyro_legacy_migration_key', migrationKey);
+        migrateLegacyState({
+          migrationKey,
+          state: JSON.parse(JSON.stringify(guestSnapshot)) as Record<string, unknown>,
+        })
+          .then(({ state: migratedState, profile: migratedProfile }) => {
+            localStorage.removeItem('neyro_state');
+            applyServer(migratedState, migratedProfile);
+          })
+          .catch(() => {
+            // Do not mark hydration complete when the server is unavailable:
+            // a retry after the next auth/network event can still migrate.
+            hydrationRequestRef.current = null;
+          });
+      })
+      .catch(() => { hydrationRequestRef.current = null; });
+  }, [isLoaded, isSignedIn, userId]);
+
+  useEffect(() => {
+    if (!isSignedIn || !userId || hydratedUserRef.current !== userId) return;
+    const id = setTimeout(() => {
+      saveServerState(stateRef.current)
+        .then(({ state: savedState, profile }) => {
+          if (hydratedUserRef.current !== userId) return;
+          setState(prev => ({
+            ...prev,
+            ...(savedState as Partial<AppState>),
+            ...(profile
+              ? {
+                  keys: profile.totalKeys,
+                  potential: Math.min(100, profile.totalPotential),
+                  streak: profile.currentStreak,
+                  profile,
+                }
+              : {}),
+          }));
+        })
+        .catch(() => {});
+    }, 2000);
+    return () => clearTimeout(id);
+  }, [state, isSignedIn, userId]);
 
   const updateState = (updates: UpdateFn) => {
     setState(prev => {
       const resolved = typeof updates === 'function' ? updates(prev) : updates;
-      return { ...prev, ...resolved };
+      if (!isSignedIn || !hydratedUserRef.current) return { ...prev, ...resolved };
+      const safeUpdates = { ...resolved };
+      for (const key of [
+        'keys', 'potential', 'streak', 'lastCompletedDate', 'todayTechniques',
+        'todayTechniquesDate', 'keysHistory', 'potentialHistory', 'streakHistory',
+        'activityLog', 'history', 'unlockedArticles', 'purchaseHistory',
+        'firstGoalBonusGiven',
+      ] as const) {
+        delete safeUpdates[key];
+      }
+      return { ...prev, ...safeUpdates };
     });
   };
 
+  const completeTechnique = useCallback(async (techniqueId: string, metadata: Record<string, unknown>) => {
+    const clientDate = getAppDayStart().toISOString().slice(0, 10);
+    const idempotencyKey = `${techniqueId}:${Date.now()}:${Math.random().toString(36).slice(2)}`;
+    const result = await apiCompleteTechnique({
+      techniqueId,
+      clientDate,
+      idempotencyKey,
+      timezoneOffsetMinutes: new Date().getTimezoneOffset(),
+      metadata,
+    });
+    setState(prev => {
+      if (!isSignedIn || hydratedUserRef.current !== userId) return prev;
+      const updates = applyServerCompletion(prev, techniqueId, result, metadata);
+      return { ...prev, ...updates };
+    });
+    return result;
+  }, [isSignedIn, userId]);
+
+  const refreshProfile = useCallback(async () => {
+    // /me also returns entitlements, so a purchase is visible immediately on
+    // this device and not only after the next full hydration.
+    const { state: serverState, profile } = await getServerState();
+    if (profile) {
+      setState(prev => ({
+        ...prev,
+        ...(serverState as Partial<AppState> | null),
+        keys: profile.totalKeys,
+        potential: Math.min(100, profile.totalPotential),
+        streak: profile.currentStreak,
+        profile,
+      }));
+    }
+  }, []);
+
   return (
-    <AppContext.Provider value={{ ...state, updateState }}>
+    <AppContext.Provider value={{ ...state, isSignedIn: Boolean(isSignedIn), updateState, completeTechnique, refreshProfile }}>
       {children}
     </AppContext.Provider>
   );

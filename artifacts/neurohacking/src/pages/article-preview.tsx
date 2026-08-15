@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useLocation, useParams } from "wouter";
 import { useAppStore } from "@/lib/store";
+import { purchaseArticle, ApiError } from "@/lib/api";
 import { ScreenTransition } from "@/components/ScreenTransition";
 import { BackButton } from "@/components/BackButton";
 import { Lock, Key } from "lucide-react";
@@ -48,8 +49,9 @@ function formatKeys(n: number) {
 export default function ArticlePreview() {
   const { id } = useParams<{ id: string }>();
   const [, setLocation] = useLocation();
-  const { keys, unlockedArticles, readArticles, updateState } = useAppStore();
+  const { keys, unlockedArticles, readArticles, updateState, isSignedIn, refreshProfile } = useAppStore();
   const [toastMsg, setToastMsg] = useState<string | null>(null);
+  const [purchasing, setPurchasing] = useState(false);
 
   const article = ARTICLES_DATA[id || ''];
   if (!article) return <div className="p-4 pt-16 text-primary">Статья не найдена</div>;
@@ -59,20 +61,38 @@ export default function ArticlePreview() {
   const isRead     = readArticles.includes(id || '');
   const canAfford  = keys >= article.cost;
 
-  const handleAction = () => {
+  const handleAction = async () => {
     if (isUnlocked) {
       setLocation(`/article/${id}/read`);
       return;
     }
     if (canAfford) {
-      updateState(prev => ({
-        keys: prev.keys - article.cost,
-        unlockedArticles: [...prev.unlockedArticles, id!],
-        keysHistory: [
-          { date: new Date().toISOString(), source: `Статья: ${article.title}`, amount: article.cost, type: 'spend' as const },
-          ...prev.keysHistory,
-        ],
-      }));
+      if (purchasing) return;
+      setPurchasing(true);
+      try {
+        if (isSignedIn) {
+          await purchaseArticle(id!);
+          await refreshProfile();
+          updateState(prev => ({ unlockedArticles: [...new Set([...prev.unlockedArticles, id!])] }));
+        } else {
+          updateState(prev => ({
+            keys: prev.keys - article.cost,
+            unlockedArticles: [...prev.unlockedArticles, id!],
+            keysHistory: [
+              { date: new Date().toISOString(), source: `Статья: ${article.title}`, amount: article.cost, type: 'spend' as const },
+              ...prev.keysHistory,
+            ],
+          }));
+        }
+      } catch (error) {
+        setToastMsg(error instanceof ApiError && error.status === 409
+          ? "Недостаточно ключей. Выполняй техники — зарабатывай ключи."
+          : "Не удалось открыть статью. Проверь соединение и попробуй ещё раз.");
+        setTimeout(() => setToastMsg(null), 3000);
+        return;
+      } finally {
+        setPurchasing(false);
+      }
       setLocation(`/article/${id}/read`);
     } else {
       setToastMsg(`Нужно ${formatKeys(article.cost)} ключей. Выполняй техники — зарабатывай ключи.`);

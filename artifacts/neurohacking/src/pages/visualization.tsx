@@ -134,7 +134,7 @@ const MIN_CHARS = 20;
 type Phase = 'goal-select' | 'questions' | 'timer';
 
 export default function Visualization() {
-  const { goals, todayTechniques, keysHistory, updateState, timerWarningShown } = useAppStore();
+  const { goals, todayTechniques, keysHistory, updateState, timerWarningShown, isSignedIn, completeTechnique } = useAppStore();
   const [, setLocation] = useLocation();
 
   const todayEarned = getTodayKeysFromSource(keysHistory, SOURCE);
@@ -167,10 +167,23 @@ export default function Visualization() {
     if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
   }, []);
 
-  const doComplete = useCallback((answers: string[]) => {
+  const doComplete = useCallback(async (answers: string[]) => {
     if (completedRef.current) return;
     completedRef.current = true;
     clearTimer();
+    if (isSignedIn) {
+      try {
+        await completeTechnique("T2", {
+          goalId: selectedGoal?.id ?? "default",
+          answers,
+        });
+        setCompleted(true);
+      } catch {
+        completedRef.current = false;
+        window.alert("Не удалось сохранить результат. Проверь соединение и попробуй ещё раз.");
+      }
+      return;
+    }
     const now = new Date().toISOString();
     const keysToAward = isMaxedOut ? 0 : KEYS_REWARD;
     updateState(prev => {
@@ -191,7 +204,7 @@ export default function Visualization() {
       };
     });
     setCompleted(true);
-  }, [clearTimer, updateState, isMaxedOut, selectedGoal]);
+  }, [clearTimer, updateState, isMaxedOut, selectedGoal, isSignedIn, completeTechnique]);
 
   useEffect(() => {
     if (phase !== 'timer' || completed) return;

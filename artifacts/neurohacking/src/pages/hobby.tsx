@@ -6,7 +6,6 @@ import { MaximInfoModal } from "@/components/MaximInfoModal";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, Plus, X, Pause, Play, Brain } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
 
 const DURATION_OPTIONS = [
   { label: "30 мин", seconds: 30  * 60, keys: 10, potential: 0.1  },
@@ -29,7 +28,7 @@ const MAX_KEYS = 60;
 const SOURCE = 'Техника: Хобби';
 
 export default function Hobby() {
-  const { hobbyList, hobbyChallenges, updateState, keysHistory, potentialHistory, todayTechniques, attentionRemindersEnabled, attentionReminderInterval, timerWarningShown } = useAppStore();
+  const { hobbyList, hobbyChallenges, updateState, keysHistory, potentialHistory, todayTechniques, attentionRemindersEnabled, attentionReminderInterval, timerWarningShown, isSignedIn, completeTechnique } = useAppStore();
   const [, setLocation] = useLocation();
 
   const todayEarned = getTodayKeysFromSource(keysHistory, SOURCE);
@@ -73,13 +72,28 @@ export default function Hobby() {
   const reminderIntervalRef = useRef(attentionReminderInterval);
   reminderIntervalRef.current = attentionReminderInterval;
 
-  const finalizeSession = useCallback((dur: typeof DURATION_OPTIONS[0], challengeResult?: 'done' | 'partial' | 'none') => {
+  const finalizeSession = useCallback(async (dur: typeof DURATION_OPTIONS[0], challengeResult?: 'done' | 'partial' | 'none') => {
     const now = new Date().toISOString();
     const hobbyName = selectedHobby ?? '';
     const activeChallengeText = (hobbyChallenges || {})[hobbyName];
     let challengeBonus = 0;
     if (challengeResult === 'done') challengeBonus = 0.2;
     else if (challengeResult === 'partial') challengeBonus = 0.1;
+    if (isSignedIn) {
+      try {
+        const result = await completeTechnique("T5", {
+          hobbyName,
+          durationLabel: dur.label,
+          challengeResult: challengeResult ?? "none",
+        });
+        setCompletedKeys(result.keys);
+        setChallengeQuestion(false);
+        pendingSessionRef.current = null;
+      } catch {
+        window.alert("Не удалось сохранить результат. Проверь соединение и попробуй ещё раз.");
+      }
+      return;
+    }
     updateState(prev => {
       const keysActual = Math.min(dur.keys, Math.max(0, MAX_KEYS - getTodayKeysFromSource(prev.keysHistory, SOURCE)));
       const prevTodayPot = getTodayPotentialFromSource(prev.potentialHistory, SOURCE);
@@ -106,7 +120,7 @@ export default function Hobby() {
     setCompletedKeys(dur.keys);
     setChallengeQuestion(false);
     pendingSessionRef.current = null;
-  }, [updateState, selectedHobby, hobbyChallenges]);
+  }, [updateState, selectedHobby, hobbyChallenges, isSignedIn, completeTechnique]);
 
   const doComplete = useCallback((dur: typeof DURATION_OPTIONS[0]) => {
     if (completedRef.current) return;
@@ -412,23 +426,6 @@ export default function Hobby() {
                       </div>
                     </button>
                   ))}
-                </div>
-                <div className="rounded-[14px] p-4" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
-                  <div className="flex justify-between items-center mb-3">
-                    <span className="body-s text-primary">Напоминания во время сессии</span>
-                    <Switch checked={attentionRemindersEnabled} onCheckedChange={c => updateState({ attentionRemindersEnabled: c })} className="data-[state=checked]:bg-[#F59E0B] transition-colors" />
-                  </div>
-                  {attentionRemindersEnabled && (
-                    <div className="flex flex-wrap gap-1.5">
-                      {REMINDER_INTERVALS.map(opt => (
-                        <button key={opt.seconds} onClick={() => updateState({ attentionReminderInterval: opt.seconds })}
-                          className="px-2.5 py-1 rounded-[8px] caption transition-all"
-                          style={{ background: attentionReminderInterval === opt.seconds ? 'rgba(245,158,11,0.18)' : 'rgba(255,255,255,0.06)', border: attentionReminderInterval === opt.seconds ? '1px solid rgba(245,158,11,0.4)' : '1px solid rgba(255,255,255,0.1)', color: attentionReminderInterval === opt.seconds ? '#F59E0B' : 'var(--text-tertiary)' }}>
-                          {opt.label}
-                        </button>
-                      ))}
-                    </div>
-                  )}
                 </div>
               </>
             )}

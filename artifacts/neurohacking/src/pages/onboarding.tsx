@@ -28,7 +28,7 @@ export default function Onboarding() {
     if (step < steps.length - 1) {
       setStep(step + 1);
     } else {
-      setLocation("/onboarding/email");
+      setLocation("/techniques");
     }
   };
 

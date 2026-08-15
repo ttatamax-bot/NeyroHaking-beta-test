@@ -244,7 +244,7 @@ export default function Goals() {
                     </button>
                   </div>
                   {g.description ? (
-                    <p className="body-s text-secondary mb-3">{g.description}</p>
+                    <p className="body-s text-secondary mb-3 whitespace-pre-wrap">{g.description}</p>
                   ) : null}
                   <span className="caption text-tertiary block mb-4">
                     {new Date(g.createdAt).toLocaleDateString('ru-RU')}

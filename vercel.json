@@ -1,20 +1,10 @@
 {
-  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "installCommand": "pnpm install --frozen-lockfile",
   "buildCommand": "pnpm --filter @workspace/neurohacking run build",
   "outputDirectory": "artifacts/neurohacking/dist/public",
-  "installCommand": "pnpm install",
-  "framework": null,
   "rewrites": [
     {
-      "source": "/sounds/:path*",
-      "destination": "/sounds/:path*"
-    },
-    {
-      "source": "/sounds/:path*/",
-      "destination": "/sounds/:path*"
-    },
-    {
-      "source": "/(.*)",
+      "source": "/((?!api/).*)",
       "destination": "/index.html"
     }
   ]

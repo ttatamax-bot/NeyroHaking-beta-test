@@ -4,6 +4,7 @@ import { ScreenTransition } from "@/components/ScreenTransition";
 import { BackButton } from "@/components/BackButton";
 import { Users, Key } from "lucide-react";
 import { motion } from "framer-motion";
+import { purchaseService, ApiError } from "@/lib/api";
 
 const COST_KEYS = 100000;
 const COST_RUB = 9999;
@@ -11,7 +12,7 @@ const TG_KEYS = "https://t.me/Mtatarinov?text=%D0%9F%D1%80%D0%B8%D0%B2%D0%B5%D1%
 const TG_RUB = "https://t.me/Mtatarinov?text=%D0%9F%D1%80%D0%B8%D0%B2%D0%B5%D1%82.%20%D0%A5%D0%BE%D1%87%D1%83%20%D1%83%D0%B7%D0%BD%D0%B0%D1%82%D1%8C%20%D0%BF%D0%BE%D0%B4%D1%80%D0%BE%D0%B1%D0%BD%D0%B5%D0%B5%20%D0%BE%20%D0%BB%D0%B8%D1%87%D0%BD%D0%BE%D0%BC%20%D0%B2%D0%B5%D0%B4%D0%B5%D0%BD%D0%B8%D0%B8.";
 
 export default function Mentoring() {
-  const { keys, updateState } = useAppStore();
+  const { keys, updateState, isSignedIn, refreshProfile } = useAppStore();
   const [processing, setProcessing] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
@@ -20,7 +21,7 @@ export default function Mentoring() {
     setTimeout(() => setToast(null), 3000);
   };
 
-  const handlePayKeys = () => {
+  const handlePayKeys = async () => {
     if (processing) return;
     if (keys < COST_KEYS) {
       showToast("Недостаточно ключей для покупки");
@@ -28,17 +29,28 @@ export default function Mentoring() {
     }
     setProcessing(true);
     const id = `purchase_${Date.now()}_${Math.random().toString(36).slice(2,7)}`;
-    updateState(prev => ({
-      keys: prev.keys - COST_KEYS,
-      keysHistory: [
-        { date: new Date().toISOString(), source: 'Личное ведение', amount: COST_KEYS, type: 'spend' as const },
-        ...prev.keysHistory,
-      ],
-      purchaseHistory: [
-        { id, type: 'mentoring', method: 'keys', amount: COST_KEYS, date: new Date().toISOString() },
-        ...prev.purchaseHistory,
-      ],
-    }));
+    try {
+      if (isSignedIn) {
+        await purchaseService("mentoring", id);
+        await refreshProfile();
+      } else {
+        updateState(prev => ({
+          keys: prev.keys - COST_KEYS,
+          keysHistory: [
+            { date: new Date().toISOString(), source: 'Личное ведение', amount: COST_KEYS, type: 'spend' as const },
+            ...prev.keysHistory,
+          ],
+          purchaseHistory: [
+            { id, type: 'mentoring', method: 'keys', amount: COST_KEYS, date: new Date().toISOString() },
+            ...prev.purchaseHistory,
+          ],
+        }));
+      }
+    } catch (error) {
+      showToast(error instanceof ApiError && error.status === 409 ? "Недостаточно ключей для покупки" : "Не удалось провести оплату");
+      setProcessing(false);
+      return;
+    }
     window.open(TG_KEYS, '_blank');
   };
 

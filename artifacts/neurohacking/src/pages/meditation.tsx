@@ -40,7 +40,7 @@ const BALL_SCALE: Record<number, { scale: number[], times?: number[] }> = {
 };
 
 export default function Meditation() {
-  const { keysHistory, potentialHistory, updateState, timerWarningShown } = useAppStore();
+  const { keysHistory, potentialHistory, updateState, timerWarningShown, isSignedIn, completeTechnique } = useAppStore();
   const [, setLocation] = useLocation();
   const todayEarned = getTodayKeysFromSource(keysHistory, SOURCE);
   const isMaxedOut = todayEarned >= MAX_KEYS;
@@ -71,10 +71,21 @@ export default function Meditation() {
     if (phaseCountdownRef.current) { clearInterval(phaseCountdownRef.current); phaseCountdownRef.current = null; }
   }, []);
 
-  const doComplete = useCallback((dur: typeof DURATION_OPTIONS[0]) => {
+  const doComplete = useCallback(async (dur: typeof DURATION_OPTIONS[0]) => {
     if (completedRef.current) return;
     completedRef.current = true;
     clearAll();
+    if (isSignedIn) {
+      try {
+        const result = await completeTechnique("T3", { durationLabel: dur.label });
+        setCompletedKeys(result.keys);
+        setRunning(false);
+      } catch {
+        completedRef.current = false;
+        window.alert("Не удалось сохранить результат. Проверь соединение и попробуй ещё раз.");
+      }
+      return;
+    }
     const now = new Date().toISOString();
     updateState(prev => {
       const keysActual = Math.min(dur.keys, Math.max(0, MAX_KEYS - getTodayKeysFromSource(prev.keysHistory, SOURCE)));
@@ -99,7 +110,7 @@ export default function Meditation() {
     });
     setCompletedKeys(dur.keys);
     setRunning(false);
-  }, [clearAll, updateState]);
+  }, [clearAll, updateState, isSignedIn, completeTechnique]);
 
   const doStart = (dur: typeof DURATION_OPTIONS[0]) => {
     completedRef.current = false;

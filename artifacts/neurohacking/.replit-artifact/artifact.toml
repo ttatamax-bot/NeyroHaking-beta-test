@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "НейроХакинг"
+description = "Приложение для ежедневных нейротехник с регистрацией, синхронизацией истории, серверной проверкой наград и защитой от повторного начисления ключей."
+version = "1.0.0"
+id = "artifacts/neurohacking"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 23158
+
+[services.development]
+run = "pnpm --filter @workspace/neurohacking run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/neurohacking", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/neurohacking/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "23158"
+BASE_PATH = "/"
