@@ -16,7 +16,7 @@ import {
   rewardForMetadata,
   type TechniqueId,
   type TechniqueMetadata,
-} from "./techniqueRewards";
+} from "./techniqueRewards.js";
 
 type JsonObject = Record<string, unknown>;
 type LegacyActivity = {

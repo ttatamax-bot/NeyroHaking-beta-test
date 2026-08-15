@@ -1,7 +1,7 @@
 import { Router } from "express";
-import healthRouter from "./health";
-import meRouter from "./me";
-import techniquesRouter from "./techniques";
+import healthRouter from "./health.js";
+import meRouter from "./me.js";
+import techniquesRouter from "./techniques.js";
 
 const router = Router();
 router.use(healthRouter);

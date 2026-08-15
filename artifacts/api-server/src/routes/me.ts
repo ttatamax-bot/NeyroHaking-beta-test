@@ -15,7 +15,7 @@ import {
 import {
   migrateLegacyState,
   stripNonAuthoritativeState,
-} from "../services/legacyMigration";
+} from "../services/legacyMigration.js";
 
 const router = Router();
 

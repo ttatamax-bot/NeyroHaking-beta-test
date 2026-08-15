@@ -8,7 +8,7 @@ import {
   recordTechniqueCompletion,
   type TechniqueId,
   type TechniqueMetadata,
-} from "../services/techniqueRewards";
+} from "../services/techniqueRewards.js";
 
 const router = Router();
 
