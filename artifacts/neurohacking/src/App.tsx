@@ -36,6 +36,7 @@ import PrivacyPolicy from "@/pages/privacy-policy";
 import MyProgress from "@/pages/my-progress";
 import SignInPage from "@/pages/sign-in";
 import SignUpPage from "@/pages/sign-up";
+import EmailLinkVerifyPage from "@/pages/email-link-verify";
 import ProfileSetup from "@/pages/profile-setup";
 
 const queryClient = new QueryClient();
@@ -631,6 +632,8 @@ function Router() {
         <Route path="/technique/sleep" component={Sleep} />
         <Route path="/privacy-policy" component={PrivacyPolicy} />
         <Route path="/my-progress" component={MyProgress} />
+        <Route path="/sign-in/verify" component={EmailLinkVerifyPage} />
+        <Route path="/sign-up/verify" component={EmailLinkVerifyPage} />
         <Route path="/sign-in/*?" component={SignInPage} />
         <Route path="/sign-up/*?" component={SignUpPage} />
         <Route>

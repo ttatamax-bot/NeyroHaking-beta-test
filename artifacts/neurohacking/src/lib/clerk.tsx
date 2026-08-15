@@ -105,6 +105,7 @@ export function ClerkProviderWithRoutes({ children }: { children: ReactNode }) {
       signInUrl={`${basePath}/sign-in`}
       signUpUrl={`${basePath}/sign-up`}
       localization={{
+        locale: "ru-RU",
         signIn: {
           start: {
             title: "Вход в НейроХакинг",
