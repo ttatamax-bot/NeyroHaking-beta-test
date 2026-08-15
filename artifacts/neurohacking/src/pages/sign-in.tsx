@@ -29,11 +29,39 @@ function isEmailCodeFactor(f: { strategy: string }): f is { strategy: "email_cod
   return f.strategy === "email_code";
 }
 
+type CodeSecondFactor =
+  | { strategy: "email_code"; emailAddressId: string }
+  | { strategy: "phone_code"; phoneNumberId: string };
+
+function isCodeSecondFactor(
+  f: { strategy: string; emailAddressId?: string; phoneNumberId?: string },
+): f is CodeSecondFactor {
+  return (
+    (f.strategy === "email_code" && Boolean(f.emailAddressId)) ||
+    (f.strategy === "phone_code" && Boolean(f.phoneNumberId))
+  );
+}
+
+function incompleteSignInMessage(status: string | null): string {
+  switch (status) {
+    case "needs_second_factor":
+      return "Первый код принят. Для входа нужен второй код.";
+    case "needs_client_trust":
+      return "Нужно подтвердить вход на новом устройстве. Запрашиваю дополнительный код.";
+    case "needs_protect_check":
+      return "Clerk запросил дополнительную проверку безопасности. Обнови страницу и попробуй снова.";
+    default:
+      return "Код принят не полностью. Попробуй запросить новый код.";
+  }
+}
+
 export default function SignInPage() {
   const { client, setActive } = useClerk();
   const { isLoaded: authLoaded } = useAuth();
   const [, setLocation] = useLocation();
   const [step, setStep] = useState<EmailCodeAuthStep>("email");
+  const [isSecondFactor, setIsSecondFactor] = useState(false);
+  const [secondFactor, setSecondFactor] = useState<CodeSecondFactor | null>(null);
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
@@ -68,6 +96,8 @@ export default function SignInPage() {
         emailAddressId: emailFactor.emailAddressId,
       }));
       setCode("");
+      setIsSecondFactor(false);
+      setSecondFactor(null);
       setStep("code");
     } catch (err) {
       setError(getClerkErrorMessage(err));
@@ -86,18 +116,69 @@ export default function SignInPage() {
     setError(null);
     try {
       const result = await withAuthTimeout(
-        client.signIn.attemptFirstFactor({ strategy: "email_code", code: code.trim() }),
+        isSecondFactor && secondFactor
+          ? client.signIn.attemptSecondFactor({ strategy: secondFactor.strategy, code: code.trim() })
+          : client.signIn.attemptFirstFactor({ strategy: "email_code", code: code.trim() }),
       );
-      if (result.status !== "complete" || !result.createdSessionId) {
-        throw new Error("Код принят не полностью. Попробуй запросить новый код.");
+      if (result.status === "complete" && result.createdSessionId) {
+        await withAuthTimeout(setActive({ session: result.createdSessionId }));
+        setLocation("/");
+        return;
       }
-      await withAuthTimeout(setActive({ session: result.createdSessionId }));
-      setLocation("/");
+
+      if (!isSecondFactor && (result.status === "needs_second_factor" || result.status === "needs_client_trust")) {
+        const availableFactor = result.supportedSecondFactors?.find((factor) =>
+          isCodeSecondFactor(factor as { strategy: string; emailAddressId?: string; phoneNumberId?: string }),
+        ) as CodeSecondFactor | undefined;
+        if (availableFactor) {
+          if (availableFactor.strategy === "email_code") {
+            await withAuthTimeout(client.signIn.prepareSecondFactor({
+              strategy: "email_code",
+              emailAddressId: availableFactor.emailAddressId,
+            }));
+          } else {
+            await withAuthTimeout(client.signIn.prepareSecondFactor({
+              strategy: "phone_code",
+              phoneNumberId: availableFactor.phoneNumberId,
+            }));
+          }
+          setSecondFactor(availableFactor);
+          setIsSecondFactor(true);
+          setCode("");
+          setError(null);
+          return;
+        }
+      }
+
+      throw new Error(incompleteSignInMessage(result.status));
     } catch (err) {
       setError(getClerkErrorMessage(err));
     } finally {
       setLoading(false);
     }
+  };
+
+  const resendCode = async () => {
+    if (isSecondFactor && secondFactor) {
+      if (!client || !authLoaded) return;
+      setLoading(true);
+      setError(null);
+      try {
+        await withAuthTimeout(client.signIn.prepareSecondFactor({
+          strategy: secondFactor.strategy,
+          ...(secondFactor.strategy === "email_code"
+            ? { emailAddressId: secondFactor.emailAddressId }
+            : { phoneNumberId: secondFactor.phoneNumberId }),
+        }));
+        setCode("");
+      } catch (err) {
+        setError(getClerkErrorMessage(err));
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+    await sendEmailCode();
   };
 
   const submit = step === "email" ? sendEmailCode : verifyCode;
@@ -107,6 +188,7 @@ export default function SignInPage() {
       <EmailCodeAuthCard
         mode="sign-in"
         step={step}
+        isSecondFactor={isSecondFactor}
         email={email}
         code={code}
         loading={loading}
@@ -115,8 +197,14 @@ export default function SignInPage() {
         onEmailChange={setEmail}
         onCodeChange={setCode}
         onSubmit={submit}
-        onResend={sendEmailCode}
-        onBack={() => { setStep("email"); setCode(""); setError(null); }}
+        onResend={resendCode}
+        onBack={() => {
+          setStep("email");
+          setIsSecondFactor(false);
+          setSecondFactor(null);
+          setCode("");
+          setError(null);
+        }}
         onSwitchMode={() => setLocation("/sign-up")}
       />
     </div>

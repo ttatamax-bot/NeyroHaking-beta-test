@@ -7,6 +7,7 @@ export type EmailCodeAuthMode = "sign-in" | "sign-up";
 interface EmailCodeAuthCardProps {
   mode: EmailCodeAuthMode;
   step: EmailCodeAuthStep;
+  isSecondFactor?: boolean;
   email: string;
   code: string;
   loading: boolean;
@@ -23,6 +24,7 @@ interface EmailCodeAuthCardProps {
 export function EmailCodeAuthCard({
   mode,
   step,
+  isSecondFactor = false,
   email,
   code,
   loading,
@@ -63,7 +65,9 @@ export function EmailCodeAuthCard({
           </h1>
           <p className="body-s mt-2 max-w-[290px] text-secondary">
             {isCodeStep
-              ? <>Мы отправили код на <strong className="text-primary">{email}</strong>.</>
+              ? isSecondFactor
+                ? <>Первый код принят. Мы отправили ещё один код на <strong className="text-primary">{email}</strong>.</>
+                : <>Мы отправили код на <strong className="text-primary">{email}</strong>.</>
               : isSignUp
                 ? "Введи email — мы отправим код для подтверждения аккаунта."
                 : "Введи email — мы отправим код для входа."
