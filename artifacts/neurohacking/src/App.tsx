@@ -3,6 +3,11 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppProvider, useAppStore, AppState, getAppDayStart, getAppDayKey } from "@/lib/store";
 import { ClerkProviderWithRoutes, ClerkQueryClientCacheInvalidator, useAuthInfo } from "@/lib/clerk";
+import {
+  clearAuthTransition,
+  getAuthTransitionTimeoutMs,
+  getPendingAuthTransition,
+} from "@/lib/auth-transition";
 import { NavBar } from "@/components/NavBar";
 import { TopBar } from "@/components/TopBar";
 import { useEffect, useRef, useState } from "react";
@@ -379,6 +384,7 @@ function AppLogic() {
   storeRef.current = store;
   // Prevent duplicate redirect after we already decided to navigate away.
   const redirectingRef = useRef(false);
+  const [, setAuthTransitionTick] = useState(0);
 
   useEffect(() => {
     document.documentElement.classList.add('dark');
@@ -389,7 +395,24 @@ function AppLogic() {
   // completed technique; returning guests with existing progress see sign-up
   // on the next app visit.
   useEffect(() => {
-    if (!isAuthLoaded || isSignedIn || redirectingRef.current) return;
+    if (!isAuthLoaded || redirectingRef.current) return undefined;
+
+    // setActive() updates Clerk's session cookie before React observes
+    // isSignedIn. During that short window, never mistake the old guest
+    // snapshot for an unauthenticated user and redirect back to sign-up.
+    if (getPendingAuthTransition()) {
+      if (isSignedIn) {
+        clearAuthTransition();
+        return undefined;
+      }
+      const timeout = window.setTimeout(() => {
+        clearAuthTransition();
+        setAuthTransitionTick((tick) => tick + 1);
+      }, getAuthTransitionTimeoutMs());
+      return () => window.clearTimeout(timeout);
+    }
+
+    if (isSignedIn) return undefined;
 
     const basePath = import.meta.env.BASE_URL.replace(/\/$/, '');
     const signUpPath = `${basePath}/sign-up`;
@@ -397,8 +420,9 @@ function AppLogic() {
     // Don't redirect when already on an auth page.
     if (
       location.startsWith('/sign-in') ||
-      location.startsWith('/sign-up')
-    ) return;
+      location.startsWith('/sign-up') ||
+      location.startsWith('/profile-setup')
+    ) return undefined;
 
     // Check in-memory store first (covers new guests right after completing
     // their first technique), then fall back to the persisted snapshot (covers
@@ -411,6 +435,7 @@ function AppLogic() {
       redirectingRef.current = true;
       window.setTimeout(() => window.location.assign(signUpPath), 50);
     }
+    return undefined;
   }, [
     isAuthLoaded,
     isSignedIn,
