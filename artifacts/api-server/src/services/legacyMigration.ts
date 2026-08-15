@@ -95,6 +95,32 @@ export function stripNonAuthoritativeState(state: JsonObject): JsonObject {
   );
 }
 
+function hasMeaningfulState(state: JsonObject): boolean {
+  return (
+    (finiteNonNegative(state.keys) ?? 0) > 0 ||
+    (finiteNonNegative(state.potential) ?? 0) > 0 ||
+    (finiteNonNegative(state.streak) ?? 0) > 0 ||
+    Boolean(state.lastCompletedDate) ||
+    Boolean(state.lastSessionDate) ||
+    state.userState === "active" ||
+    state.userState === "dayDone" ||
+    state.onboardingComplete === true ||
+    (Array.isArray(state.activityLog) && state.activityLog.length > 0) ||
+    (Array.isArray(state.history) && state.history.length > 0) ||
+    (Array.isArray(state.goals) && state.goals.length > 0) ||
+    (Array.isArray(state.scenes) && state.scenes.length > 0) ||
+    (Array.isArray(state.keysHistory) && state.keysHistory.length > 0) ||
+    (Array.isArray(state.potentialHistory) && state.potentialHistory.length > 0) ||
+    (Array.isArray(state.streakHistory) && state.streakHistory.length > 0) ||
+    (Array.isArray(state.unlockedArticles) &&
+      state.unlockedArticles.some((article) => article !== "A1")) ||
+    (Array.isArray(state.readArticles) && state.readArticles.length > 0) ||
+    (Array.isArray(state.readNews) && state.readNews.length > 0) ||
+    (Array.isArray(state.plannerTasks) && state.plannerTasks.length > 0) ||
+    (Array.isArray(state.purchaseHistory) && state.purchaseHistory.length > 0)
+  );
+}
+
 function finiteNonNegative(value: unknown): number | null {
   const number = typeof value === "number" ? value : Number(value);
   return Number.isFinite(number) && number >= 0 ? number : null;
@@ -323,7 +349,11 @@ export async function migrateLegacyState(
     const existing = await tx.query.legacyMigrationsTable.findFirst({
       where: eq(legacyMigrationsTable.userId, userId),
     });
-    if (existing) {
+    const incomingHasProgress = hasMeaningfulState(sourceState);
+    const existingHasProgress = existing
+      ? hasMeaningfulState(existing.sourceState as JsonObject)
+      : false;
+    if (existing && (!incomingHasProgress || existingHasProgress)) {
       return {
         existing,
         profile: await profileFor(tx, userId),
@@ -476,13 +506,21 @@ export async function migrateLegacyState(
     if (activities.some((activity) => activity.details.timezoneOffsetMinutes === undefined)) {
       warning(audit, "timezone_missing_for_some_activities");
     }
-    await tx.insert(legacyMigrationsTable).values({
+    const migrationValues = {
       userId,
       migrationKey,
       sourceState: safeState,
       audit,
       status: audit.warnings.length ? "imported_with_warnings" : "imported",
-    });
+      importedAt: now,
+    };
+    if (existing) {
+      await tx.update(legacyMigrationsTable)
+        .set(migrationValues)
+        .where(eq(legacyMigrationsTable.id, existing.id));
+    } else {
+      await tx.insert(legacyMigrationsTable).values(migrationValues);
+    }
     await tx.insert(userStatesTable).values({
       userId,
       state: safeState,
