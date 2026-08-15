@@ -13,6 +13,18 @@ function getClerkErrorMessage(error: unknown): string {
   );
 }
 
+function withAuthTimeout<T>(promise: Promise<T>, timeoutMs = 15000): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = window.setTimeout(() => {
+      reject(new Error("Clerk не ответил за 15 секунд. Проверь соединение и попробуй ещё раз."));
+    }, timeoutMs);
+    promise.then(
+      (value) => { window.clearTimeout(timer); resolve(value); },
+      (reason) => { window.clearTimeout(timer); reject(reason); },
+    );
+  });
+}
+
 function isEmailCodeFactor(f: { strategy: string }): f is { strategy: "email_code"; emailAddressId: string } {
   return f.strategy === "email_code";
 }
@@ -32,16 +44,16 @@ export default function SignInPage() {
     setError(null);
     try {
       const signIn = client.signIn;
-      const result = await signIn.create({ identifier: email.trim() });
+      const result = await withAuthTimeout(signIn.create({ identifier: email.trim() }));
       type EmailCodeFactor = { strategy: "email_code"; emailAddressId: string };
       const emailFactor = result.supportedFirstFactors?.find(isEmailCodeFactor) as EmailCodeFactor | undefined;
       if (!emailFactor) {
         throw new Error("Аккаунт не найден. Зарегистрируйся, чтобы продолжить.");
       }
-      await signIn.prepareFirstFactor({
+      await withAuthTimeout(signIn.prepareFirstFactor({
         strategy: "email_code",
         emailAddressId: emailFactor.emailAddressId,
-      });
+      }));
       setStep("code");
     } catch (err) {
       setError(getClerkErrorMessage(err));
@@ -56,10 +68,10 @@ export default function SignInPage() {
     setError(null);
     try {
       const signIn = client.signIn;
-      const result = await signIn.attemptFirstFactor({
+      const result = await withAuthTimeout(signIn.attemptFirstFactor({
         strategy: "email_code",
         code: code.trim(),
-      });
+      }));
       if (result.status === "complete" && result.createdSessionId) {
         await setActive({ session: result.createdSessionId });
         setLocation("/");

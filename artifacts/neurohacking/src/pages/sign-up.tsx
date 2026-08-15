@@ -14,6 +14,18 @@ function getClerkErrorMessage(error: unknown): string {
   );
 }
 
+function withAuthTimeout<T>(promise: Promise<T>, timeoutMs = 15000): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = window.setTimeout(() => {
+      reject(new Error("Clerk не ответил за 15 секунд. Проверь соединение и попробуй ещё раз."));
+    }, timeoutMs);
+    promise.then(
+      (value) => { window.clearTimeout(timer); resolve(value); },
+      (reason) => { window.clearTimeout(timer); reject(reason); },
+    );
+  });
+}
+
 export default function SignUpPage() {
   const { client, setActive, loaded } = useClerk();
   const [, setLocation] = useLocation();
@@ -29,8 +41,8 @@ export default function SignUpPage() {
     setError(null);
     try {
       const signUp = client.signUp;
-      await signUp.create({ emailAddress: email.trim() });
-      await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
+      await withAuthTimeout(signUp.create({ emailAddress: email.trim() }));
+      await withAuthTimeout(signUp.prepareEmailAddressVerification({ strategy: "email_code" }));
       setStep("code");
     } catch (err) {
       setError(getClerkErrorMessage(err));
@@ -45,7 +57,7 @@ export default function SignUpPage() {
     setError(null);
     try {
       const signUp = client.signUp;
-      const result = await signUp.attemptEmailAddressVerification({ code: code.trim() });
+      const result = await withAuthTimeout(signUp.attemptEmailAddressVerification({ code: code.trim() }));
       if (result.status === "complete" && result.createdSessionId) {
         await setActive({ session: result.createdSessionId });
         setLocation("/profile-setup");

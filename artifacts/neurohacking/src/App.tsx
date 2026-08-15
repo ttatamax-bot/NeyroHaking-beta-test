@@ -361,10 +361,25 @@ function AppLogic() {
     const hasProgress = (snapshot: Partial<AppState> | null): boolean => {
       if (!snapshot) return false;
       return (
+        (snapshot.userState !== undefined && snapshot.userState !== 'new') ||
+        Boolean(snapshot.email) ||
+        Boolean(snapshot.onboardingComplete) ||
+        (snapshot.keys ?? 0) > 0 ||
+        (snapshot.potential ?? 0) > 0 ||
+        (snapshot.streak ?? 0) > 0 ||
         (snapshot.activityLog?.length ?? 0) > 0 ||
         (snapshot.keysHistory?.length ?? 0) > 0 ||
         (snapshot.potentialHistory?.length ?? 0) > 0 ||
-        Boolean(snapshot.lastCompletedDate)
+        (snapshot.streakHistory?.length ?? 0) > 0 ||
+        (snapshot.history?.length ?? 0) > 0 ||
+        (snapshot.goals?.length ?? 0) > 0 ||
+        (snapshot.scenes?.length ?? 0) > 0 ||
+        (snapshot.plannerTasks?.length ?? 0) > 0 ||
+        (snapshot.readArticles?.length ?? 0) > 0 ||
+        (snapshot.unlockedArticles?.length ?? 0) > 1 ||
+        (snapshot.purchaseHistory?.length ?? 0) > 0 ||
+        Boolean(snapshot.lastCompletedDate) ||
+        Boolean(snapshot.lastSessionDate)
       );
     };
 
@@ -375,8 +390,16 @@ function AppLogic() {
       hasProgress(store) ||
       (() => {
         try {
-          const raw = localStorage.getItem('neyro_state');
-          return hasProgress(raw ? JSON.parse(raw) as Partial<AppState> : null);
+          const savedKeys = ['neyro_state', 'neuro_state', 'neurohacking_state'];
+          return savedKeys.some((key) => {
+            const raw = localStorage.getItem(key);
+            if (!raw) return false;
+            try {
+              return hasProgress(JSON.parse(raw) as Partial<AppState>);
+            } catch {
+              return false;
+            }
+          });
         } catch {
           return false;
         }
