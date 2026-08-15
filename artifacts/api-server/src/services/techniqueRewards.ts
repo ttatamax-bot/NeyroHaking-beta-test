@@ -8,7 +8,7 @@ import {
   sql,
   streakHistoryTable,
   userProfilesTable,
-} from "@workspace/db";
+} from "../../../../lib/db/src/index.js";
 
 export type TechniqueId = "T1" | "T2" | "T3" | "T4" | "T5" | "T6";
 export type TechniqueMetadata = Record<string, unknown>;
