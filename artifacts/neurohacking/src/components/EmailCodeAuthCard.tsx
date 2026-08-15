@@ -126,7 +126,6 @@ export function EmailCodeAuthCard({
               data-cl-size="flexible"
               data-cl-language="auto"
               className="flex min-h-0 justify-center"
-              aria-hidden="true"
             />
           )}
 
