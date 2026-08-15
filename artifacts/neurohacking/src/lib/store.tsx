@@ -183,6 +183,33 @@ export const defaultState: AppState = {
   profile: null,
 };
 
+function hasMeaningfulSyncState(state: Partial<AppState> | Record<string, unknown> | null): boolean {
+  if (!state) return false;
+  return (
+    Number(state.keys ?? 0) > 0 ||
+    Number(state.potential ?? 0) > 0 ||
+    Number(state.streak ?? 0) > 0 ||
+    Boolean(state.lastCompletedDate) ||
+    Boolean(state.lastSessionDate) ||
+    state.userState === 'active' ||
+    state.userState === 'dayDone' ||
+    state.onboardingComplete === true ||
+    (Array.isArray(state.activityLog) && state.activityLog.length > 0) ||
+    (Array.isArray(state.history) && state.history.length > 0) ||
+    (Array.isArray(state.goals) && state.goals.length > 0) ||
+    (Array.isArray(state.scenes) && state.scenes.length > 0) ||
+    (Array.isArray(state.keysHistory) && state.keysHistory.length > 0) ||
+    (Array.isArray(state.potentialHistory) && state.potentialHistory.length > 0) ||
+    (Array.isArray(state.streakHistory) && state.streakHistory.length > 0) ||
+    (Array.isArray(state.unlockedArticles) &&
+      state.unlockedArticles.some((article) => article !== 'A1')) ||
+    (Array.isArray(state.readArticles) && state.readArticles.length > 0) ||
+    (Array.isArray(state.readNews) && state.readNews.length > 0) ||
+    (Array.isArray(state.plannerTasks) && state.plannerTasks.length > 0) ||
+    (Array.isArray(state.purchaseHistory) && state.purchaseHistory.length > 0)
+  );
+}
+
 type UpdateFn = Partial<AppState> | ((prev: AppState) => Partial<AppState>);
 
 interface AppContextType extends AppState {
@@ -351,6 +378,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const hydrationRequestRef = useRef<string | null>(null);
   const stateRef = useRef(state);
   stateRef.current = state;
+  const [, setHydrationRetryTick] = useState(0);
 
   useEffect(() => {
     // Once an account has hydrated, local storage is no longer an authority.
@@ -362,7 +390,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [state, isSignedIn]);
 
   useEffect(() => {
-    if (!isLoaded) return;
+    if (!isLoaded) return undefined;
     if (!isSignedIn || !userId) {
       hydrationRequestRef.current = null;
       hydratedUserRef.current = null;
@@ -374,11 +402,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           setState({ ...defaultState, todayTechniquesDate: getAppDayStart().toISOString() });
         }
       }
-      return;
+      return undefined;
     }
-    if (hydratedUserRef.current === userId || hydrationRequestRef.current === userId) return;
+    if (hydratedUserRef.current === userId || hydrationRequestRef.current === userId) return undefined;
     hydrationRequestRef.current = userId;
     const guestSnapshot = stateRef.current;
+    let retryTimer: number | null = null;
+    const retryHydration = () => {
+      if (retryTimer !== null) window.clearTimeout(retryTimer);
+      retryTimer = window.setTimeout(() => {
+        setHydrationRetryTick((tick) => tick + 1);
+      }, 3000);
+    };
     getServerState()
       .then(({ state: serverState, profile }) => {
         if (hydrationRequestRef.current !== userId) return;
@@ -397,8 +432,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               : {}),
           }));
         };
-        if (serverState !== null && Object.keys(serverState).length > 0) {
-          applyServer(serverState, profile);
+        const localHasProgress = hasMeaningfulSyncState(guestSnapshot);
+        const serverHasProgress = hasMeaningfulSyncState(serverState);
+        if (serverHasProgress || !localHasProgress) {
+          applyServer(serverState ?? {}, profile);
           localStorage.removeItem('neyro_legacy_migration_key');
           return;
         }
@@ -418,10 +455,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             // Do not mark hydration complete when the server is unavailable:
             // a retry after the next auth/network event can still migrate.
             hydrationRequestRef.current = null;
+            retryHydration();
           });
       })
-      .catch(() => { hydrationRequestRef.current = null; });
-  }, [isLoaded, isSignedIn, userId]);
+      .catch(() => {
+        hydrationRequestRef.current = null;
+        retryHydration();
+      });
+    return () => {
+      if (retryTimer !== null) window.clearTimeout(retryTimer);
+    };
+  }, [isLoaded, isSignedIn, userId, setHydrationRetryTick]);
 
   useEffect(() => {
     if (!isSignedIn || !userId || hydratedUserRef.current !== userId) return;
