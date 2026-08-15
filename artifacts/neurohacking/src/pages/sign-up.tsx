@@ -2,6 +2,7 @@ import { useAuth, useClerk } from "@clerk/react";
 import { useLocation } from "wouter";
 import { useEffect, useRef, useState } from "react";
 import { EmailCodeAuthCard, type EmailCodeAuthStep } from "@/components/EmailCodeAuthCard";
+import { markAuthTransition } from "@/lib/auth-transition";
 
 type SignUpRequirement = "first_name" | "last_name" | "username" | "password" | "legal_accepted";
 const pendingNicknameStorageKey = "neuro_pending_nickname";
@@ -166,8 +167,10 @@ export default function SignUpPage() {
       setLoading(true);
       setError(null);
       try {
+        markAuthTransition();
         await withAuthTimeout(setActive({ session: pendingSessionId }));
-        setLocation("/profile-setup");
+        const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
+        window.location.assign(`${basePath}/profile-setup`);
       } catch (err) {
         setError(getClerkErrorMessage(err));
       } finally {
@@ -209,7 +212,8 @@ export default function SignUpPage() {
           // The profile setup screen still allows entering the nickname manually.
         }
         await withAuthTimeout(setActive({ session: result.createdSessionId }));
-        setLocation("/profile-setup");
+        const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
+        window.location.assign(`${basePath}/profile-setup`);
         return;
       }
 
