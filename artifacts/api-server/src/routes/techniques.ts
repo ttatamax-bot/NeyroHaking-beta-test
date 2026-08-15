@@ -1,4 +1,3 @@
-import { Router } from "express";
 import { getAuth } from "@clerk/express";
 import { and, eq } from "drizzle-orm";
 import { db, usersTable } from "@workspace/db";
@@ -9,8 +8,9 @@ import {
   type TechniqueId,
   type TechniqueMetadata,
 } from "../services/techniqueRewards.js";
+import { createCompatibleRouter } from "./compatRouter.js";
 
-const router = Router();
+const router = createCompatibleRouter();
 
 const metadataSchemas: Record<TechniqueId, z.ZodTypeAny> = {
   T1: z.object({

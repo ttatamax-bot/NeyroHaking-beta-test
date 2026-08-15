@@ -1,9 +1,9 @@
-import { Router } from "express";
 import healthRouter from "./health.js";
 import meRouter from "./me.js";
 import techniquesRouter from "./techniques.js";
+import { createCompatibleRouter } from "./compatRouter.js";
 
-const router = Router();
+const router = createCompatibleRouter();
 router.use(healthRouter);
 router.use(meRouter);
 router.use(techniquesRouter);

@@ -1,4 +1,4 @@
-import { Router, type Request, type Response } from "express";
+import { type Request, type Response } from "express";
 import { getAuth } from "@clerk/express";
 import { and, desc, eq, ilike, sql } from "drizzle-orm";
 import {
@@ -16,8 +16,9 @@ import {
   migrateLegacyState,
   stripNonAuthoritativeState,
 } from "../services/legacyMigration.js";
+import { createCompatibleRouter } from "./compatRouter.js";
 
-const router = Router();
+const router = createCompatibleRouter();
 
 function clerkUserId(req: Request): string | null {
   const auth = getAuth(req);
