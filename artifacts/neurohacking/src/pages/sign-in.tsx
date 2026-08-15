@@ -2,6 +2,7 @@ import { useAuth, useClerk } from "@clerk/react";
 import { useLocation } from "wouter";
 import { useEffect, useState } from "react";
 import { EmailCodeAuthCard, type EmailCodeAuthStep } from "@/components/EmailCodeAuthCard";
+import { markAuthTransition } from "@/lib/auth-transition";
 function getClerkErrorMessage(error: unknown): string {
   const e = error as { errors?: Array<{ longMessage?: string; message?: string }>; message?: string; longMessage?: string };
   const message =
@@ -130,8 +131,10 @@ export default function SignInPage() {
           : client.signIn.attemptFirstFactor({ strategy: "email_code", code: code.trim() }),
       );
       if (result.status === "complete" && result.createdSessionId) {
+        markAuthTransition();
         await withAuthTimeout(setActive({ session: result.createdSessionId }));
-        setLocation("/");
+        const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
+        window.location.assign(basePath || "/");
         return;
       }
 
