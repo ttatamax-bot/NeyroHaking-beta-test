@@ -72,30 +72,12 @@ export default function Home() {
             className="px-6 pb-16 mt-10">
             <button
               className="btn-grad btn-shimmer w-full h-[58px] rounded-[16px] title-s flex items-center justify-center gap-2"
-              onClick={() => setLocation('/sign-up')}
-            >
-              Создать аккаунт <ChevronRight size={20} />
-            </button>
-            <button
-              className="w-full h-[46px] mt-3 rounded-[14px] body-s"
-              style={{
-                color: 'var(--text-secondary)',
-                border: '1px solid rgba(100,160,230,0.22)',
-                background: 'rgba(12,28,60,0.46)',
-              }}
               onClick={() => {
                 updateState({ userState: 'onboarding', onboardingStep: 0 });
                 setLocation('/techniques');
               }}
             >
-              Сначала изучить систему без аккаунта
-            </button>
-            <button
-              className="w-full mt-3 body-s"
-              style={{ color: 'var(--text-blue)' }}
-              onClick={() => setLocation('/sign-in')}
-            >
-              Уже есть аккаунт? Войти
+              Изучить систему <ChevronRight size={20} />
             </button>
           </motion.div>
         </div>

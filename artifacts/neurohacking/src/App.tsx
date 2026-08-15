@@ -2,7 +2,7 @@ import { Switch, Route, Router as WouterRouter, useLocation } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppProvider, useAppStore, AppState, getAppDayStart, getAppDayKey } from "@/lib/store";
-import { ClerkProviderWithRoutes, ClerkQueryClientCacheInvalidator } from "@/lib/clerk";
+import { ClerkProviderWithRoutes, ClerkQueryClientCacheInvalidator, useAuthInfo } from "@/lib/clerk";
 import { NavBar } from "@/components/NavBar";
 import { TopBar } from "@/components/TopBar";
 import { useEffect, useRef, useState } from "react";
@@ -331,12 +331,44 @@ function DevResetButton() {
 function AppLogic() {
   const store = useAppStore();
   const { userState, updateState } = store;
+  const { isLoaded: isAuthLoaded, isSignedIn } = useAuthInfo();
+  const [location, setLocation] = useLocation();
   const storeRef = useRef(store);
   storeRef.current = store;
 
   useEffect(() => {
     document.documentElement.classList.add('dark');
   }, []);
+
+  // Guests keep their first results locally, but server-backed progress starts
+  // with Clerk registration. New guests are sent to sign-up after their first
+  // completed technique; returning guests with existing progress see it on the
+  // next app visit.
+  useEffect(() => {
+    if (!isAuthLoaded || isSignedIn) return;
+    if (location.startsWith('/sign-in') || location.startsWith('/sign-up')) return;
+
+    const hasGuestProgress =
+      store.activityLog.length > 0 ||
+      store.keysHistory.length > 0 ||
+      store.potentialHistory.length > 0 ||
+      store.history.length > 0 ||
+      Boolean(store.lastCompletedDate);
+
+    if (hasGuestProgress) {
+      setLocation('/sign-up');
+    }
+  }, [
+    isAuthLoaded,
+    isSignedIn,
+    location,
+    setLocation,
+    store.activityLog.length,
+    store.keysHistory.length,
+    store.potentialHistory.length,
+    store.history.length,
+    store.lastCompletedDate,
+  ]);
 
   // Global Wake Lock — keep screen on while app is open
   useEffect(() => {
