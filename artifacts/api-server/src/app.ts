@@ -2,7 +2,7 @@ import express from "express";
 import cors from "cors";
 import { pinoHttp } from "pino-http";
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { clerkMiddleware } from "@clerk/express";
+import { authenticateRequest, clerkClient } from "@clerk/express";
 import router from "./routes/index.js";
 import { logger } from "./lib/logger.js";
 import {
@@ -42,9 +42,33 @@ app.use(express.json({ limit: "256kb" }));
 app.use(express.urlencoded({ extended: true }));
 
 app.use(
-  clerkMiddleware(() => ({
-    publishableKey: process.env.CLERK_PUBLISHABLE_KEY,
-  })),
+  async (req: any, res: any, next: any) => {
+    try {
+      const requestState = await authenticateRequest({
+        clerkClient,
+        request: req,
+        options: {
+          publishableKey: process.env.CLERK_PUBLISHABLE_KEY,
+          secretKey: process.env.CLERK_SECRET_KEY,
+        },
+      });
+
+      requestState.headers.forEach((value, key) => res.appendHeader(key, value));
+      const location = requestState.headers.get("location");
+      if (location) {
+        res.status(307).end();
+        return;
+      }
+      if (res.writableEnded) return;
+
+      const auth = ((options?: unknown) => requestState.toAuth(options as any)) as any;
+      auth[Symbol.for("@clerk/express.auth")] = true;
+      req.auth = auth;
+      next();
+    } catch (error) {
+      next(error);
+    }
+  },
 );
 
 app.use("/api", router);
