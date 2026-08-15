@@ -1,7 +1,7 @@
 import { useClerk } from "@clerk/react";
 import { useLocation } from "wouter";
 import { useEffect, useState } from "react";
-import { EmailCodeAuthCard, type EmailLinkAuthStep } from "@/components/EmailCodeAuthCard";
+import { EmailCodeAuthCard, type EmailCodeAuthStep } from "@/components/EmailCodeAuthCard";
 
 function getClerkErrorMessage(error: unknown): string {
   const e = error as { errors?: Array<{ longMessage?: string; message?: string }>; message?: string; longMessage?: string };
@@ -10,10 +10,7 @@ function getClerkErrorMessage(error: unknown): string {
     e.errors?.[0]?.message ??
     e.longMessage ??
     e.message ??
-    "Не удалось отправить ссылку. Попробуй ещё раз.";
-  if (message.includes("email_link") && message.includes("allowed")) {
-    return "В Clerk не включены ссылки для подтверждения email. Включи стратегию Email link в настройках User & authentication.";
-  }
+    "Не удалось отправить код. Попробуй ещё раз.";
   return message;
 }
 
@@ -30,10 +27,11 @@ function withAuthTimeout<T>(promise: Promise<T>, timeoutMs = 15000): Promise<T> 
 }
 
 export default function SignUpPage() {
-  const { client, loaded } = useClerk();
+  const { client, loaded, setActive } = useClerk();
   const [, setLocation] = useLocation();
-  const [step, setStep] = useState<EmailLinkAuthStep>("email");
+  const [step, setStep] = useState<EmailCodeAuthStep>("email");
   const [email, setEmail] = useState("");
+  const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -45,17 +43,16 @@ export default function SignUpPage() {
     return () => window.clearTimeout(timer);
   }, [loaded]);
 
-  const sendEmailLink = async () => {
+  const sendEmailCode = async () => {
     if (!loaded || !client || !email.trim()) return;
     setLoading(true);
     setError(null);
     try {
       const signUp = client.signUp;
       await withAuthTimeout(signUp.create({ emailAddress: email.trim(), locale: "ru-RU" }));
-      const callbackUrl = `${window.location.origin}${import.meta.env.BASE_URL.replace(/\/$/, "")}/sign-up/verify`;
-      const emailLinkFlow = signUp.createEmailLinkFlow();
-      await withAuthTimeout(emailLinkFlow.startEmailLinkFlow({ redirectUrl: callbackUrl }));
-      setStep("sent");
+      await withAuthTimeout(signUp.prepareEmailAddressVerification({ strategy: "email_code" }));
+      setCode("");
+      setStep("code");
     } catch (err) {
       setError(getClerkErrorMessage(err));
     } finally {
@@ -63,18 +60,43 @@ export default function SignUpPage() {
     }
   };
 
+  const verifyCode = async () => {
+    if (!loaded || !client || code.trim().length < 4) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await withAuthTimeout(
+        client.signUp.attemptEmailAddressVerification({ code: code.trim() }),
+      );
+      if (result.status !== "complete" || !result.createdSessionId) {
+        throw new Error("Код принят не полностью. Попробуй запросить новый код.");
+      }
+      await withAuthTimeout(setActive({ session: result.createdSessionId }));
+      setLocation("/profile-setup");
+    } catch (err) {
+      setError(getClerkErrorMessage(err));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const submit = step === "email" ? sendEmailCode : verifyCode;
+
   return (
     <div className="min-h-[100dvh] w-full flex items-center justify-center px-4" style={{ background: '#0F2035' }}>
       <EmailCodeAuthCard
         mode="sign-up"
         step={step}
         email={email}
+        code={code}
         loading={loading}
         authReady={loaded}
         error={error}
         onEmailChange={setEmail}
-        onSubmit={sendEmailLink}
-        onBack={() => { setStep("email"); setError(null); }}
+        onCodeChange={setCode}
+        onSubmit={submit}
+        onResend={sendEmailCode}
+        onBack={() => { setStep("email"); setCode(""); setError(null); }}
         onSwitchMode={() => setLocation("/sign-in")}
       />
     </div>

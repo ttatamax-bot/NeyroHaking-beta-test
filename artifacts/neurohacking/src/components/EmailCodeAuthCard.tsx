@@ -1,17 +1,21 @@
 import { ArrowLeft, Mail, RefreshCw, Sparkles } from "lucide-react";
 
-export type EmailLinkAuthStep = "email" | "sent";
+export type EmailCodeAuthStep = "email" | "code";
+export type EmailLinkAuthStep = EmailCodeAuthStep;
 export type EmailCodeAuthMode = "sign-in" | "sign-up";
 
 interface EmailCodeAuthCardProps {
   mode: EmailCodeAuthMode;
-  step: EmailLinkAuthStep;
+  step: EmailCodeAuthStep;
   email: string;
+  code: string;
   loading: boolean;
   authReady: boolean;
   error: string | null;
   onEmailChange: (value: string) => void;
+  onCodeChange: (value: string) => void;
   onSubmit: () => void;
+  onResend: () => void;
   onBack: () => void;
   onSwitchMode: () => void;
 }
@@ -20,16 +24,19 @@ export function EmailCodeAuthCard({
   mode,
   step,
   email,
+  code,
   loading,
   authReady,
   error,
   onEmailChange,
+  onCodeChange,
   onSubmit,
+  onResend,
   onBack,
   onSwitchMode,
 }: EmailCodeAuthCardProps) {
   const isSignUp = mode === "sign-up";
-  const isSent = step === "sent";
+  const isCodeStep = step === "code";
 
   return (
     <div className="w-full max-w-[390px] px-4">
@@ -49,17 +56,18 @@ export function EmailCodeAuthCard({
               border: "1px solid rgba(96,165,250,0.3)",
             }}
           >
-            {isSent ? <Mail size={22} className="text-blue-light" /> : <Sparkles size={22} className="text-blue-light" />}
+            {isCodeStep ? <Mail size={22} className="text-blue-light" /> : <Sparkles size={22} className="text-blue-light" />}
           </div>
           <h1 className="title-l text-primary">
-            {isSent ? "Проверь почту" : isSignUp ? "Регистрация" : "Вход"}
+            {isCodeStep ? "Введи код" : isSignUp ? "Регистрация" : "Вход"}
           </h1>
           <p className="body-s mt-2 max-w-[290px] text-secondary">
-            {isSent
-              ? <>Мы отправили письмо с кнопкой подтверждения на <strong className="text-primary">{email}</strong>.</>
+            {isCodeStep
+              ? <>Мы отправили код на <strong className="text-primary">{email}</strong>.</>
               : isSignUp
-                ? "Введи email — мы отправим ссылку для подтверждения. Пароль и код не нужны."
-                : "Введи email — мы отправим ссылку для входа. Пароль и код не нужны."}
+                ? "Введи email — мы отправим код для подтверждения аккаунта."
+                : "Введи email — мы отправим код для входа."
+            }
           </p>
         </div>
 
@@ -70,7 +78,7 @@ export function EmailCodeAuthCard({
           }}
           className="space-y-4"
         >
-          {!isSent && (
+          {!isCodeStep && (
             <label className="block">
               <span className="caption mb-2 block text-secondary">Email</span>
               <input
@@ -87,13 +95,32 @@ export function EmailCodeAuthCard({
             </label>
           )}
 
-          {isSent && (
+          {isCodeStep && (
             <div
               className="rounded-[14px] border px-4 py-3 text-center body-s text-secondary"
               style={{ background: "rgba(37,99,235,0.08)", borderColor: "rgba(96,165,250,0.22)" }}
             >
-              Открой письмо и нажми кнопку подтверждения. Страница обновится автоматически.
+              Проверь папку «Спам», если письма нет во входящих.
             </div>
+          )}
+
+          {isCodeStep && (
+            <label className="block">
+              <span className="caption mb-2 block text-secondary">Код из письма</span>
+              <input
+                type="text"
+                value={code}
+                onChange={(event) => onCodeChange(event.target.value.replace(/\D/g, "").slice(0, 6))}
+                placeholder="000000"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                autoFocus
+                required
+                maxLength={6}
+                className="h-[52px] w-full rounded-[14px] border px-4 text-center text-xl tracking-[0.35em] text-primary outline-none transition focus:border-blue-core"
+                style={{ background: "#122448", borderColor: "rgba(100,160,230,0.25)" }}
+              />
+            </label>
           )}
 
           {error && (
@@ -106,7 +133,7 @@ export function EmailCodeAuthCard({
             </div>
           )}
 
-          {isSignUp && !isSent && (
+          {isSignUp && !isCodeStep && (
             <div
               id="clerk-captcha"
               data-cl-theme="dark"
@@ -125,13 +152,13 @@ export function EmailCodeAuthCard({
               ? "Отправляем…"
               : !authReady
                 ? "Загружаем вход…"
-                : isSent
-                  ? "Отправить письмо снова"
-                  : "Получить ссылку"}
+                : isCodeStep
+                  ? "Подтвердить код"
+                  : "Получить код"}
           </button>
         </form>
 
-        {isSent && (
+        {isCodeStep && (
           <div className="mt-5 flex items-center justify-between gap-3">
             <button
               type="button"
@@ -142,14 +169,19 @@ export function EmailCodeAuthCard({
               <ArrowLeft size={15} />
               Изменить email
             </button>
-            <span className="inline-flex items-center gap-1.5 body-s text-blue-light">
+            <button
+              type="button"
+              onClick={onResend}
+              disabled={loading}
+              className="inline-flex items-center gap-1.5 body-s text-blue-light transition hover:text-primary disabled:opacity-50"
+            >
               <RefreshCw size={14} />
-              Ссылка действует ограниченное время
-            </span>
+              Отправить ещё раз
+            </button>
           </div>
         )}
 
-        {!isSent && (
+        {!isCodeStep && (
           <p className="mt-6 text-center body-s text-secondary">
             {isSignUp ? "Уже есть аккаунт?" : "Нет аккаунта?"}{" "}
             <button type="button" onClick={onSwitchMode} className="text-blue-light hover:text-primary">

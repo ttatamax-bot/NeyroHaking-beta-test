@@ -1,7 +1,7 @@
 import { useClerk } from "@clerk/react";
 import { useLocation } from "wouter";
 import { useEffect, useState } from "react";
-import { EmailCodeAuthCard, type EmailLinkAuthStep } from "@/components/EmailCodeAuthCard";
+import { EmailCodeAuthCard, type EmailCodeAuthStep } from "@/components/EmailCodeAuthCard";
 function getClerkErrorMessage(error: unknown): string {
   const e = error as { errors?: Array<{ longMessage?: string; message?: string }>; message?: string; longMessage?: string };
   const message =
@@ -9,10 +9,7 @@ function getClerkErrorMessage(error: unknown): string {
     e.errors?.[0]?.message ??
     e.longMessage ??
     e.message ??
-    "Не удалось отправить ссылку. Проверь email и попробуй ещё раз.";
-  if (message.includes("email_link") && message.includes("allowed")) {
-    return "В Clerk не включены ссылки для входа. Включи стратегию Email link в настройках User & authentication.";
-  }
+    "Не удалось отправить код. Проверь email и попробуй ещё раз.";
   return message;
 }
 
@@ -28,15 +25,16 @@ function withAuthTimeout<T>(promise: Promise<T>, timeoutMs = 15000): Promise<T> 
   });
 }
 
-function isEmailLinkFactor(f: { strategy: string }): f is { strategy: "email_link"; emailAddressId: string } {
-  return f.strategy === "email_link";
+function isEmailCodeFactor(f: { strategy: string }): f is { strategy: "email_code"; emailAddressId: string } {
+  return f.strategy === "email_code";
 }
 
 export default function SignInPage() {
-  const { client, loaded } = useClerk();
+  const { client, loaded, setActive } = useClerk();
   const [, setLocation] = useLocation();
-  const [step, setStep] = useState<EmailLinkAuthStep>("email");
+  const [step, setStep] = useState<EmailCodeAuthStep>("email");
   const [email, setEmail] = useState("");
+  const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -48,25 +46,24 @@ export default function SignInPage() {
     return () => window.clearTimeout(timer);
   }, [loaded]);
 
-  const sendEmailLink = async () => {
+  const sendEmailCode = async () => {
     if (!loaded || !client || !email.trim()) return;
     setLoading(true);
     setError(null);
     try {
       const signIn = client.signIn;
       const result = await withAuthTimeout(signIn.create({ identifier: email.trim() }));
-      type EmailLinkFactor = { strategy: "email_link"; emailAddressId: string };
-      const emailFactor = result.supportedFirstFactors?.find(isEmailLinkFactor) as EmailLinkFactor | undefined;
+      type EmailCodeFactor = { strategy: "email_code"; emailAddressId: string };
+      const emailFactor = result.supportedFirstFactors?.find(isEmailCodeFactor) as EmailCodeFactor | undefined;
       if (!emailFactor) {
         throw new Error("Аккаунт не найден. Зарегистрируйся, чтобы продолжить.");
       }
-      const callbackUrl = `${window.location.origin}${import.meta.env.BASE_URL.replace(/\/$/, "")}/sign-in/verify`;
-      const emailLinkFlow = signIn.createEmailLinkFlow();
-      await withAuthTimeout(emailLinkFlow.startEmailLinkFlow({
+      await withAuthTimeout(signIn.prepareFirstFactor({
+        strategy: "email_code",
         emailAddressId: emailFactor.emailAddressId,
-        redirectUrl: callbackUrl,
       }));
-      setStep("sent");
+      setCode("");
+      setStep("code");
     } catch (err) {
       setError(getClerkErrorMessage(err));
     } finally {
@@ -74,18 +71,43 @@ export default function SignInPage() {
     }
   };
 
+  const verifyCode = async () => {
+    if (!loaded || !client || code.trim().length < 4) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await withAuthTimeout(
+        client.signIn.attemptFirstFactor({ strategy: "email_code", code: code.trim() }),
+      );
+      if (result.status !== "complete" || !result.createdSessionId) {
+        throw new Error("Код принят не полностью. Попробуй запросить новый код.");
+      }
+      await withAuthTimeout(setActive({ session: result.createdSessionId }));
+      setLocation("/");
+    } catch (err) {
+      setError(getClerkErrorMessage(err));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const submit = step === "email" ? sendEmailCode : verifyCode;
+
   return (
     <div className="min-h-[100dvh] w-full flex items-center justify-center px-4" style={{ background: '#0F2035' }}>
       <EmailCodeAuthCard
         mode="sign-in"
         step={step}
         email={email}
+        code={code}
         loading={loading}
         authReady={loaded}
         error={error}
         onEmailChange={setEmail}
-        onSubmit={sendEmailLink}
-        onBack={() => { setStep("email"); setError(null); }}
+        onCodeChange={setCode}
+        onSubmit={submit}
+        onResend={sendEmailCode}
+        onBack={() => { setStep("email"); setCode(""); setError(null); }}
         onSwitchMode={() => setLocation("/sign-up")}
       />
     </div>

@@ -68,20 +68,19 @@ function hasProgressSnapshot(snapshot: Partial<AppState> | null): boolean {
 
 function hasStoredGuestProgress(): boolean {
   try {
-    for (const key of Object.keys(localStorage)) {
-      if (key === 'neyro_legacy_migration_key' || key.startsWith('neyro_notif_')) continue;
+    return Object.keys(localStorage).some((key) => {
+      if (key === 'neyro_legacy_migration_key' || key.startsWith('neyro_notif_')) return false;
       const raw = localStorage.getItem(key);
-      if (!raw) continue;
+      if (!raw) return false;
       try {
-        if (hasProgressSnapshot(JSON.parse(raw) as Partial<AppState>)) return true;
+        return hasProgressSnapshot(JSON.parse(raw) as Partial<AppState>);
       } catch {
-        // Ignore non-JSON local storage values such as install-prompt flags.
+        return false;
       }
-    }
+    });
   } catch {
     return false;
   }
-  return false;
 }
 
 const TECH_MESSAGES: { text: string; highlight: string[] }[] = [
@@ -410,8 +409,6 @@ function AppLogic() {
       hasStoredGuestProgress();
 
     if (hasGuestProgress && location !== '/sign-up') {
-      // Give AppProvider's persistence effect a tick to save the latest guest
-      // completion before the full navigation reloads the app.
       redirectingRef.current = true;
       window.setTimeout(() => window.location.assign(signUpPath), 50);
     }
