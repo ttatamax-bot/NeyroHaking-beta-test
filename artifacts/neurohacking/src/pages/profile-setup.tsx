@@ -7,12 +7,19 @@ import { useAppStore } from "@/lib/store";
 import { updateServerProfile, ApiError } from "@/lib/api";
 
 const nicknamePattern = /^[\p{L}\p{N}][\p{L}\p{N}_.-]{2,23}$/u;
+const pendingNicknameStorageKey = "neuro_pending_nickname";
 
 export default function ProfileSetup() {
   const [, setLocation] = useLocation();
   const { isLoaded, isSignedIn, user } = useUser();
   const { updateState } = useAppStore();
-  const [nickname, setNickname] = useState("");
+  const [nickname, setNickname] = useState(() => {
+    try {
+      return sessionStorage.getItem(pendingNicknameStorageKey) ?? "";
+    } catch {
+      return "";
+    }
+  });
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -36,6 +43,11 @@ export default function ProfileSetup() {
     try {
       const profile = await updateServerProfile({ nickname: normalized });
       updateState({ profile, userState: "active", onboardingComplete: true });
+      try {
+        sessionStorage.removeItem(pendingNicknameStorageKey);
+      } catch {
+        // Ignore storage restrictions; the saved server profile is authoritative.
+      }
       setLocation("/path");
     } catch (err) {
       setError(

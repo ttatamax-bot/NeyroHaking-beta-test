@@ -1,9 +1,10 @@
 import { useAuth, useClerk } from "@clerk/react";
 import { useLocation } from "wouter";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { EmailCodeAuthCard, type EmailCodeAuthStep } from "@/components/EmailCodeAuthCard";
 
 type SignUpRequirement = "first_name" | "last_name" | "username" | "password" | "legal_accepted";
+const pendingNicknameStorageKey = "neuro_pending_nickname";
 
 function getClerkErrorMessage(error: unknown): string {
   const e = error as { errors?: Array<{ longMessage?: string; message?: string }>; message?: string; longMessage?: string };
@@ -39,6 +40,13 @@ function getRequirements(result: { missingFields?: unknown[] }): SignUpRequireme
   );
 }
 
+function generateTechnicalPassword(): string {
+  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%^&*";
+  const bytes = new Uint8Array(32);
+  crypto.getRandomValues(bytes);
+  return `N${Array.from(bytes, (byte) => alphabet[byte % alphabet.length]).join("")}x`;
+}
+
 export default function SignUpPage() {
   const { client, setActive } = useClerk();
   const { isLoaded: authLoaded } = useAuth();
@@ -47,14 +55,16 @@ export default function SignUpPage() {
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
   const [requirements, setRequirements] = useState<SignUpRequirement[] | null>(null);
+  const [clerkRequirements, setClerkRequirements] = useState<SignUpRequirement[] | null>(null);
+  const [pendingSessionId, setPendingSessionId] = useState<string | null>(null);
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
   const [legalAccepted, setLegalAccepted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [authLoadFailed, setAuthLoadFailed] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const technicalPasswordRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (authLoaded) {
@@ -82,7 +92,12 @@ export default function SignUpPage() {
     setError(null);
     try {
       const signUp = client.signUp;
-      await withAuthTimeout(signUp.create({ emailAddress: email.trim(), locale: "ru-RU" }));
+      technicalPasswordRef.current ??= generateTechnicalPassword();
+      await withAuthTimeout(signUp.create({
+        emailAddress: email.trim(),
+        locale: "ru-RU",
+        password: technicalPasswordRef.current,
+      }));
       await withAuthTimeout(signUp.prepareEmailAddressVerification({ strategy: "email_code" }));
       setCode("");
       setStep("code");
@@ -106,14 +121,19 @@ export default function SignUpPage() {
         client.signUp.attemptEmailAddressVerification({ code: code.trim() }),
       );
       if (result.status === "complete" && result.createdSessionId) {
-        await withAuthTimeout(setActive({ session: result.createdSessionId }));
-        setLocation("/profile-setup");
+        setPendingSessionId(result.createdSessionId);
+        setClerkRequirements([]);
+        setRequirements(["username"]);
+        setError(null);
         return;
       }
 
       const missing = getRequirements(result);
       if (result.status === "missing_requirements" && missing.length > 0) {
-        setRequirements(missing);
+        setClerkRequirements(missing);
+        setRequirements(missing.filter((field) => field !== "password").length > 0
+          ? missing.filter((field) => field !== "password")
+          : ["username"]);
         setError(null);
         return;
       }
@@ -132,23 +152,40 @@ export default function SignUpPage() {
   const completeSignUp = async () => {
     if (!authLoaded || !client || !requirements || loading) return;
 
-    if (requirements.includes("first_name") && !firstName.trim()) {
-      setError("Введи имя.");
-      return;
-    }
-    if (requirements.includes("last_name") && !lastName.trim()) {
-      setError("Введи фамилию.");
-      return;
-    }
-    if (requirements.includes("username") && username.trim().length < 3) {
+    if (username.trim().length < 3) {
       setError("Введи имя пользователя длиной не менее 3 символов.");
       return;
     }
-    if (requirements.includes("password") && password.length < 8) {
-      setError("Пароль должен содержать не менее 8 символов.");
+
+    if (pendingSessionId) {
+      try {
+        sessionStorage.setItem(pendingNicknameStorageKey, username.trim());
+      } catch {
+        // The profile setup screen still allows entering the nickname manually.
+      }
+      setLoading(true);
+      setError(null);
+      try {
+        await withAuthTimeout(setActive({ session: pendingSessionId }));
+        setLocation("/profile-setup");
+      } catch (err) {
+        setError(getClerkErrorMessage(err));
+      } finally {
+        setLoading(false);
+      }
       return;
     }
-    if (requirements.includes("legal_accepted") && !legalAccepted) {
+
+    const actualRequirements = clerkRequirements ?? requirements;
+    if (actualRequirements.includes("first_name") && !firstName.trim()) {
+      setError("Введи имя.");
+      return;
+    }
+    if (actualRequirements.includes("last_name") && !lastName.trim()) {
+      setError("Введи фамилию.");
+      return;
+    }
+    if (actualRequirements.includes("legal_accepted") && !legalAccepted) {
       setError("Подтверди согласие с условиями.");
       return;
     }
@@ -156,22 +193,31 @@ export default function SignUpPage() {
     setLoading(true);
     setError(null);
     try {
+      technicalPasswordRef.current ??= generateTechnicalPassword();
       const result = await withAuthTimeout(client.signUp.update({
-        ...(requirements.includes("first_name") ? { firstName: firstName.trim() } : {}),
-        ...(requirements.includes("last_name") ? { lastName: lastName.trim() } : {}),
-        ...(requirements.includes("username") ? { username: username.trim() } : {}),
-        ...(requirements.includes("password") ? { password } : {}),
-        ...(requirements.includes("legal_accepted") ? { legalAccepted: true } : {}),
+        ...(actualRequirements.includes("first_name") ? { firstName: firstName.trim() } : {}),
+        ...(actualRequirements.includes("last_name") ? { lastName: lastName.trim() } : {}),
+        ...(actualRequirements.includes("username") ? { username: username.trim() } : {}),
+        ...(actualRequirements.includes("password") ? { password: technicalPasswordRef.current } : {}),
+        ...(actualRequirements.includes("legal_accepted") ? { legalAccepted: true } : {}),
       }));
 
       if (result.status === "complete" && result.createdSessionId) {
+        try {
+          sessionStorage.setItem(pendingNicknameStorageKey, username.trim());
+        } catch {
+          // The profile setup screen still allows entering the nickname manually.
+        }
         await withAuthTimeout(setActive({ session: result.createdSessionId }));
         setLocation("/profile-setup");
         return;
       }
 
       const remaining = getRequirements(result);
-      setRequirements(remaining.length > 0 ? remaining : requirements);
+      setClerkRequirements(remaining);
+      setRequirements(remaining.filter((field) => field !== "password").length > 0
+        ? remaining.filter((field) => field !== "password")
+        : ["username"]);
       throw new Error("Заполни обязательные данные, чтобы создать аккаунт.");
     } catch (err) {
       setError(getClerkErrorMessage(err));
@@ -185,8 +231,6 @@ export default function SignUpPage() {
   if (requirements) {
     const needsFirstName = requirements.includes("first_name");
     const needsLastName = requirements.includes("last_name");
-    const needsUsername = requirements.includes("username");
-    const needsPassword = requirements.includes("password");
     const needsLegal = requirements.includes("legal_accepted");
 
     return (
@@ -229,32 +273,18 @@ export default function SignUpPage() {
                 />
               </label>
             )}
-            {needsUsername && (
-              <label className="block">
-                <span className="caption mb-2 block text-secondary">Имя пользователя</span>
-                <input
-                  value={username}
-                  onChange={(event) => { setUsername(event.target.value); setError(null); }}
-                  autoComplete="username"
-                  placeholder="например, neuro_user"
-                  className="h-[52px] w-full rounded-[14px] border px-4 text-primary outline-none"
-                  style={{ background: "#122448", borderColor: "rgba(100,160,230,0.25)" }}
-                />
-              </label>
-            )}
-            {needsPassword && (
-              <label className="block">
-                <span className="caption mb-2 block text-secondary">Пароль</span>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(event) => { setPassword(event.target.value); setError(null); }}
-                  autoComplete="new-password"
-                  className="h-[52px] w-full rounded-[14px] border px-4 text-primary outline-none"
-                  style={{ background: "#122448", borderColor: "rgba(100,160,230,0.25)" }}
-                />
-              </label>
-            )}
+            <label className="block">
+              <span className="caption mb-2 block text-secondary">Имя пользователя</span>
+              <input
+                value={username}
+                onChange={(event) => { setUsername(event.target.value); setError(null); }}
+                autoComplete="username"
+                placeholder="например, neuro_user"
+                maxLength={24}
+                className="h-[52px] w-full rounded-[14px] border px-4 text-primary outline-none"
+                style={{ background: "#122448", borderColor: "rgba(100,160,230,0.25)" }}
+              />
+            </label>
             {needsLegal && (
               <label className="flex items-start gap-3 body-s text-secondary">
                 <input
@@ -284,7 +314,12 @@ export default function SignUpPage() {
             </button>
             <button
               type="button"
-              onClick={() => { setRequirements(null); setError(null); }}
+              onClick={() => {
+                setRequirements(null);
+                setClerkRequirements(null);
+                setPendingSessionId(null);
+                setError(null);
+              }}
               disabled={loading}
               className="w-full body-s text-secondary"
             >
@@ -312,7 +347,15 @@ export default function SignUpPage() {
         onSubmit={submit}
         onRetryAuth={retryAuthLoad}
         onResend={sendEmailCode}
-        onBack={() => { setStep("email"); setCode(""); setError(null); }}
+        onBack={() => {
+          setStep("email");
+          setCode("");
+          setRequirements(null);
+          setClerkRequirements(null);
+          setPendingSessionId(null);
+          technicalPasswordRef.current = null;
+          setError(null);
+        }}
         onSwitchMode={() => setLocation("/sign-in")}
       />
     </div>
