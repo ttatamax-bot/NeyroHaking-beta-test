@@ -11,7 +11,7 @@ import {
   streakHistoryTable,
   userProfilesTable,
   userStatesTable,
-} from "@workspace/db";
+} from "../../../../lib/db/src/index.js";
 import {
   appDayKey,
   isTechniqueId,
