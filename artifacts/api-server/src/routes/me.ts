@@ -14,7 +14,7 @@ import {
   userProfilesTable,
   userStatesTable,
   usersTable,
-} from "@workspace/db";
+} from "../../../../lib/db/src/index.js";
 import {
   migrateLegacyState,
   stripNonAuthoritativeState,
