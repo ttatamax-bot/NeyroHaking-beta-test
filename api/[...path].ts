@@ -11,7 +11,13 @@ function hasClerkToken(req: any): boolean {
 }
 
 export default function apiPathEntry(req: any, res: any) {
-  if (req.url?.startsWith("/api/me") && !hasClerkToken(req)) {
+  const requestPath = String(req.url ?? req.path ?? req.originalUrl ?? "");
+  const isMeRoute =
+    requestPath === "/me" ||
+    requestPath.startsWith("/me/") ||
+    requestPath === "/api/me" ||
+    requestPath.startsWith("/api/me/");
+  if (isMeRoute && !hasClerkToken(req)) {
     res.status(401).json({ error: "Unauthorized" });
     return;
   }
