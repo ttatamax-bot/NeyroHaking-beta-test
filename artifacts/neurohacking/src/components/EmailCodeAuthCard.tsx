@@ -12,10 +12,12 @@ interface EmailCodeAuthCardProps {
   code: string;
   loading: boolean;
   authReady: boolean;
+  authLoadFailed?: boolean;
   error: string | null;
   onEmailChange: (value: string) => void;
   onCodeChange: (value: string) => void;
   onSubmit: () => void;
+  onRetryAuth?: () => void;
   onResend: () => void;
   onBack: () => void;
   onSwitchMode: () => void;
@@ -29,10 +31,12 @@ export function EmailCodeAuthCard({
   code,
   loading,
   authReady,
+  authLoadFailed = false,
   error,
   onEmailChange,
   onCodeChange,
   onSubmit,
+  onRetryAuth,
   onResend,
   onBack,
   onSwitchMode,
@@ -78,7 +82,11 @@ export function EmailCodeAuthCard({
         <form
           onSubmit={(event) => {
             event.preventDefault();
-            onSubmit();
+            if (authLoadFailed) {
+              onRetryAuth?.();
+            } else {
+              onSubmit();
+            }
           }}
           className="space-y-4"
         >
@@ -149,11 +157,13 @@ export function EmailCodeAuthCard({
 
           <button
             type="submit"
-            disabled={!authReady || loading}
+            disabled={loading || (!authReady && !authLoadFailed)}
             className="btn-grad btn-shimmer h-[52px] w-full rounded-[14px] title-s text-white disabled:cursor-not-allowed disabled:opacity-50"
           >
             {loading
               ? "Отправляем…"
+              : authLoadFailed
+                ? "Повторить загрузку"
               : !authReady
                 ? "Загружаем вход…"
                 : isCodeStep

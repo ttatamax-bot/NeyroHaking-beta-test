@@ -65,15 +65,24 @@ export default function SignInPage() {
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
+  const [authLoadFailed, setAuthLoadFailed] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (authLoaded) return;
+    if (authLoaded) {
+      setAuthLoadFailed(false);
+      return;
+    }
     const timer = window.setTimeout(() => {
-      setError("Сервис входа не загрузился. Обнови страницу и попробуй снова.");
+      setAuthLoadFailed(true);
+      setError("Сервис входа не загрузился. Если у тебя Brave, отключи Shields для этого сайта или открой его в Safari/Chrome, затем повтори загрузку.");
     }, 10000);
     return () => window.clearTimeout(timer);
   }, [authLoaded]);
+
+  const retryAuthLoad = () => {
+    window.location.reload();
+  };
 
   const sendEmailCode = async () => {
     if (!authLoaded || !client) return;
@@ -193,10 +202,12 @@ export default function SignInPage() {
         code={code}
         loading={loading}
         authReady={authLoaded}
+        authLoadFailed={authLoadFailed}
         error={error}
         onEmailChange={setEmail}
         onCodeChange={setCode}
         onSubmit={submit}
+        onRetryAuth={retryAuthLoad}
         onResend={resendCode}
         onBack={() => {
           setStep("email");
