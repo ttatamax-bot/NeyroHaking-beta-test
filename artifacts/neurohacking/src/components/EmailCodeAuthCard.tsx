@@ -119,6 +119,17 @@ export function EmailCodeAuthCard({
             </div>
           )}
 
+          {isSignUp && step === "email" && (
+            <div
+              id="clerk-captcha"
+              data-cl-theme="dark"
+              data-cl-size="flexible"
+              data-cl-language="auto"
+              className="flex min-h-0 justify-center"
+              aria-hidden="true"
+            />
+          )}
+
           <button
             type="submit"
             disabled={!authReady || loading || (step === "code" && code.length < 4)}
