@@ -1,4 +1,9 @@
-import type { IncomingHttpHeaders } from "node:http";
+import type {
+  ClientRequest,
+  IncomingHttpHeaders,
+  IncomingMessage,
+  ServerResponse,
+} from "node:http";
 import type { RequestHandler } from "express";
 import { createProxyMiddleware } from "http-proxy-middleware";
 
@@ -15,16 +20,18 @@ export function getClerkProxyHost(req: {
 
 export function clerkProxyMiddleware(): RequestHandler {
   if (process.env.NODE_ENV !== "production" || !process.env.CLERK_SECRET_KEY) {
-    return (_req, _res, next) => next();
+    return ((_req: IncomingMessage, _res: ServerResponse, next: (err?: unknown) => void) =>
+      next()) as unknown as RequestHandler;
   }
 
   const secretKey = process.env.CLERK_SECRET_KEY;
   return createProxyMiddleware({
     target: CLERK_FAPI,
     changeOrigin: true,
-    pathRewrite: (path) => path.replace(new RegExp(`^${CLERK_PROXY_PATH}`), ""),
+    pathRewrite: (path: string) =>
+      path.replace(new RegExp(`^${CLERK_PROXY_PATH}`), ""),
     on: {
-      proxyReq: (proxyReq, req) => {
+      proxyReq: (proxyReq: ClientRequest, req: IncomingMessage) => {
         const protocol = req.headers["x-forwarded-proto"] || "https";
         const host = getClerkProxyHost(req) || "";
         proxyReq.setHeader(
@@ -34,5 +41,5 @@ export function clerkProxyMiddleware(): RequestHandler {
         proxyReq.setHeader("Clerk-Secret-Key", secretKey);
       },
     },
-  });
+  } as any) as unknown as RequestHandler;
 }
