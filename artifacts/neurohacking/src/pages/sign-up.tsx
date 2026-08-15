@@ -1,18 +1,21 @@
-import { useSignUp } from "@clerk/react";
+import { useClerk } from "@clerk/react";
 import { useLocation } from "wouter";
 import { useState } from "react";
 import { EmailCodeAuthCard, type EmailCodeAuthStep } from "@/components/EmailCodeAuthCard";
 
 function getClerkErrorMessage(error: unknown): string {
-  const clerkError = error as { errors?: Array<{ longMessage?: string; message?: string }>; message?: string };
-  return clerkError.errors?.[0]?.longMessage
-    ?? clerkError.errors?.[0]?.message
-    ?? clerkError.message
-    ?? "Не удалось отправить код. Попробуй ещё раз.";
+  const e = error as { errors?: Array<{ longMessage?: string; message?: string }>; message?: string; longMessage?: string };
+  return (
+    e.errors?.[0]?.longMessage ??
+    e.errors?.[0]?.message ??
+    e.longMessage ??
+    e.message ??
+    "Не удалось отправить код. Попробуй ещё раз."
+  );
 }
 
 export default function SignUpPage() {
-  const { signUp, fetchStatus } = useSignUp();
+  const { client, setActive, loaded } = useClerk();
   const [, setLocation] = useLocation();
   const [step, setStep] = useState<EmailCodeAuthStep>("email");
   const [email, setEmail] = useState("");
@@ -21,14 +24,13 @@ export default function SignUpPage() {
   const [error, setError] = useState<string | null>(null);
 
   const sendCode = async () => {
-    if (!email.trim()) return;
+    if (!loaded || !client || !email.trim()) return;
     setLoading(true);
     setError(null);
     try {
-      const created = await signUp.create({ emailAddress: email.trim() });
-      if (created.error) throw created.error;
-      const verification = await signUp.verifications.sendEmailCode();
-      if (verification.error) throw verification.error;
+      const signUp = client.signUp;
+      await signUp.create({ emailAddress: email.trim() });
+      await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
       setStep("code");
     } catch (err) {
       setError(getClerkErrorMessage(err));
@@ -38,26 +40,24 @@ export default function SignUpPage() {
   };
 
   const verifyCode = async () => {
-    if (!code.trim()) return;
+    if (!loaded || !client || !code.trim()) return;
     setLoading(true);
     setError(null);
     try {
-      const verification = await signUp.verifications.verifyEmailCode({ code: code.trim() });
-      if (verification.error) throw verification.error;
-      if (signUp.status !== "complete") {
-        throw new Error("Email подтверждён не полностью. Попробуй ещё раз.");
+      const signUp = client.signUp;
+      const result = await signUp.attemptEmailAddressVerification({ code: code.trim() });
+      if (result.status === "complete" && result.createdSessionId) {
+        await setActive({ session: result.createdSessionId });
+        setLocation("/profile-setup");
+      } else {
+        throw new Error("Верификация не завершена. Попробуй ещё раз.");
       }
-      const finalized = await signUp.finalize();
-      if (finalized.error) throw finalized.error;
-      setLocation("/profile-setup");
     } catch (err) {
       setError(getClerkErrorMessage(err));
     } finally {
       setLoading(false);
     }
   };
-
-  const submit = step === "email" ? sendCode : verifyCode;
 
   return (
     <div className="min-h-[100dvh] w-full flex items-center justify-center px-4" style={{ background: '#0F2035' }}>
@@ -66,11 +66,11 @@ export default function SignUpPage() {
         step={step}
         email={email}
         code={code}
-        loading={loading || fetchStatus === "fetching"}
+        loading={loading || !loaded}
         error={error}
         onEmailChange={setEmail}
         onCodeChange={setCode}
-        onSubmit={submit}
+        onSubmit={step === "email" ? sendCode : verifyCode}
         onBack={() => { setStep("email"); setCode(""); setError(null); }}
         onResend={sendCode}
         onSwitchMode={() => setLocation("/sign-in")}

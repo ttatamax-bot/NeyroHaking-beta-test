@@ -1,18 +1,24 @@
-import { useSignIn } from "@clerk/react";
+import { useClerk } from "@clerk/react";
 import { useLocation } from "wouter";
 import { useState } from "react";
 import { EmailCodeAuthCard, type EmailCodeAuthStep } from "@/components/EmailCodeAuthCard";
-
 function getClerkErrorMessage(error: unknown): string {
-  const clerkError = error as { errors?: Array<{ longMessage?: string; message?: string }>; message?: string };
-  return clerkError.errors?.[0]?.longMessage
-    ?? clerkError.errors?.[0]?.message
-    ?? clerkError.message
-    ?? "Не удалось отправить код. Проверь email и попробуй ещё раз.";
+  const e = error as { errors?: Array<{ longMessage?: string; message?: string }>; message?: string; longMessage?: string };
+  return (
+    e.errors?.[0]?.longMessage ??
+    e.errors?.[0]?.message ??
+    e.longMessage ??
+    e.message ??
+    "Не удалось отправить код. Проверь email и попробуй ещё раз."
+  );
+}
+
+function isEmailCodeFactor(f: { strategy: string }): f is { strategy: "email_code"; emailAddressId: string } {
+  return f.strategy === "email_code";
 }
 
 export default function SignInPage() {
-  const { signIn, fetchStatus } = useSignIn();
+  const { client, setActive, loaded } = useClerk();
   const [, setLocation] = useLocation();
   const [step, setStep] = useState<EmailCodeAuthStep>("email");
   const [email, setEmail] = useState("");
@@ -21,14 +27,21 @@ export default function SignInPage() {
   const [error, setError] = useState<string | null>(null);
 
   const sendCode = async () => {
-    if (!email.trim()) return;
+    if (!loaded || !client || !email.trim()) return;
     setLoading(true);
     setError(null);
     try {
-      const result = await signIn.emailCode.sendCode(
-        step === "email" ? { emailAddress: email.trim() } : undefined,
-      );
-      if (result.error) throw result.error;
+      const signIn = client.signIn;
+      const result = await signIn.create({ identifier: email.trim() });
+      type EmailCodeFactor = { strategy: "email_code"; emailAddressId: string };
+      const emailFactor = result.supportedFirstFactors?.find(isEmailCodeFactor) as EmailCodeFactor | undefined;
+      if (!emailFactor) {
+        throw new Error("Аккаунт не найден. Зарегистрируйся, чтобы продолжить.");
+      }
+      await signIn.prepareFirstFactor({
+        strategy: "email_code",
+        emailAddressId: emailFactor.emailAddressId,
+      });
       setStep("code");
     } catch (err) {
       setError(getClerkErrorMessage(err));
@@ -38,26 +51,27 @@ export default function SignInPage() {
   };
 
   const verifyCode = async () => {
-    if (!code.trim()) return;
+    if (!loaded || !client || !code.trim()) return;
     setLoading(true);
     setError(null);
     try {
-      const result = await signIn.emailCode.verifyCode({ code: code.trim() });
-      if (result.error) throw result.error;
-      if (signIn.status !== "complete") {
-        throw new Error("Email подтверждён не полностью. Попробуй ещё раз.");
+      const signIn = client.signIn;
+      const result = await signIn.attemptFirstFactor({
+        strategy: "email_code",
+        code: code.trim(),
+      });
+      if (result.status === "complete" && result.createdSessionId) {
+        await setActive({ session: result.createdSessionId });
+        setLocation("/");
+      } else {
+        throw new Error("Вход не завершён. Попробуй ещё раз.");
       }
-      const finalized = await signIn.finalize();
-      if (finalized.error) throw finalized.error;
-      setLocation("/");
     } catch (err) {
       setError(getClerkErrorMessage(err));
     } finally {
       setLoading(false);
     }
   };
-
-  const submit = step === "email" ? sendCode : verifyCode;
 
   return (
     <div className="min-h-[100dvh] w-full flex items-center justify-center px-4" style={{ background: '#0F2035' }}>
@@ -66,11 +80,11 @@ export default function SignInPage() {
         step={step}
         email={email}
         code={code}
-        loading={loading || fetchStatus === "fetching"}
+        loading={loading || !loaded}
         error={error}
         onEmailChange={setEmail}
         onCodeChange={setCode}
-        onSubmit={submit}
+        onSubmit={step === "email" ? sendCode : verifyCode}
         onBack={() => { setStep("email"); setCode(""); setError(null); }}
         onResend={sendCode}
         onSwitchMode={() => setLocation("/sign-up")}
