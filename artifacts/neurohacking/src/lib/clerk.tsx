@@ -14,8 +14,7 @@ const clerkPubKey = publishableKeyFromHost(
   window.location.hostname,
   import.meta.env.VITE_CLERK_PUBLISHABLE_KEY,
 );
-const clerkProxyUrl =
-  import.meta.env.VITE_CLERK_PROXY_URL || `${basePath}/api/__clerk`;
+const clerkProxyUrl = import.meta.env.VITE_CLERK_PROXY_URL;
 
 function stripBase(path: string): string {
   return basePath && path.startsWith(basePath)
@@ -98,14 +97,10 @@ export function ClerkProviderWithRoutes({ children }: { children: ReactNode }) {
     throw new Error("Missing VITE_CLERK_PUBLISHABLE_KEY");
   }
 
-  // Proxying is only available for production Clerk instances; in development
-  // the SDK loads Clerk assets directly from Clerk's CDN.
-  const proxyUrl = import.meta.env.PROD ? clerkProxyUrl : undefined;
-
   return (
     <ClerkProvider
       publishableKey={clerkPubKey}
-      proxyUrl={proxyUrl}
+      proxyUrl={clerkProxyUrl}
       appearance={clerkAppearance}
       signInUrl={`${basePath}/sign-in`}
       signUpUrl={`${basePath}/sign-up`}

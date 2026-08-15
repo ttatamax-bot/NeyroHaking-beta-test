@@ -9,6 +9,7 @@ interface EmailCodeAuthCardProps {
   email: string;
   code: string;
   loading: boolean;
+  authReady: boolean;
   error: string | null;
   onEmailChange: (value: string) => void;
   onCodeChange: (value: string) => void;
@@ -24,6 +25,7 @@ export function EmailCodeAuthCard({
   email,
   code,
   loading,
+  authReady,
   error,
   onEmailChange,
   onCodeChange,
@@ -119,10 +121,16 @@ export function EmailCodeAuthCard({
 
           <button
             type="submit"
-            disabled={loading || (step === "code" && code.length < 4)}
+            disabled={!authReady || loading || (step === "code" && code.length < 4)}
             className="btn-grad btn-shimmer h-[52px] w-full rounded-[14px] title-s text-white disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {loading ? "Проверяем…" : step === "email" ? "Получить код" : "Подтвердить email"}
+            {loading
+              ? "Проверяем…"
+              : !authReady
+                ? "Загружаем вход…"
+                : step === "email"
+                  ? "Получить код"
+                  : "Подтвердить email"}
           </button>
         </form>
 
@@ -131,7 +139,7 @@ export function EmailCodeAuthCard({
             <button
               type="button"
               onClick={onBack}
-              disabled={loading}
+              disabled={!authReady || loading}
               className="inline-flex items-center gap-1.5 body-s text-secondary transition hover:text-primary disabled:opacity-50"
             >
               <ArrowLeft size={15} />
@@ -140,7 +148,7 @@ export function EmailCodeAuthCard({
             <button
               type="button"
               onClick={onResend}
-              disabled={loading}
+              disabled={!authReady || loading}
               className="inline-flex items-center gap-1.5 body-s text-blue-light transition hover:text-primary disabled:opacity-50"
             >
               <RefreshCw size={14} />

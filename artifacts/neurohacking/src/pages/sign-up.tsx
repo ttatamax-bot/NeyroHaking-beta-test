@@ -1,6 +1,6 @@
 import { useClerk } from "@clerk/react";
 import { useLocation } from "wouter";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { EmailCodeAuthCard, type EmailCodeAuthStep } from "@/components/EmailCodeAuthCard";
 
 function getClerkErrorMessage(error: unknown): string {
@@ -34,6 +34,14 @@ export default function SignUpPage() {
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (loaded) return;
+    const timer = window.setTimeout(() => {
+      setError("Сервис входа не загрузился. Обнови страницу и попробуй снова.");
+    }, 10000);
+    return () => window.clearTimeout(timer);
+  }, [loaded]);
 
   const sendCode = async () => {
     if (!loaded || !client || !email.trim()) return;
@@ -78,7 +86,8 @@ export default function SignUpPage() {
         step={step}
         email={email}
         code={code}
-        loading={loading || !loaded}
+        loading={loading}
+        authReady={loaded}
         error={error}
         onEmailChange={setEmail}
         onCodeChange={setCode}
