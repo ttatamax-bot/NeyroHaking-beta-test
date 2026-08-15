@@ -332,7 +332,7 @@ function AppLogic() {
   const store = useAppStore();
   const { userState, updateState } = store;
   const { isLoaded: isAuthLoaded, isSignedIn } = useAuthInfo();
-  const [location, setLocation] = useLocation();
+  const [location] = useLocation();
   const storeRef = useRef(store);
   storeRef.current = store;
 
@@ -346,23 +346,57 @@ function AppLogic() {
   // next app visit.
   useEffect(() => {
     if (!isAuthLoaded || isSignedIn) return;
-    if (location.startsWith('/sign-in') || location.startsWith('/sign-up')) return;
+    const basePath = import.meta.env.BASE_URL.replace(/\/$/, '');
+    const signInPath = `${basePath}/sign-in` || '/sign-in';
+    const signUpPath = `${basePath}/sign-up` || '/sign-up';
+    const currentPath = window.location.pathname;
+    if (
+      location.startsWith('/sign-in') ||
+      location.startsWith('/sign-up') ||
+      currentPath === signInPath ||
+      currentPath.startsWith(`${signInPath}/`) ||
+      currentPath === signUpPath ||
+      currentPath.startsWith(`${signUpPath}/`)
+    ) return;
+
+    const hasStateProgress = (snapshot: Partial<AppState> | null) => {
+      if (!snapshot) return false;
+      return (
+        (snapshot.activityLog?.length ?? 0) > 0 ||
+        (snapshot.keysHistory?.length ?? 0) > 0 ||
+        (snapshot.potentialHistory?.length ?? 0) > 0 ||
+        (snapshot.history?.length ?? 0) > 0 ||
+        Boolean(snapshot.lastCompletedDate)
+      );
+    };
+
+    let persistedState: Partial<AppState> | null = null;
+    try {
+      const saved = localStorage.getItem('neyro_state');
+      persistedState = saved ? JSON.parse(saved) as Partial<AppState> : null;
+    } catch {
+      persistedState = null;
+    }
 
     const hasGuestProgress =
-      store.activityLog.length > 0 ||
-      store.keysHistory.length > 0 ||
-      store.potentialHistory.length > 0 ||
-      store.history.length > 0 ||
-      Boolean(store.lastCompletedDate);
+      hasStateProgress(store) ||
+      hasStateProgress(persistedState);
 
     if (hasGuestProgress) {
-      setLocation('/sign-up');
+      // Use a full route navigation here rather than relying on the router's
+      // in-memory transition. This also covers the first render after loading
+      // an existing guest snapshot and works consistently on Vercel rewrites.
+      const target = signUpPath || '/sign-up';
+      if (currentPath !== target) {
+        const redirectTimer = window.setTimeout(() => window.location.assign(target), 0);
+        return () => window.clearTimeout(redirectTimer);
+      }
     }
+    return undefined;
   }, [
     isAuthLoaded,
     isSignedIn,
     location,
-    setLocation,
     store.activityLog.length,
     store.keysHistory.length,
     store.potentialHistory.length,
