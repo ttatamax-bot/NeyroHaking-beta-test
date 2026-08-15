@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { useUser } from "@clerk/react";
 import { motion } from "framer-motion";
@@ -20,15 +20,20 @@ export default function ProfileSetup() {
       return "";
     }
   });
+  const [hasPendingNickname] = useState(() => {
+    try {
+      return Boolean(sessionStorage.getItem(pendingNicknameStorageKey));
+    } catch {
+      return false;
+    }
+  });
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const autoSaveAttemptedRef = useRef(false);
 
   useEffect(() => {
     if (isLoaded && !isSignedIn) setLocation("/sign-up");
   }, [isLoaded, isSignedIn, setLocation]);
-
-  if (!isLoaded) return null;
-  if (!isSignedIn) return null;
 
   const normalized = nickname.trim();
   const validationError =
@@ -59,6 +64,24 @@ export default function ProfileSetup() {
       setSaving(false);
     }
   };
+
+  useEffect(() => {
+    if (
+      !hasPendingNickname ||
+      !isLoaded ||
+      !isSignedIn ||
+      !normalized ||
+      validationError ||
+      autoSaveAttemptedRef.current
+    ) {
+      return;
+    }
+    autoSaveAttemptedRef.current = true;
+    void submit();
+  }, [hasPendingNickname, isLoaded, isSignedIn, normalized, validationError]);
+
+  if (!isLoaded) return null;
+  if (!isSignedIn) return null;
 
   return (
     <div className="min-h-[100dvh] flex items-center justify-center px-6">
