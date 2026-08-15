@@ -55,6 +55,26 @@ export default function ProfileSetup() {
       }
       setLocation("/path");
     } catch (err) {
+      if (hasPendingNickname && user) {
+        try {
+          await user.update({
+            unsafeMetadata: {
+              ...user.unsafeMetadata,
+              neuroNickname: normalized,
+            },
+          });
+          updateState({ userState: "active", onboardingComplete: true });
+          try {
+            sessionStorage.removeItem(pendingNicknameStorageKey);
+          } catch {
+            // Ignore storage restrictions; Clerk metadata is now authoritative for onboarding.
+          }
+          setLocation("/path");
+          return;
+        } catch {
+          // Show the regular error if the account metadata fallback also fails.
+        }
+      }
       setError(
         err instanceof ApiError && err.status === 409
           ? "Этот никнейм уже занят. Выбери другой."
