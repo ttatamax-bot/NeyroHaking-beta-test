@@ -3,7 +3,6 @@ import cors from "cors";
 import { pinoHttp } from "pino-http";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { clerkMiddleware } from "@clerk/express";
-import { publishableKeyFromHost } from "@clerk/shared/keys";
 import router from "./routes/index.js";
 import { logger } from "./lib/logger.js";
 import {
@@ -43,11 +42,8 @@ app.use(express.json({ limit: "256kb" }));
 app.use(express.urlencoded({ extended: true }));
 
 app.use(
-  clerkMiddleware((req: any) => ({
-    publishableKey: publishableKeyFromHost(
-      getClerkProxyHost(req) ?? "",
-      process.env.CLERK_PUBLISHABLE_KEY,
-    ),
+  clerkMiddleware(() => ({
+    publishableKey: process.env.CLERK_PUBLISHABLE_KEY,
   })),
 );
 
