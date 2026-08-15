@@ -145,7 +145,7 @@ export function EmailCodeAuthCard({
 
           <button
             type="submit"
-            disabled={!authReady || loading || !email.trim()}
+            disabled={!authReady || loading}
             className="btn-grad btn-shimmer h-[52px] w-full rounded-[14px] title-s text-white disabled:cursor-not-allowed disabled:opacity-50"
           >
             {loading

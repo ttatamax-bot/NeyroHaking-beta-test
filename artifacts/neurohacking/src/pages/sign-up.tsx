@@ -1,4 +1,4 @@
-import { useClerk } from "@clerk/react";
+import { useAuth, useClerk } from "@clerk/react";
 import { useLocation } from "wouter";
 import { useEffect, useState } from "react";
 import { EmailCodeAuthCard, type EmailCodeAuthStep } from "@/components/EmailCodeAuthCard";
@@ -27,7 +27,8 @@ function withAuthTimeout<T>(promise: Promise<T>, timeoutMs = 15000): Promise<T> 
 }
 
 export default function SignUpPage() {
-  const { client, loaded, setActive } = useClerk();
+  const { client, setActive } = useClerk();
+  const { isLoaded: authLoaded } = useAuth();
   const [, setLocation] = useLocation();
   const [step, setStep] = useState<EmailCodeAuthStep>("email");
   const [email, setEmail] = useState("");
@@ -36,15 +37,19 @@ export default function SignUpPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (loaded) return;
+    if (authLoaded) return;
     const timer = window.setTimeout(() => {
       setError("Сервис входа не загрузился. Обнови страницу и попробуй снова.");
     }, 10000);
     return () => window.clearTimeout(timer);
-  }, [loaded]);
+  }, [authLoaded]);
 
   const sendEmailCode = async () => {
-    if (!loaded || !client || !email.trim()) return;
+    if (!authLoaded || !client) return;
+    if (!email.trim()) {
+      setError("Введи email, чтобы получить код.");
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
@@ -61,7 +66,11 @@ export default function SignUpPage() {
   };
 
   const verifyCode = async () => {
-    if (!loaded || !client || code.trim().length < 4) return;
+    if (!authLoaded || !client) return;
+    if (code.trim().length < 4) {
+      setError("Введи код из письма.");
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
@@ -90,7 +99,7 @@ export default function SignUpPage() {
         email={email}
         code={code}
         loading={loading}
-        authReady={loaded}
+        authReady={authLoaded}
         error={error}
         onEmailChange={setEmail}
         onCodeChange={setCode}
