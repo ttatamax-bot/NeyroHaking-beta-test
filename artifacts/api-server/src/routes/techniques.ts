@@ -1,5 +1,5 @@
 import { getAuth } from "@clerk/express";
-import { and, db, eq, usersTable } from "@workspace/db";
+import { and, db, eq, usersTable } from "../../../../lib/db/src/index.js";
 import { z } from "zod";
 import {
   isTechniqueId,
