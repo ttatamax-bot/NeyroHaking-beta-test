@@ -1,4 +1,4 @@
-import express, { type Application } from "express";
+import express from "express";
 import cors from "cors";
 import { pinoHttp } from "pino-http";
 import type { IncomingMessage, ServerResponse } from "node:http";
@@ -12,7 +12,11 @@ import {
   getClerkProxyHost,
 } from "./middlewares/clerkProxyMiddleware.js";
 
-const app: Application = express();
+type ExpressRuntimeApp = ReturnType<typeof express> & {
+  use: (...args: any[]) => unknown;
+};
+
+const app = express() as ExpressRuntimeApp;
 
 app.use(
   pinoHttp({
@@ -39,7 +43,7 @@ app.use(express.json({ limit: "256kb" }));
 app.use(express.urlencoded({ extended: true }));
 
 app.use(
-  clerkMiddleware((req) => ({
+  clerkMiddleware((req: any) => ({
     publishableKey: publishableKeyFromHost(
       getClerkProxyHost(req) ?? "",
       process.env.CLERK_PUBLISHABLE_KEY,
