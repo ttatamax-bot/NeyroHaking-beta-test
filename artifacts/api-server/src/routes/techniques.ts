@@ -8,6 +8,7 @@ import {
   type TechniqueMetadata,
 } from "../services/techniqueRewards.js";
 import { createCompatibleRouter } from "./compatRouter.js";
+import { logger } from "../lib/logger.js";
 
 const router = createCompatibleRouter();
 
@@ -67,13 +68,21 @@ router.post("/techniques/complete", async (req, res) => {
     .returning())[0] ?? (await db.query.usersTable.findFirst({
     where: eq(usersTable.clerkId, clerkId),
   }))!;
-  res.json(await recordTechniqueCompletion(
-    user.id,
-    techniqueId,
-    metadata.data as TechniqueMetadata,
-    parsed.data.timezoneOffsetMinutes,
-    parsed.data.idempotencyKey,
-  ));
+  try {
+    res.json(await recordTechniqueCompletion(
+      user.id,
+      techniqueId,
+      metadata.data as TechniqueMetadata,
+      parsed.data.timezoneOffsetMinutes,
+      parsed.data.idempotencyKey,
+    ));
+  } catch (error) {
+    const code = typeof error === "object" && error !== null && "code" in error
+      ? String(error.code)
+      : "completion_transaction_failed";
+    logger.error({ err: error, techniqueId, code }, "Technique completion failed");
+    res.status(500).json({ error: "Technique completion failed", code });
+  }
 });
 
 export default router;
