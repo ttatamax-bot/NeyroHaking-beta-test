@@ -11,6 +11,7 @@ declare const process: {
 export default async function healthz(_req: unknown, res: HealthResponse) {
   let databaseReachable = false;
   let databaseSchema = false;
+  let databaseError: string | null = null;
 
   if (process.env.DATABASE_URL) {
     try {
@@ -22,9 +23,21 @@ export default async function healthz(_req: unknown, res: HealthResponse) {
       await pool.query("select 1 from user_states limit 0");
       await pool.query("select 1 from legacy_migrations limit 0");
       databaseSchema = true;
-    } catch {
+    } catch (error) {
       // Keep health output safe for a public endpoint; the booleans identify
       // whether the configured database can actually serve account sync.
+      const code = typeof error === "object" && error !== null && "code" in error
+        ? String(error.code)
+        : "";
+      const message = error instanceof Error ? error.message.toLowerCase() : "";
+      databaseError = code ||
+        (message.includes("password") || message.includes("authentication")
+          ? "authentication_failed"
+          : message.includes("timeout") || message.includes("timed out")
+            ? "connection_timeout"
+            : message.includes("enotfound") || message.includes("getaddrinfo")
+              ? "host_not_found"
+              : "connection_failed");
     }
   }
 
@@ -43,6 +56,7 @@ export default async function healthz(_req: unknown, res: HealthResponse) {
     database: {
       reachable: databaseReachable,
       schema: databaseSchema,
+      error: databaseError,
     },
   });
 }
