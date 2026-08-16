@@ -1,5 +1,3 @@
-import app from "../../artifacts/api-server/src/app.js";
-
 function hasClerkToken(req: any): boolean {
   const authorization = req.headers?.authorization;
   const cookie = req.headers?.cookie ?? "";
@@ -21,5 +19,6 @@ export default async function techniquesCompleteEntry(req: any, res: any) {
     : "/api/techniques/complete";
   req.url = normalizedPath;
   req.originalUrl = normalizedPath;
+  const { default: app } = await import("../../artifacts/api-server/src/app.js");
   return app(req, res);
 }
