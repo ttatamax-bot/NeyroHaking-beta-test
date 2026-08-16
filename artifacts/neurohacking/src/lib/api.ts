@@ -5,6 +5,8 @@ const BASE_URL = import.meta.env.VITE_API_BASE_URL
 export const API_BASE = BASE_URL.endsWith('/api') ? BASE_URL : `${BASE_URL}/api`;
 
 let authTokenProvider: ((forceRefresh?: boolean) => Promise<string | null>) | null = null;
+const AUTH_TOKEN_TIMEOUT_MS = 2500;
+const API_REQUEST_TIMEOUT_MS = 12_000;
 
 export function setApiAuthTokenProvider(
   provider: ((forceRefresh?: boolean) => Promise<string | null>) | null,
@@ -16,8 +18,37 @@ async function requestHeaders(
   headers: Record<string, string> = {},
   forceRefresh = false,
 ): Promise<Record<string, string>> {
-  const token = await authTokenProvider?.(forceRefresh);
+  let token: string | null = null;
+  if (authTokenProvider) {
+    try {
+      token = await Promise.race([
+        authTokenProvider(forceRefresh),
+        new Promise<null>((resolve) => {
+          window.setTimeout(() => resolve(null), AUTH_TOKEN_TIMEOUT_MS);
+        }),
+      ]);
+    } catch {
+      // Same-origin Clerk cookies can authenticate the API even when the
+      // browser's token resource is temporarily unavailable.
+      token = null;
+    }
+  }
   return token ? { ...headers, Authorization: `Bearer ${token}` } : headers;
+}
+
+async function fetchWithTimeout(input: RequestInfo | URL, init: RequestInit): Promise<Response> {
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), API_REQUEST_TIMEOUT_MS);
+  try {
+    return await fetch(input, { ...init, signal: controller.signal });
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      throw new ApiError(504, 'Request timed out', { error: 'request_timeout' });
+    }
+    throw error;
+  } finally {
+    window.clearTimeout(timeout);
+  }
 }
 
 export class ApiError extends Error {
@@ -39,7 +70,7 @@ async function handleResponse(response: Response) {
 }
 
 export async function apiGet<T = unknown>(path: string): Promise<T> {
-  const request = async (forceRefresh = false) => fetch(`${API_BASE}${path}`, {
+  const request = async (forceRefresh = false) => fetchWithTimeout(`${API_BASE}${path}`, {
     credentials: 'include',
     cache: 'no-store',
     headers: await requestHeaders({}, forceRefresh),
@@ -50,7 +81,7 @@ export async function apiGet<T = unknown>(path: string): Promise<T> {
 }
 
 export async function apiPost<T = unknown>(path: string, body: unknown): Promise<T> {
-  const request = async (forceRefresh = false) => fetch(`${API_BASE}${path}`, {
+  const request = async (forceRefresh = false) => fetchWithTimeout(`${API_BASE}${path}`, {
     method: 'POST',
     headers: await requestHeaders({ 'Content-Type': 'application/json' }, forceRefresh),
     credentials: 'include',
