@@ -21,6 +21,7 @@ import {
   stripNonAuthoritativeState,
 } from "../services/legacyMigration.js";
 import { createCompatibleRouter } from "./compatRouter.js";
+import { logger } from "../lib/logger.js";
 
 const router = createCompatibleRouter();
 
@@ -78,7 +79,13 @@ router.get("/me", async (req, res) => {
   const clerkId = requireUser(req, res);
   if (!clerkId) return;
   const user = await getUser(clerkId);
-  await reconcileLegacyKeyLedger(user.id);
+  try {
+    await reconcileLegacyKeyLedger(user.id);
+  } catch (error) {
+    // A repair of historical ledger data must not block account hydration.
+    // The repair is idempotent and can be retried on a later /me request.
+    logger.error({ err: error, userId: user.id }, "Legacy ledger repair failed during account hydration");
+  }
   const state = await db.query.userStatesTable.findFirst({
     where: eq(userStatesTable.userId, user.id),
   });
