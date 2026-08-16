@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import { useEffect, useRef, useState } from "react";
 import { EmailCodeAuthCard, type EmailCodeAuthStep } from "@/components/EmailCodeAuthCard";
 import { markAuthTransition } from "@/lib/auth-transition";
+import { getRememberedEmail } from "@/lib/remembered-email";
 
 type SignUpRequirement = "first_name" | "last_name" | "username" | "password" | "legal_accepted";
 const pendingNicknameStorageKey = "neuro_pending_nickname";
@@ -53,7 +54,7 @@ export default function SignUpPage() {
   const { isLoaded: authLoaded } = useAuth();
   const [, setLocation] = useLocation();
   const [step, setStep] = useState<EmailCodeAuthStep>("email");
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(() => getRememberedEmail());
   const [code, setCode] = useState("");
   const [requirements, setRequirements] = useState<SignUpRequirement[] | null>(null);
   const [clerkRequirements, setClerkRequirements] = useState<SignUpRequirement[] | null>(null);
