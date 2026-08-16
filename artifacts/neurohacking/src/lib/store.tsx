@@ -1,10 +1,11 @@
 import { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react';
-import { useUser } from '@clerk/react';
+import { useAuth, useUser } from '@clerk/react';
 import {
   getServerState,
   saveServerState,
   migrateLegacyState,
   completeTechnique as apiCompleteTechnique,
+  setApiAuthTokenProvider,
   type CompleteTechniqueResult,
   type ServerProfile,
 } from './api';
@@ -375,12 +376,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   });
 
   const { isLoaded, isSignedIn, user } = useUser();
+  const { getToken } = useAuth();
   const userId = user?.id ?? null;
   const hydratedUserRef = useRef<string | null>(null);
   const hydrationRequestRef = useRef<string | null>(null);
   const stateRef = useRef(state);
   stateRef.current = state;
   const [, setHydrationRetryTick] = useState(0);
+
+  useEffect(() => {
+    setApiAuthTokenProvider(getToken);
+    return () => setApiAuthTokenProvider(null);
+  }, [getToken]);
 
   useEffect(() => {
     // Once an account has hydrated, local storage is no longer an authority.
