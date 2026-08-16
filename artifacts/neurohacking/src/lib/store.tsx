@@ -273,6 +273,76 @@ export function profileDayPotential(profile: ServerProfile | null | undefined, n
   return clampDayPotential(profile.dayPotential);
 }
 
+function sameStateValue(left: unknown, right: unknown): boolean {
+  if (Object.is(left, right)) return true;
+  try {
+    return JSON.stringify(left) === JSON.stringify(right);
+  } catch {
+    return false;
+  }
+}
+
+function sameServerProfile(left: ServerProfile | null | undefined, right: ServerProfile | null | undefined): boolean {
+  if (!left || !right) return left === right;
+  for (const key of [
+    'id',
+    'userId',
+    'nickname',
+    'displayName',
+    'bio',
+    'avatarUrl',
+    'totalKeys',
+    'totalPotential',
+    'dayPotential',
+    'dayPotentialDay',
+    'closedDays',
+    'currentStreak',
+    'longestStreak',
+    'createdAt',
+  ] as const) {
+    if (!Object.is(left[key], right[key])) return false;
+  }
+  return true;
+}
+
+function mergeSavedServerState(
+  previous: AppState,
+  savedState: Record<string, unknown> | null | undefined,
+  profile: ServerProfile | null | undefined,
+): AppState {
+  let next = previous;
+  let changed = false;
+
+  for (const [key, value] of Object.entries(savedState ?? {})) {
+    if (key === 'profile') continue;
+    const stateKey = key as keyof AppState;
+    if (!sameStateValue(previous[stateKey], value)) {
+      if (!changed) {
+        next = { ...previous };
+        changed = true;
+      }
+      (next as unknown as Record<string, unknown>)[key] = value;
+    }
+  }
+
+  if (profile && !sameServerProfile(previous.profile, profile)) {
+    if (!changed) {
+      next = { ...previous };
+      changed = true;
+    }
+    next = {
+      ...next,
+      keys: profile.totalKeys,
+      potential: profileDayPotential(profile),
+      closedDays: profile.closedDays,
+      streak: profile.currentStreak,
+      profile,
+    };
+  }
+
+  return next;
+}
+
 /**
  * Локальное начисление для гостя: потенциал копится в пределах дня,
  * а ключи появляются только при закрытии дня на 100%.
@@ -681,19 +751,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       saveServerState(stateRef.current)
         .then(({ state: savedState, profile }) => {
           if (hydratedUserRef.current !== userId) return;
-          setState(prev => ({
-            ...prev,
-            ...(savedState as Partial<AppState>),
-            ...(profile
-              ? {
-                  keys: profile.totalKeys,
-                  potential: profileDayPotential(profile),
-                  closedDays: profile.closedDays,
-                  streak: profile.currentStreak,
-                  profile,
-                }
-              : {}),
-          }));
+          setState(prev => mergeSavedServerState(prev, savedState, profile));
         })
         .catch(() => {});
     }, 2000);
