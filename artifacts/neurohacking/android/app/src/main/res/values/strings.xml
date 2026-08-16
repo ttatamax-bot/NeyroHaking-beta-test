@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">НейроХакинг</string>
+    <string name="title_activity_main">НейроХакинг</string>
+    <string name="package_name">com.neyrohaking.app</string>
+    <string name="custom_url_scheme">com.neyrohaking.app</string>
+</resources>

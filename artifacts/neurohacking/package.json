@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "vite --config vite.config.ts --host 0.0.0.0",
     "build": "vite build --config vite.config.ts",
+    "android:sync": "pnpm run build && cap sync android",
+    "android:build": "pnpm run android:sync && cd android && ./gradlew assembleDebug",
     "serve": "vite preview --config vite.config.ts --host 0.0.0.0",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
@@ -72,9 +74,12 @@
     "vaul": "^1.1.2",
     "vite": "catalog:",
     "wouter": "^3.3.5",
-    "zod": "catalog:"
+    "zod": "catalog:",
+    "@capacitor/android": "^8.5.0",
+    "@capacitor/cli": "^8.5.0"
   },
   "dependencies": {
+    "@capacitor/core": "^8.5.0",
     "@clerk/react": "^6.12.5",
     "@clerk/themes": "^2.4.57"
   }

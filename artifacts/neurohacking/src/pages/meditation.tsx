@@ -82,7 +82,6 @@ export default function Meditation() {
         const result = await completeTechnique(
           "T3",
           { durationLabel: dur.label },
-          completionKeyRef.current ?? undefined,
         );
         setCompletedKeys(result.keys);
         setRunning(false);

@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import { useAppStore, getTodayKeysFromSource, computeStreakUpdate } from "@/lib/store";
 import { TechniqueIntroPanel } from "@/components/TechniqueIntroPanel";
 import { MaximInfoModal } from "@/components/MaximInfoModal";
+import { isNativeStepCounter, nativeStepCounter } from "@/lib/step-counter";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, Footprints, Brain, AlertCircle } from "lucide-react";
 
@@ -50,10 +51,9 @@ export default function Walk() {
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [showMinStepsAlert, setShowMinStepsAlert] = useState(false);
   const [showWalkWarning, setShowWalkWarning] = useState(false);
+  const nativeAndroid = isNativeStepCounter();
 
-  const lastAccRef = useRef<number>(0);
   const lastStepTimeRef = useRef<number>(Date.now());
-  const stepCooldownRef = useRef<boolean>(false);
   const wakeLockRef = useRef<WakeLockSentinel | null>(null);
 
   const currentReward = getRewardForSteps(steps);
@@ -91,6 +91,44 @@ export default function Walk() {
     return () => document.removeEventListener('visibilitychange', handleVisibility);
   }, [running, acquireWakeLock]);
 
+  // The Android native wrapper keeps counting in a foreground service while
+  // the screen is locked. When the WebView becomes active again, hydrate the
+  // number from the service instead of trusting a suspended JS listener.
+  useEffect(() => {
+    if (!running || !nativeAndroid) return;
+
+    let disposed = false;
+    let listener: { remove: () => Promise<void> } | null = null;
+
+    const syncStatus = async () => {
+      try {
+        const status = await nativeStepCounter.getStatus();
+        if (!disposed) setSteps(status.steps);
+      } catch {
+        // The browser fallback is used outside the native Android wrapper.
+      }
+    };
+
+    void (async () => {
+      await syncStatus();
+      if (disposed) return;
+      listener = await nativeStepCounter.addListener("stepUpdate", (status) => {
+        if (!disposed) setSteps(status.steps);
+      });
+    })();
+
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") void syncStatus();
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    return () => {
+      disposed = true;
+      document.removeEventListener("visibilitychange", handleVisibility);
+      if (listener) void listener.remove();
+    };
+  }, [nativeAndroid, running]);
+
   // Show walk warning on first entry to this page
   useEffect(() => {
     if (!walkWarningShown) {
@@ -114,6 +152,7 @@ export default function Walk() {
     if (isSignedIn) {
       try {
         await completeTechnique("T4", { steps });
+        if (nativeAndroid) await nativeStepCounter.stop();
         setCompleted(true);
         setRunning(false);
         releaseWakeLock();
@@ -155,8 +194,9 @@ export default function Walk() {
     });
     setCompleted(true);
     setRunning(false);
+    if (nativeAndroid) void nativeStepCounter.stop();
     releaseWakeLock();
-  }, [updateState, steps, releaseWakeLock, isSignedIn, completeTechnique]);
+  }, [updateState, steps, releaseWakeLock, isSignedIn, completeTechnique, nativeAndroid]);
 
   const startSession = async () => {
     setSteps(0);
@@ -164,16 +204,36 @@ export default function Walk() {
     setCompleted(false);
     setShowExitConfirm(false);
     lastStepTimeRef.current = Date.now();
-    const DeviceMotionEvent_ = DeviceMotionEvent as any;
-    if (typeof DeviceMotionEvent_.requestPermission === 'function') {
+    if (nativeAndroid) {
       try {
-        const state = await DeviceMotionEvent_.requestPermission();
-        if (state !== 'granted') {
+        const status = await nativeStepCounter.start();
+        if (!status.supported) {
+          window.alert("В этом Android-телефоне системный датчик шагов недоступен.");
           setRunning(false);
           return;
         }
       } catch {
-        // ignore
+        window.alert("Не удалось запустить фоновый шагомер. Разреши доступ к физической активности в настройках Android.");
+        setRunning(false);
+        return;
+      }
+      await acquireWakeLock();
+      return;
+    }
+
+    const DeviceMotionEvent_ = window.DeviceMotionEvent as typeof DeviceMotionEvent & {
+      requestPermission?: () => Promise<"granted" | "denied">;
+    } | undefined;
+    if (typeof DeviceMotionEvent_?.requestPermission === "function") {
+      try {
+        const state = await DeviceMotionEvent_.requestPermission();
+        if (state !== "granted") {
+          setRunning(false);
+          return;
+        }
+      } catch {
+        setRunning(false);
+        return;
       }
     }
     await acquireWakeLock();
@@ -182,40 +242,39 @@ export default function Walk() {
   const exitEarly = () => {
     setRunning(false);
     setShowExitConfirm(false);
+    if (nativeAndroid) void nativeStepCounter.stop();
     releaseWakeLock();
   };
 
   useEffect(() => {
-    if (!running) return;
+    if (!running || nativeAndroid) return;
     const handleMotion = (e: DeviceMotionEvent) => {
-      const acc = e.accelerationIncludingGravity;
-      if (!acc) return;
-      const x = acc.x ?? 0;
-      const y = acc.y ?? 0;
-      const z = acc.z ?? 0;
+      const acc = e.acceleration;
+      const accWithGravity = e.accelerationIncludingGravity;
+      if (!acc && !accWithGravity) return;
+      const values = acc && [acc.x, acc.y, acc.z].every((value) => typeof value === "number")
+        ? acc
+        : accWithGravity;
+      if (!values) return;
+      const x = values.x ?? 0;
+      const y = values.y ?? 0;
+      const z = values.z ?? 0;
       const magnitude = Math.sqrt(x * x + y * y + z * z);
-      const threshold = 12;
-      if (magnitude > threshold && !stepCooldownRef.current) {
+      const hasGravity = values === accWithGravity;
+      const baseline = hasGravity ? 9.81 : 0;
+      const signal = Math.abs(magnitude - baseline);
+      const threshold = hasGravity ? 2.0 : 1.35;
+      if (signal > threshold) {
         const now = Date.now();
         if (now - lastStepTimeRef.current > 300) {
           setSteps(s => s + 1);
           lastStepTimeRef.current = now;
-          stepCooldownRef.current = true;
-          setTimeout(() => { stepCooldownRef.current = false; }, 400);
         }
       }
-      lastAccRef.current = magnitude;
     };
-    const DeviceMotionEvent_ = DeviceMotionEvent as any;
-    if (typeof DeviceMotionEvent_.requestPermission === 'function') {
-      DeviceMotionEvent_.requestPermission().then((state: string) => {
-        if (state === 'granted') window.addEventListener('devicemotion', handleMotion);
-      }).catch(() => {});
-    } else {
-      window.addEventListener('devicemotion', handleMotion);
-    }
+    window.addEventListener("devicemotion", handleMotion);
     return () => window.removeEventListener('devicemotion', handleMotion);
-  }, [running]);
+  }, [nativeAndroid, running]);
 
   useEffect(() => {
     return () => releaseWakeLock();
@@ -309,7 +368,9 @@ export default function Walk() {
         <TechniqueIntroPanel techniqueId="T4" />
         <MaximInfoModal
           show={showWalkWarning}
-          message={"Из-за технических ограничений шагомер не работает фоном, снизь яркость экрана на минимум, и оставь его включенным."}
+          message={nativeAndroid
+            ? "В Android-приложении шагомер продолжит работать после блокировки экрана. Разреши доступ к физической активности, если система его запросит."
+            : "В браузере шагомер работает только пока страница активна. После блокировки экрана браузер может остановить датчики; для фонового режима установи нативное Android-приложение."}
           onClose={handleWalkWarningClose}
         />
       </div>
