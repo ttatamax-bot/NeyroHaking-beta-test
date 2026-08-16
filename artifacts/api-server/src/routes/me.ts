@@ -84,10 +84,23 @@ router.get("/me", async (req, res) => {
   const state = await db.query.userStatesTable.findFirst({
     where: eq(userStatesTable.userId, user.id),
   });
+  const completedTechniques = await db.select({
+    id: completedTechniquesTable.id,
+    techniqueId: completedTechniquesTable.techniqueId,
+    appDay: completedTechniquesTable.appDay,
+    completedAt: completedTechniquesTable.completedAt,
+    keysAwarded: completedTechniquesTable.keysAwarded,
+    potentialAwarded: completedTechniquesTable.potentialAwarded,
+    metadata: completedTechniquesTable.metadata,
+  }).from(completedTechniquesTable)
+    .where(eq(completedTechniquesTable.userId, user.id))
+    .orderBy(desc(completedTechniquesTable.completedAt))
+    .limit(200);
   res.json({
     user: { id: user.id, clerkId: user.clerkId, email: user.email },
     state: state?.state ?? null,
     profile: await getProfile(user.id),
+    completedTechniques,
   });
 });
 
