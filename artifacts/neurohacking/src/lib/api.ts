@@ -41,6 +41,7 @@ async function handleResponse(response: Response) {
 export async function apiGet<T = unknown>(path: string): Promise<T> {
   const request = async (forceRefresh = false) => fetch(`${API_BASE}${path}`, {
     credentials: 'include',
+    cache: 'no-store',
     headers: await requestHeaders({}, forceRefresh),
   });
   let response = await request();
@@ -53,6 +54,7 @@ export async function apiPost<T = unknown>(path: string, body: unknown): Promise
     method: 'POST',
     headers: await requestHeaders({ 'Content-Type': 'application/json' }, forceRefresh),
     credentials: 'include',
+    cache: 'no-store',
     body: JSON.stringify(body),
   });
   let response = await request();
