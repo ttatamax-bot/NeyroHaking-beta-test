@@ -214,6 +214,8 @@ type UpdateFn = Partial<AppState> | ((prev: AppState) => Partial<AppState>);
 
 interface AppContextType extends AppState {
   isSignedIn: boolean;
+  isAuthLoaded: boolean;
+  isAccountReady: boolean;
   updateState: (updates: UpdateFn) => void;
   completeTechnique: (techniqueId: string, metadata: Record<string, unknown>) => Promise<CompleteTechniqueResult>;
   refreshProfile: () => Promise<void>;
@@ -419,9 +421,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         if (hydrationRequestRef.current !== userId) return;
         const applyServer = (nextState: Record<string, unknown>, nextProfile: ServerProfile | null) => {
           hydratedUserRef.current = userId;
+          const serverPartial = nextState as Partial<AppState>;
+          const hasSavedNickname = Boolean(nextProfile?.nickname);
+          const completedProfileFallback =
+            hasSavedNickname && (!serverPartial.userState || serverPartial.userState === 'new')
+              ? { userState: 'active' as const, onboardingComplete: true }
+              : {};
           setState(prev => ({
             ...prev,
-            ...(nextState as Partial<AppState>),
+            ...serverPartial,
+            ...completedProfileFallback,
             ...(nextProfile
               ? {
                   keys: nextProfile.totalKeys,
@@ -543,7 +552,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <AppContext.Provider value={{ ...state, isSignedIn: Boolean(isSignedIn), updateState, completeTechnique, refreshProfile }}>
+    <AppContext.Provider value={{
+      ...state,
+      isSignedIn: Boolean(isSignedIn),
+      isAuthLoaded: isLoaded,
+      isAccountReady: isLoaded && (!isSignedIn || hydratedUserRef.current === userId),
+      updateState,
+      completeTechnique,
+      refreshProfile,
+    }}>
       {children}
     </AppContext.Provider>
   );
