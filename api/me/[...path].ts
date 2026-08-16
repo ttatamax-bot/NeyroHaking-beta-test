@@ -13,6 +13,14 @@ export default async function mePathEntry(req: any, res: any) {
     res.status(401).json({ error: "Unauthorized" });
     return;
   }
+  const requestPath = String(req.url ?? req.path ?? req.originalUrl ?? "");
+  if (!requestPath.startsWith("/api")) {
+    const normalizedPath = requestPath.startsWith("/me")
+      ? `/api${requestPath}`
+      : `/api/me${requestPath.startsWith("/") ? requestPath : `/${requestPath}`}`;
+    req.url = normalizedPath;
+    req.originalUrl = normalizedPath;
+  }
   const { default: app } = await import("../../artifacts/api-server/src/app.js");
   return app(req, res);
 }
