@@ -36,7 +36,7 @@ export function TopBar() {
         className="flex items-center gap-1 active:opacity-70 transition-opacity"
       >
         <Brain size={14} color="#F59E0B" />
-        <span className="num text-primary" style={{ fontSize: 13 }}>{potential.toFixed(1)}%</span>
+        <span className="num text-primary" style={{ fontSize: 13 }}>{Math.min(100, potential).toFixed(1)}%</span>
       </button>
 
       <div style={{ width: 1, height: 13, background: 'rgba(100,160,230,0.15)' }} />

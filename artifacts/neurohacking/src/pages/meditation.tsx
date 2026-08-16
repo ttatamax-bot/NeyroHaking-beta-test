@@ -1,21 +1,20 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useLocation } from "wouter";
 import { ApiError } from "@/lib/api";
-import { useAppStore, getTodayKeysFromSource, getTodayPotentialFromSource, computeStreakUpdate } from "@/lib/store";
+import { useAppStore } from "@/lib/store";
+import { applyLocalCompletion } from "@/lib/store";
 import { TechniqueIntroPanel } from "@/components/TechniqueIntroPanel";
 import { MaximInfoModal } from "@/components/MaximInfoModal";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, Pause, Play, Brain } from "lucide-react";
 
 const DURATION_OPTIONS = [
-  { label: "3 мин",  seconds: 180,  keys: 5,  potential: 0.05 },
-  { label: "5 мин",  seconds: 300,  keys: 10, potential: 0.1  },
-  { label: "10 мин", seconds: 600,  keys: 20, potential: 0.15 },
-  { label: "15 мин", seconds: 900,  keys: 30, potential: 0.2  },
-  { label: "20 мин", seconds: 1200, keys: 40, potential: 0.25 },
+  { label: "3 мин", seconds: 180 },
+  { label: "5 мин", seconds: 300 },
+  { label: "10 мин", seconds: 600 },
+  { label: "15 мин", seconds: 900 },
+  { label: "20 мин", seconds: 1200 },
 ];
-const MAX_KEYS = 40;
-const SOURCE = 'Техника: Нейромедитация';
 type Phase = 'inhale' | 'hold1' | 'exhale' | 'hold2';
 const PHASES: Phase[] = ['inhale', 'hold1', 'exhale', 'hold2'];
 const PHASE_DURATION = 4;
@@ -41,11 +40,8 @@ const BALL_SCALE: Record<number, { scale: number[], times?: number[] }> = {
 };
 
 export default function Meditation() {
-  const { keysHistory, potentialHistory, updateState, timerWarningShown, isSignedIn, completeTechnique } = useAppStore();
+  const { updateState, timerWarningShown, isSignedIn, completeTechnique } = useAppStore();
   const [, setLocation] = useLocation();
-  const todayEarned = getTodayKeysFromSource(keysHistory, SOURCE);
-  const isMaxedOut = todayEarned >= MAX_KEYS;
-  const todayPotential = getTodayPotentialFromSource(potentialHistory, SOURCE);
 
   const [selected, setSelected] = useState<typeof DURATION_OPTIONS[0] | null>(null);
   const [running, setRunning] = useState(false);
@@ -53,7 +49,7 @@ export default function Meditation() {
   const [timeLeft, setTimeLeft] = useState(0);
   const [phaseIdx, setPhaseIdx] = useState(0);
   const [phaseCountdown, setPhaseCountdown] = useState(PHASE_DURATION);
-  const [completedKeys, setCompletedKeys] = useState<number | null>(null);
+  const [completedPotential, setCompletedPotential] = useState<number | null>(null);
   const [showTimerWarning, setShowTimerWarning] = useState(false);
   const pendingDurRef = useRef<typeof DURATION_OPTIONS[0] | null>(null);
 
@@ -83,7 +79,7 @@ export default function Meditation() {
           "T3",
           { durationLabel: dur.label },
         );
-        setCompletedKeys(result.keys);
+        setCompletedPotential(result.potential);
         setRunning(false);
         completionKeyRef.current = null;
       } catch (error) {
@@ -96,28 +92,13 @@ export default function Meditation() {
       return;
     }
     const now = new Date().toISOString();
-    updateState(prev => {
-      const keysActual = Math.min(dur.keys, Math.max(0, MAX_KEYS - getTodayKeysFromSource(prev.keysHistory, SOURCE)));
-      const potActual = Math.max(0, dur.potential - getTodayPotentialFromSource(prev.potentialHistory, SOURCE));
-      const streakUpdate = computeStreakUpdate(prev);
-      return {
-        todayTechniques: { ...prev.todayTechniques, T3: true },
-        keys: prev.keys + keysActual,
-        potential: potActual > 0 ? Math.min(100, prev.potential + potActual) : prev.potential,
-        keysHistory: keysActual > 0
-          ? [{ date: now, source: SOURCE, amount: keysActual, type: 'earn' as const }, ...prev.keysHistory]
-          : prev.keysHistory,
-        potentialHistory: potActual > 0
-          ? [{ date: now, source: SOURCE, amount: potActual }, ...prev.potentialHistory]
-          : prev.potentialHistory,
-        activityLog: [
-          { id: `act_${Date.now()}`, date: now, type: 'meditation' as const, keysGained: keysActual, potentialGained: potActual, details: { durationLabel: dur.label } },
-          ...prev.activityLog,
-        ],
-        ...streakUpdate,
-      };
-    });
-    setCompletedKeys(dur.keys);
+    updateState(prev => applyLocalCompletion(
+      prev,
+      'T3',
+      { durationLabel: dur.label },
+      'meditation',
+    ));
+    setCompletedPotential(10);
     setRunning(false);
   }, [clearAll, updateState, isSignedIn, completeTechnique]);
 
@@ -125,7 +106,7 @@ export default function Meditation() {
     completedRef.current = false;
     completionKeyRef.current = `T3:${Date.now()}:${Math.random().toString(36).slice(2)}`;
     setSelected(dur); setTimeLeft(dur.seconds); setPhaseIdx(0);
-    setPhaseCountdown(PHASE_DURATION); setPaused(false); setCompletedKeys(null); setRunning(true);
+    setPhaseCountdown(PHASE_DURATION); setPaused(false); setCompletedPotential(null); setRunning(true);
   };
 
   const startSession = (dur: typeof DURATION_OPTIONS[0]) => {
@@ -185,19 +166,17 @@ export default function Meditation() {
   const phase = PHASES[phaseIdx];
   const formatTime = (s: number) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`;
 
-  if (completedKeys !== null) {
+  if (completedPotential !== null) {
     return (
       <div className="flex flex-col h-[100dvh] items-center justify-center relative overflow-hidden">
         <div className="relative z-10 text-center px-8">
           <div className="text-5xl mb-6">✦</div>
           <h1 className="display-l text-primary mb-3">Медитация завершена</h1>
-          <p className="body text-secondary mb-8">+{completedKeys} ключей начислено</p>
-          {!isMaxedOut && (
-            <button onClick={() => { setCompletedKeys(null); setSelected(null); }}
-              className="w-full h-[52px] rounded-[14px] btn-grad btn-shimmer text-white title-s mb-3 active:opacity-90">
-              Ещё раз
-            </button>
-          )}
+          <p className="body text-secondary mb-8">+{completedPotential}% потенциала начислено</p>
+          <button onClick={() => { setCompletedPotential(null); setSelected(null); }}
+            className="w-full h-[52px] rounded-[14px] btn-grad btn-shimmer text-white title-s mb-3 active:opacity-90">
+            Ещё раз
+          </button>
           <button onClick={() => { setLocation('/techniques'); }}
             className="w-full h-[52px] rounded-[14px] bg-surface-1 border border-border text-primary body active:opacity-70">
             Назад к техникам
@@ -208,7 +187,6 @@ export default function Meditation() {
   }
 
   if (!running) {
-    const remaining = MAX_KEYS - todayEarned;
     return (
       <div className="flex flex-col h-[100dvh] relative overflow-hidden">
         <div className="relative z-10 flex flex-col h-full">
@@ -218,25 +196,13 @@ export default function Meditation() {
             </button>
             <h1 className="title-l text-primary">Нейромедитация</h1>
           </div>
-          {isMaxedOut ? (
-            <div className="flex-1 flex flex-col justify-center px-4 text-center">
-              <div className="text-4xl mb-4">✓</div>
-              <p className="title-s text-primary mb-2">Максимум за сегодня</p>
-              <p className="body text-secondary">Ты уже заработал {todayEarned} ключей на медитации сегодня. Максимум — {MAX_KEYS}.</p>
-            </div>
-          ) : (
-            <div className="flex-1 flex flex-col justify-center px-4 overflow-y-auto pb-4">
-              {todayEarned > 0 && (
-                <div className="mb-6 px-4 py-3 rounded-[12px] bg-blue-ultra-soft border border-[rgba(37,99,235,0.2)]">
-                  <p className="caption text-blue-light">Сегодня заработано: {todayEarned} / {MAX_KEYS} ключей. Осталось: {remaining}.</p>
-                </div>
-              )}
+          <div className="flex-1 flex flex-col justify-center px-4 overflow-y-auto pb-4">
               <p className="body text-secondary mb-8 leading-relaxed">
                 Квадратное дыхание: вдох — задержка — выдох — задержка. 4 секунды каждая фаза.
               </p>
               <p className="caption text-tertiary mb-3 uppercase tracking-wider">Длительность</p>
               <div className="space-y-3 mb-5">
-                {DURATION_OPTIONS.filter(o => o.keys <= remaining || remaining === MAX_KEYS).map((opt, idx) => (
+                {DURATION_OPTIONS.map((opt, idx) => (
                   <motion.button key={opt.label}
                     initial={{ opacity: 0, y: 32 }} animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: idx * 0.07, duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
@@ -245,14 +211,13 @@ export default function Meditation() {
                     style={{ background: 'linear-gradient(135deg, rgba(245,158,11,0.22) 0%, rgba(245,158,11,0.08) 100%)', border: '1px solid rgba(245,158,11,0.28)', boxShadow: '0 6px 28px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,255,255,0.08), 0 1px 0 rgba(255,255,255,0.07) inset' }}>
                     <span className="title-s text-primary">{opt.label}</span>
                     <div className="flex flex-col items-end gap-0.5">
-                      <span className="body-s text-blue-light">+{opt.keys} ключей</span>
-                      <span className="caption text-tertiary flex items-center gap-1">+{opt.potential}% <Brain size={11} color="var(--text-tertiary)" /></span>
+                      <span className="body-s text-blue-light">+10% потенциала</span>
+                      <span className="caption text-tertiary flex items-center gap-1">Ключи — за закрытие дня <Brain size={11} color="var(--text-tertiary)" /></span>
                     </div>
                   </motion.button>
                 ))}
               </div>
             </div>
-          )}
         </div>
         <TechniqueIntroPanel techniqueId="T3" />
         <MaximInfoModal

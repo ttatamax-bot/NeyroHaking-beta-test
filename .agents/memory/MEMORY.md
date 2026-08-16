@@ -14,3 +14,4 @@
 - [Vercel nested API routes](vercel-nested-api-routes.md) — explicit Vercel entrypoints may be needed for nested API paths; normalize stripped prefixes before handing off to Express.
 - [Completion ledger hydration](completion-ledger-hydration.md) — cross-device checklist and activity UI must hydrate from server completion rows, not only debounced client state.
 - [Android step counter architecture](android-step-counter.md) — background counting requires a native foreground service; browser motion sensors are foreground-only.
+- [Daily potential display](daily-potential-display.md) — keep raw day potential above 100 internally; clamp only the displayed percentage.

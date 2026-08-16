@@ -20,6 +20,8 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  ArticlePurchaseResult,
+  ArticleReadResult,
   BadRequestResponse,
   ClientState,
   CompletedTechnique,
@@ -563,6 +565,136 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
         TContext
       > => {
       return useMutation(getSaveMyStateMutationOptions(options));
+    }
+
+export const getPurchaseArticleUrl = (articleId: 'A2' | 'A3' | 'A4' | 'A5',) => {
+
+
+
+
+  return `/api/me/articles/${articleId}/purchase`
+}
+
+export const purchaseArticle = async (articleId: 'A2' | 'A3' | 'A4' | 'A5', options?: Parameters<typeof customFetch>[1]): Promise<ArticlePurchaseResult> => {
+
+  return customFetch<ArticlePurchaseResult>(getPurchaseArticleUrl(articleId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getPurchaseArticleMutationOptions = <TError = ErrorType<UnauthorizedResponse | ConflictResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof purchaseArticle>>, TError,{articleId: 'A2' | 'A3' | 'A4' | 'A5'}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof purchaseArticle>>, TError,{articleId: 'A2' | 'A3' | 'A4' | 'A5'}, TContext> => {
+
+const mutationKey = ['purchaseArticle'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof purchaseArticle>>, {articleId: 'A2' | 'A3' | 'A4' | 'A5'}> = (props) => {
+          const {articleId} = props ?? {};
+
+          return  purchaseArticle(articleId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PurchaseArticleMutationResult = NonNullable<Awaited<ReturnType<typeof purchaseArticle>>>
+
+    export type PurchaseArticleMutationError = ErrorType<UnauthorizedResponse | ConflictResponse>
+
+    export const usePurchaseArticle = <TError = ErrorType<UnauthorizedResponse | ConflictResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof purchaseArticle>>, TError,{articleId: 'A2' | 'A3' | 'A4' | 'A5'}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof purchaseArticle>>,
+        TError,
+        {articleId: 'A2' | 'A3' | 'A4' | 'A5'},
+        TContext
+      > => {
+      return useMutation(getPurchaseArticleMutationOptions(options));
+    }
+
+export const getCompleteArticleReadUrl = (articleId: string,) => {
+
+
+
+
+  return `/api/me/articles/${articleId}/read`
+}
+
+export const completeArticleRead = async (articleId: string, options?: Parameters<typeof customFetch>[1]): Promise<ArticleReadResult> => {
+
+  return customFetch<ArticleReadResult>(getCompleteArticleReadUrl(articleId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getCompleteArticleReadMutationOptions = <TError = ErrorType<UnauthorizedResponse | ConflictResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof completeArticleRead>>, TError,{articleId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof completeArticleRead>>, TError,{articleId: string}, TContext> => {
+
+const mutationKey = ['completeArticleRead'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof completeArticleRead>>, {articleId: string}> = (props) => {
+          const {articleId} = props ?? {};
+
+          return  completeArticleRead(articleId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CompleteArticleReadMutationResult = NonNullable<Awaited<ReturnType<typeof completeArticleRead>>>
+
+    export type CompleteArticleReadMutationError = ErrorType<UnauthorizedResponse | ConflictResponse>
+
+    export const useCompleteArticleRead = <TError = ErrorType<UnauthorizedResponse | ConflictResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof completeArticleRead>>, TError,{articleId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof completeArticleRead>>,
+        TError,
+        {articleId: string},
+        TContext
+      > => {
+      return useMutation(getCompleteArticleReadMutationOptions(options));
     }
 
 export const getMigrateLegacyStateUrl = () => {

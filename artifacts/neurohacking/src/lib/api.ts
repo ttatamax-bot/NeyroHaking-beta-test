@@ -74,7 +74,14 @@ export interface ServerProfile {
   bio: string | null;
   avatarUrl: string | null;
   totalKeys: number;
+  /** Устаревшее накопительное поле. */
   totalPotential: number;
+  /** Потенциал текущего дня, 0–100. */
+  dayPotential: number;
+  /** День приложения (YYYY-MM-DD), к которому относится dayPotential. */
+  dayPotentialDay: string | null;
+  /** Количество закрытых на 100% дней. */
+  closedDays: number;
   currentStreak: number;
   longestStreak: number;
   createdAt: string;
@@ -128,14 +135,6 @@ export async function completeArticleRead(articleId: string): Promise<{
   return apiPost(`/me/articles/${encodeURIComponent(articleId)}/read`, {});
 }
 
-export async function purchaseService(serviceId: 'consultation' | 'mentoring', purchaseKey: string): Promise<{
-  serviceId: string;
-  alreadyPurchased: boolean;
-  profile: ServerProfile;
-}> {
-  return apiPost(`/me/services/${encodeURIComponent(serviceId)}/purchase`, { purchaseKey });
-}
-
 export async function getServerProfile(): Promise<ServerProfile> {
   return apiGet<ServerProfile>('/me/profile');
 }
@@ -181,6 +180,8 @@ export interface CompleteTechniqueResult {
   longestStreak: number;
   totalKeys: number;
   totalPotential: number;
+  dayClosed: boolean;
+  closedDays: number;
   alreadyCompleted?: boolean;
 }
 

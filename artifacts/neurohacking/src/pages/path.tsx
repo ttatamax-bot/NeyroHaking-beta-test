@@ -63,7 +63,7 @@ export default function Path() {
       : 'Нет';
 
   const statCards = [
-    { id: 'PATH_potential', icon: Brain, value: `${Math.round(potential)}%`, label: 'Потенциал', route: '/potential-stats', iconColor: ICON_COLORS.stat[0], labelColor: WHITE },
+    { id: 'PATH_potential', icon: Brain, value: `${Math.round(Math.min(100, potential))}%`, label: 'Потенциал', route: '/potential-stats', iconColor: ICON_COLORS.stat[0], labelColor: WHITE },
     { id: 'PATH_keys',      icon: Key,   value: `${keys}`,                   label: 'Ключи',     route: '/keys-stats',      iconColor: ICON_COLORS.stat[1], labelColor: WHITE },
     { id: 'PATH_streak',    icon: Flame, value: `${streak}`,                 label: 'Дней подряд',route: '/streak',         iconColor: ICON_COLORS.stat[2], labelColor: WHITE },
   ];

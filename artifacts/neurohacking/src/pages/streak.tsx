@@ -4,11 +4,12 @@ import { BackButton } from "@/components/BackButton";
 import { motion } from "framer-motion";
 
 const MULTIPLIER_TIERS = [
-  { min: 0,  max: 6,   bonus: 0,  label: '0–6 дней' },
-  { min: 7,  max: 13,  bonus: 5,  label: '7–13 дней' },
-  { min: 14, max: 29,  bonus: 10, label: '14–29 дней' },
-  { min: 30, max: 59,  bonus: 15, label: '30–59 дней' },
-  { min: 60, max: Infinity, bonus: 20, label: '60+ дней' },
+  ...Array.from({ length: 15 }, (_, index) => ({
+    min: index + 1,
+    max: index + 1,
+    bonus: Math.min(100 + index * 25, 450),
+    label: `${index + 1}${index === 14 ? '+' : ''} день${index === 0 ? '' : 'й'}`,
+  })),
 ];
 
 function getCurrentTierIdx(streak: number): number {
@@ -33,7 +34,7 @@ export default function Streak() {
       <div className="bg-surface-1 border border-border rounded-[24px] p-8 flex flex-col items-center w-full relative overflow-hidden">
         <div className="absolute top-0 right-0 p-4">
           <div className="bg-blue-ultra-soft border border-[rgba(37,99,235,0.2)] rounded-full px-2 py-1">
-            <span className="caption text-blue-light">+{currentBonus}% к ключам</span>
+           <span className="caption text-blue-light">+{currentBonus} ключей</span>
           </div>
         </div>
         
@@ -50,14 +51,14 @@ export default function Streak() {
         </div>
 
         <p className="body-s text-tertiary text-center px-4">
-          Серия сохраняется если ты завершил день через технику Сон и выполнил хотя бы одну другую технику.
+           Серия растёт за каждый закрытый на 100% день. После 15-го дня награда фиксируется на 450 ключах.
         </p>
       </div>
 
       {/* Multiplier Tiers Card */}
       <div className="w-full glass rounded-[20px] overflow-hidden">
         <div className="px-4 pt-4 pb-3" style={{ borderBottom: '1px solid rgba(100,160,230,0.1)' }}>
-          <p className="caption text-tertiary uppercase tracking-wider">Бонус серии</p>
+           <p className="caption text-tertiary uppercase tracking-wider">Ключи за закрытие дня</p>
         </div>
         <div className="p-4 space-y-2">
           {MULTIPLIER_TIERS.map((tier, i) => {

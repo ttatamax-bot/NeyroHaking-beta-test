@@ -10,6 +10,14 @@ import {
   type ServerCompletion,
   type ServerProfile,
 } from './api';
+import {
+  DAY_POTENTIAL_TARGET,
+  clampDayPotential,
+  dayCloseReward,
+  normalizeDayPotential,
+  potentialForTechnique,
+  type TechniqueId,
+} from '@workspace/economy';
 
 export type UserState = 'new' | 'onboarding' | 'active' | 'dayDone';
 
@@ -102,6 +110,7 @@ export interface AppState {
   email: string | null;
   onboardingComplete: boolean;
   potential: number;
+  closedDays: number;
   keys: number;
   streak: number;
   todayTechniques: {
@@ -147,6 +156,7 @@ export const defaultState: AppState = {
   email: null,
   onboardingComplete: false,
   potential: 0,
+  closedDays: 0,
   keys: 0,
   streak: 0,
   todayTechniques: {
@@ -190,6 +200,7 @@ function hasMeaningfulSyncState(state: Partial<AppState> | Record<string, unknow
   return (
     Number(state.keys ?? 0) > 0 ||
     Number(state.potential ?? 0) > 0 ||
+    Number(state.closedDays ?? 0) > 0 ||
     Number(state.streak ?? 0) > 0 ||
     Boolean(state.lastCompletedDate) ||
     Boolean(state.lastSessionDate) ||
@@ -253,6 +264,61 @@ function getServerAppDayKey(date: Date = new Date()): string {
   const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
   if (local.getUTCHours() < 5) local.setUTCDate(local.getUTCDate() - 1);
   return local.toISOString().slice(0, 10);
+}
+
+/** Потенциал дня из серверного профиля; на новом дне он равен нулю. */
+export function profileDayPotential(profile: ServerProfile | null | undefined, now: Date = new Date()): number {
+  if (!profile) return 0;
+  if (profile.dayPotentialDay !== getServerAppDayKey(now)) return 0;
+  return clampDayPotential(profile.dayPotential);
+}
+
+/**
+ * Локальное начисление для гостя: потенциал копится в пределах дня,
+ * а ключи появляются только при закрытии дня на 100%.
+ */
+export function applyLocalCompletion(
+  prev: AppState,
+  techniqueId: TechniqueId,
+  metadata: Record<string, unknown>,
+  activityType: ActivityEntry['type'],
+  now: Date = new Date(),
+): Partial<AppState> {
+  const nowISO = now.toISOString();
+  const source = TECHNIQUE_SOURCES[techniqueId] ?? techniqueId;
+  const potential = potentialForTechnique(techniqueId, metadata);
+  const potentialBefore = normalizeDayPotential(prev.potential);
+  const potentialAfter = normalizeDayPotential(potentialBefore + potential);
+  const closesDay = potentialBefore < DAY_POTENTIAL_TARGET && potentialAfter >= DAY_POTENTIAL_TARGET;
+  const streakUpdate = closesDay ? computeStreakUpdate(prev, now) : {};
+  const streak = (streakUpdate as Partial<AppState>).streak ?? prev.streak;
+  const keys = closesDay ? dayCloseReward(streak) : 0;
+
+  return {
+    todayTechniques: { ...prev.todayTechniques, [techniqueId]: true },
+    potential: potentialAfter,
+    keys: prev.keys + keys,
+    potentialHistory: potential > 0
+      ? [{ date: nowISO, source, amount: potential }, ...prev.potentialHistory]
+      : prev.potentialHistory,
+    keysHistory: keys > 0
+      ? [{ date: nowISO, source: 'Закрытие дня на 100%', amount: keys, type: 'earn' as const }, ...prev.keysHistory]
+      : prev.keysHistory,
+    closedDays: prev.closedDays + (closesDay ? 1 : 0),
+    userState: closesDay ? 'dayDone' : prev.userState,
+    activityLog: [
+      {
+        id: `act_${now.getTime()}`,
+        date: nowISO,
+        type: activityType,
+        keysGained: keys,
+        potentialGained: potential,
+        details: metadata as ActivityEntry['details'],
+      },
+      ...prev.activityLog,
+    ],
+    ...streakUpdate,
+  };
 }
 
 function completionActivityType(techniqueId: string): ActivityEntry['type'] {
@@ -409,8 +475,20 @@ export function applyServerCompletion(
   const source = TECHNIQUE_SOURCES[techniqueId] ?? techniqueId;
   const updates: Partial<AppState> = {
     keys: result.totalKeys,
-    potential: Math.min(100, result.totalPotential),
+    potential: clampDayPotential(result.totalPotential),
+    closedDays: result.closedDays,
     streak: result.newStreak,
+    profile: prev.profile
+      ? {
+          ...prev.profile,
+          totalKeys: result.totalKeys,
+          dayPotential: clampDayPotential(result.totalPotential),
+          dayPotentialDay: getServerAppDayKey(now),
+          closedDays: result.closedDays,
+          currentStreak: result.newStreak,
+          longestStreak: result.longestStreak,
+        }
+      : prev.profile,
     todayTechniques: { ...prev.todayTechniques, [techniqueId]: true },
     keysHistory: result.keys > 0
       ? [{ date: nowISO, source, amount: result.keys, type: 'earn' as const }, ...prev.keysHistory]
@@ -433,7 +511,7 @@ export function applyServerCompletion(
     streakHistory: [{ date: nowISO, value: result.newStreak }, ...prev.streakHistory],
   };
 
-  if (techniqueId === 'T6') {
+  if (result.dayClosed) {
     updates.userState = 'dayDone';
     updates.history = [
       {
@@ -469,6 +547,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           return {
             ...merged,
             userState: merged.userState === 'dayDone' ? 'active' : merged.userState,
+            potential: 0,
             todayTechniques: { T1: false, T2: false, T3: false, T4: false, T5: false, T6: false },
             todayTechniquesDate: getAppDayStart().toISOString(),
           };
@@ -553,7 +632,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             ...(nextProfile
               ? {
                   keys: nextProfile.totalKeys,
-                  potential: Math.min(100, nextProfile.totalPotential),
+                  potential: profileDayPotential(nextProfile),
+                  closedDays: nextProfile.closedDays,
                   streak: nextProfile.currentStreak,
                   profile: nextProfile,
                 }
@@ -607,7 +687,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             ...(profile
               ? {
                   keys: profile.totalKeys,
-                  potential: Math.min(100, profile.totalPotential),
+                  potential: profileDayPotential(profile),
+                  closedDays: profile.closedDays,
                   streak: profile.currentStreak,
                   profile,
                 }
@@ -687,7 +768,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         ...prev,
         ...(serverState as Partial<AppState> | null),
         keys: profile.totalKeys,
-        potential: Math.min(100, profile.totalPotential),
+        potential: profileDayPotential(profile),
+        closedDays: profile.closedDays,
         streak: profile.currentStreak,
         profile,
       }, completedTechniques ?? []));

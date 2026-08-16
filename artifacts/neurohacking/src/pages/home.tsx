@@ -217,7 +217,7 @@ export default function Home() {
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: 0.4, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
               >
-                {Math.round(potential)}
+                {Math.round(Math.min(100, potential))}
               </motion.span>
               <span style={{ fontSize: 31, fontWeight: 300, color: '#F59E0B', marginTop: 2, marginLeft: -2 }}>%</span>
             </div>

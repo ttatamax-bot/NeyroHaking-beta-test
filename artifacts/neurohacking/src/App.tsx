@@ -35,8 +35,6 @@ import Walk from "@/pages/walk";
 import Hobby from "@/pages/hobby";
 import Sleep from "@/pages/sleep";
 import NewsArticle from "@/pages/news";
-import Consultation from "@/pages/consultation";
-import Mentoring from "@/pages/mentoring";
 import PrivacyPolicy from "@/pages/privacy-policy";
 import MyProgress from "@/pages/my-progress";
 import SignInPage from "@/pages/sign-in";
@@ -53,6 +51,7 @@ function hasProgressSnapshot(snapshot: Partial<AppState> | null): boolean {
     Boolean(snapshot.onboardingComplete) ||
     (snapshot.keys ?? 0) > 0 ||
     (snapshot.potential ?? 0) > 0 ||
+    (snapshot.closedDays ?? 0) > 0 ||
     (snapshot.streak ?? 0) > 0 ||
     (snapshot.activityLog?.length ?? 0) > 0 ||
     (snapshot.keysHistory?.length ?? 0) > 0 ||
@@ -101,7 +100,7 @@ const TECH_MESSAGES: { text: string; highlight: string[] }[] = [
 const KNOWLEDGE_MESSAGES: { text: string; highlight: string[] }[] = [
   { text: 'Здесь — знания, которые меняют мышление.', highlight: [] },
   { text: 'Каждая статья обоснована нейронаукой.', highlight: ['ACAD_articles'] },
-  { text: 'Ключи открывают доступ к материалам.', highlight: ['ACAD_services'] },
+  { text: 'Ключи открывают доступ к статьям.', highlight: ['ACAD_articles'] },
 ];
 
 type TabMessage = {
@@ -120,8 +119,8 @@ const PATH_MESSAGES: TabMessage[] = [
 ];
 
 const ACADEMY_MESSAGES: TabMessage[] = [
-  { text: 'К статьям по нейробиологии и консультациям.',                               highlight: ['ACAD_articles', 'ACAD_services'],      msgTop: '50%'  },
-  { text: 'За выполнение техник ты получаешь ключи.',                                  highlight: ['ACAD_services'],                      blurStart: 258, msgTop: '268px' },
+  { text: 'К статьям по нейробиологии и практикам.',                                    highlight: ['ACAD_articles'],      msgTop: '50%'  },
+  { text: 'Ключи выдаются за закрытие дня на 100%.',                                    highlight: ['PATH_keys'],          blurStart: 258, msgTop: '268px' },
 ];
 
 const MSG_TOP_PX: Record<number, string> = {
@@ -516,6 +515,7 @@ function AppLogic() {
         }
         storeRef.current.updateState(prev => ({
           userState: prev.userState === 'dayDone' ? 'active' : prev.userState,
+          potential: 0,
           todayTechniques: {
             T1: false,
             T2: false,
@@ -527,6 +527,9 @@ function AppLogic() {
           todayTechniquesDate: getAppDayStart(now).toISOString(),
           ...streakUpdates,
         }));
+        if (storeRef.current.isSignedIn) {
+          void storeRef.current.refreshProfile();
+        }
       }
     };
     check();
@@ -659,8 +662,6 @@ function Router() {
         <Route path="/article/:id/read" component={ArticleRead} />
         <Route path="/article/:id" component={ArticlePreview} />
         <Route path="/news/:id" component={NewsArticle} />
-        <Route path="/consultation" component={Consultation} />
-        <Route path="/mentoring" component={Mentoring} />
         <Route path="/technique/planner" component={Planner} />
         <Route path="/technique/visualization" component={Visualization} />
         <Route path="/technique/meditation" component={Meditation} />

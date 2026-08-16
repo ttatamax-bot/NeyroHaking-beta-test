@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useLocation } from "wouter";
-import { useAppStore, getTodayKeysFromSource, computeStreakUpdate } from "@/lib/store";
+import { useAppStore, getTodayKeysFromSource } from "@/lib/store";
+import { applyLocalCompletion } from "@/lib/store";
 import { TechniqueIntroPanel } from "@/components/TechniqueIntroPanel";
 import { MaximInfoModal } from "@/components/MaximInfoModal";
 import { isNativeStepCounter, nativeStepCounter } from "@/lib/step-counter";
@@ -43,7 +44,7 @@ export default function Walk() {
   const [, setLocation] = useLocation();
 
   const todayEarned = getTodayKeysFromSource(keysHistory, SOURCE);
-  const isMaxedOut = todayEarned >= MAX_KEYS;
+  const isMaxedOut = false;
 
   const [running, setRunning] = useState(false);
   const [steps, setSteps] = useState(0);
@@ -163,35 +164,9 @@ export default function Walk() {
     }
     const now = new Date().toISOString();
 
-    updateState(prev => {
-      const keysActual = reward
-        ? Math.min(reward.keys, Math.max(0, MAX_KEYS - getTodayKeysFromSource(prev.keysHistory, SOURCE)))
-        : 0;
-      const streakUpdate = computeStreakUpdate(prev);
-      return {
-        todayTechniques: { ...prev.todayTechniques, T4: true },
-        keys: prev.keys + keysActual,
-        potential: reward ? Math.min(100, prev.potential + reward.potential) : prev.potential,
-        keysHistory: keysActual > 0
-          ? [{ date: now, source: SOURCE, amount: keysActual, type: 'earn' as const }, ...prev.keysHistory]
-          : prev.keysHistory,
-        potentialHistory: reward
-          ? [{ date: now, source: SOURCE, amount: reward.potential }, ...prev.potentialHistory]
-          : prev.potentialHistory,
-        activityLog: [
-          {
-            id: `act_${Date.now()}`,
-            date: now,
-            type: 'walk' as const,
-            keysGained: keysActual,
-            potentialGained: reward?.potential ?? 0,
-            details: { steps },
-          },
-          ...prev.activityLog,
-        ],
-        ...streakUpdate,
-      };
-    });
+    updateState(prev => (
+      reward ? applyLocalCompletion(prev, 'T4', { steps }, 'walk') : {}
+    ));
     setCompleted(true);
     setRunning(false);
     if (nativeAndroid) void nativeStepCounter.stop();
@@ -295,8 +270,8 @@ export default function Walk() {
           <p className="body text-secondary mb-1 num">{steps} шагов</p>
           {reward ? (
             <>
-              <p className="body text-secondary mb-1">+{keysEarned} ключей начислено</p>
-              <p className="caption text-tertiary mb-8">+{reward.potential}% потенциал</p>
+               <p className="body text-secondary mb-1">+10% потенциала начислено</p>
+               <p className="caption text-tertiary mb-8">Ключи — только при закрытии дня на 100%</p>
             </>
           ) : (
             <p className="body-s text-tertiary mb-8">Достигни 2500 шагов для награды</p>
@@ -343,16 +318,16 @@ export default function Walk() {
                 <p className="body text-secondary mb-6 leading-relaxed">
                   Выйди на прогулку с эспандером. Шаги отслеживаются через датчик движения.
                 </p>
-                <p className="caption text-tertiary mb-3 uppercase tracking-wider">Ступени награды</p>
+                 <p className="caption text-tertiary mb-3 uppercase tracking-wider">Условие завершения</p>
                 <div className="space-y-2 mb-6">
-                  {STEP_MILESTONES.filter(m => m.keys <= remaining || remaining >= MAX_KEYS).map(m => (
+                   {STEP_MILESTONES.map(m => (
                     <div key={m.steps}
                       className="flex justify-between items-center px-4 py-3 rounded-[12px]"
                       style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
                       <span className="body-s text-primary num">{m.steps.toLocaleString('ru')} шагов</span>
                       <div className="flex items-center gap-3">
-                        <span className="caption text-blue-light">+{m.keys} ключей</span>
-                        <span className="caption text-tertiary flex items-center gap-1">+{m.potential}% <Brain size={10} color="var(--text-tertiary)" /></span>
+                         <span className="caption text-blue-light">+10% потенциала</span>
+                         <span className="caption text-tertiary flex items-center gap-1">Ключи — за закрытие дня <Brain size={10} color="var(--text-tertiary)" /></span>
                       </div>
                     </div>
                   ))}
@@ -395,7 +370,7 @@ export default function Walk() {
           <div className="w-full mb-8">
             <div className="flex justify-between items-center mb-2">
               <span className="caption text-tertiary">До награды</span>
-              <span className="caption text-blue-light num">{nextMilestone.steps.toLocaleString('ru')} шагов → +{nextMilestone.keys} ключей</span>
+               <span className="caption text-blue-light num">{nextMilestone.steps.toLocaleString('ru')} шагов → +10% потенциала</span>
             </div>
             <div className="h-1.5 w-full rounded-full" style={{ background: 'rgba(255,255,255,0.08)' }}>
               <motion.div className="h-full rounded-full" style={{ background: '#22C55E' }}
@@ -410,7 +385,7 @@ export default function Walk() {
         )}
         {currentReward && (
           <div className="mb-6 px-4 py-2 rounded-[10px]" style={{ background: 'rgba(37,99,235,0.1)', border: '1px solid rgba(37,99,235,0.2)' }}>
-            <span className="caption text-blue-light">Текущая награда: +{currentReward.keys} ключей</span>
+             <span className="caption text-blue-light">После завершения: +10% потенциала</span>
           </div>
         )}
         {steps < MIN_STEPS_TO_COMPLETE && steps > 0 && (

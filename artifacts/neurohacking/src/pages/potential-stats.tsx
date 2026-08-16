@@ -11,7 +11,7 @@ export default function PotentialStats() {
 
       <div className="bg-surface-1 border border-border rounded-[24px] p-6 text-center mt-4">
         <h1 className="title-m text-secondary mb-2">Потенциал</h1>
-        <span className="display-l text-primary">{potential}%</span>
+        <span className="display-l text-primary">{Math.min(100, potential)}%</span>
       </div>
 
       <div>

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useLocation } from "wouter";
-import { useAppStore, getTodayKeysFromSource, computeStreakUpdate } from "@/lib/store";
+import { useAppStore, getTodayKeysFromSource } from "@/lib/store";
+import { applyLocalCompletion } from "@/lib/store";
 import { TechniqueIntroPanel } from "@/components/TechniqueIntroPanel";
 import { MaximInfoModal } from "@/components/MaximInfoModal";
 import { ScreenTransition } from "@/components/ScreenTransition";
@@ -8,6 +9,7 @@ import { BackButton } from "@/components/BackButton";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Plus, X, Clock, Pause, Play, Target, ChevronLeft } from "lucide-react";
+import { plannerAccuracy, plannerPotential } from "@workspace/economy";
 
 function fmtDur(min: number) {
   if (min < 60) return `${min} мин`;
@@ -86,11 +88,13 @@ function getBaseReward(actualMinutes: number): { keys: number; potential: number
 
 function calculateT1Reward(actualMinutes: number, estimatedMinutes: number): { keys: number; potential: number; accuracyPercent: number } {
   if (actualMinutes < estimatedMinutes * 0.3) return { keys: 0, potential: 0, accuracyPercent: 0 };
-  const deviation = Math.abs(actualMinutes - estimatedMinutes) / Math.max(actualMinutes, estimatedMinutes);
-  const accuracyPercent = Math.exp(-1.5 * deviation * deviation);
-  const actualForCalc = Math.min(actualMinutes, estimatedMinutes);
-  const base = getBaseReward(actualForCalc);
-  return { keys: Math.floor(base.keys * accuracyPercent), potential: Math.round(base.potential * accuracyPercent * 100) / 100, accuracyPercent };
+  const actualSeconds = actualMinutes * 60;
+  const estimatedSeconds = estimatedMinutes * 60;
+  return {
+    keys: 0,
+    potential: plannerPotential(actualSeconds, estimatedSeconds),
+    accuracyPercent: plannerAccuracy(actualSeconds, estimatedSeconds),
+  };
 }
 
 function getAccuracyLabel(actualMin: number, estimatedMin: number): { text: string; color: string } {
@@ -174,26 +178,21 @@ export default function Planner() {
     }
 
     const now = new Date().toISOString();
-    updateState(prev => {
-      const streakUpdate = computeStreakUpdate(prev);
-      return {
-        plannerTasks: prev.plannerTasks.map(t => t.id === task.taskId ? { ...t, completed: true } : t),
-        keys: prev.keys + keysEarned,
-        potential: potentialEarned > 0 ? Math.min(100, prev.potential + potentialEarned) : prev.potential,
-        todayTechniques: { ...prev.todayTechniques, T1: prev.todayTechniques.T1 || keysEarned >= 1 },
-        keysHistory: keysEarned > 0
-          ? [{ date: now, source: SOURCE, amount: keysEarned, type: 'earn' as const }, ...prev.keysHistory]
-          : prev.keysHistory,
-        potentialHistory: potentialEarned > 0
-          ? [{ date: now, source: SOURCE, amount: potentialEarned }, ...prev.potentialHistory]
-          : prev.potentialHistory,
-        activityLog: [
-          { id: `act_${Date.now()}`, date: now, type: 'planner' as const, keysGained: keysEarned, potentialGained: potentialEarned, details: { taskText: task.text, durationMin: task.estimatedMinutes, durationLabel: DURATION_OPTIONS.find(d => d.minutes === task.estimatedMinutes)?.label ?? fmtDur(task.estimatedMinutes) } },
-          ...prev.activityLog,
-        ],
-        ...streakUpdate,
-      };
-    });
+    updateState(prev => ({
+      ...applyLocalCompletion(
+        prev,
+        'T1',
+        {
+          taskText: task.text,
+          durationMin: task.estimatedMinutes,
+          durationLabel: DURATION_OPTIONS.find(d => d.minutes === task.estimatedMinutes)?.label ?? fmtDur(task.estimatedMinutes),
+          estimatedSeconds: task.totalSeconds,
+          actualSeconds: elapsedSec,
+        },
+        'planner',
+      ),
+      plannerTasks: prev.plannerTasks.map(t => t.id === task.taskId ? { ...t, completed: true } : t),
+    }));
     setCompletionResult({ taskText: task.text, predictedSec: task.totalSeconds, actualSec: elapsedSec, keysEarned, potentialEarned, accuracyPercent });
     setActiveTask(null);
     setElapsed(0);
@@ -404,14 +403,14 @@ export default function Planner() {
               style={{ background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.2)' }}>
               <span className="caption text-secondary">Максимальная награда</span>
               <div className="flex items-center gap-3">
-                <span className="caption" style={{ color: '#F59E0B' }}>+{selectedDuration.keys} ключей</span>
-                <span className="caption" style={{ color: '#60A5FA' }}>+{selectedDuration.potential.toFixed(2)}% пот.</span>
+                <span className="caption" style={{ color: '#F59E0B' }}>Потенциал по факту</span>
+                <span className="caption" style={{ color: '#60A5FA' }}>Ключи — за закрытие дня</span>
               </div>
             </div>
           )}
           {selectedDuration && (
             <div className="rounded-[12px] p-3" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
-              <p className="caption text-tertiary">Чем точнее предсказание — тем больше ключей. Если потратишь менее 30% от предсказанного — награды нет.</p>
+              <p className="caption text-tertiary">Потенциал считается по фактически потраченному времени, а точность предсказания влияет на коэффициент. Если потратить менее 30% — начисления нет.</p>
             </div>
           )}
           <button onClick={handleAddTask}

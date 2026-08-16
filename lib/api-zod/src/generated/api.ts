@@ -13,6 +13,11 @@ export const HealthCheckResponse = zod.object({
 })
 
 
+export const getMeResponseProfileDayPotentialDayRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+export const getMeResponseProfileClosedDaysMin = 0;
+
+
+
 export const GetMeResponse = zod.object({
   "user": zod.object({
   "id": zod.int(),
@@ -29,12 +34,20 @@ export const GetMeResponse = zod.object({
   "avatarUrl": zod.string().nullable(),
   "totalKeys": zod.int(),
   "totalPotential": zod.number(),
+  "dayPotential": zod.number(),
+  "dayPotentialDay": zod.string().regex(getMeResponseProfileDayPotentialDayRegExp).nullable(),
+  "closedDays": zod.int().min(getMeResponseProfileClosedDaysMin),
   "currentStreak": zod.int(),
   "longestStreak": zod.int(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
 })
 })
+
+
+export const getMyProfileResponseDayPotentialDayRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+export const getMyProfileResponseClosedDaysMin = 0;
+
 
 
 export const GetMyProfileResponse = zod.object({
@@ -46,6 +59,9 @@ export const GetMyProfileResponse = zod.object({
   "avatarUrl": zod.string().nullable(),
   "totalKeys": zod.int(),
   "totalPotential": zod.number(),
+  "dayPotential": zod.number(),
+  "dayPotentialDay": zod.string().regex(getMyProfileResponseDayPotentialDayRegExp).nullable(),
+  "closedDays": zod.int().min(getMyProfileResponseClosedDaysMin),
   "currentStreak": zod.int(),
   "longestStreak": zod.int(),
   "createdAt": zod.coerce.date(),
@@ -71,6 +87,11 @@ export const UpdateMyProfileBody = zod.object({
   "avatarUrl": zod.url().max(updateMyProfileBodyAvatarUrlMax).optional()
 })
 
+export const updateMyProfileResponseDayPotentialDayRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+export const updateMyProfileResponseClosedDaysMin = 0;
+
+
+
 export const UpdateMyProfileResponse = zod.object({
   "id": zod.int(),
   "userId": zod.int(),
@@ -80,6 +101,9 @@ export const UpdateMyProfileResponse = zod.object({
   "avatarUrl": zod.string().nullable(),
   "totalKeys": zod.int(),
   "totalPotential": zod.number(),
+  "dayPotential": zod.number(),
+  "dayPotentialDay": zod.string().regex(updateMyProfileResponseDayPotentialDayRegExp).nullable(),
+  "closedDays": zod.int().min(updateMyProfileResponseClosedDaysMin),
   "currentStreak": zod.int(),
   "longestStreak": zod.int(),
   "createdAt": zod.coerce.date(),
@@ -118,8 +142,101 @@ export const GetMyTransactionsResponse = zod.object({
 
 export const SaveMyStateBody = zod.record(zod.string(), zod.unknown())
 
+export const saveMyStateResponseProfileDayPotentialDayRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+export const saveMyStateResponseProfileClosedDaysMin = 0;
+
+
+
 export const SaveMyStateResponse = zod.object({
-  "state": zod.record(zod.string(), zod.unknown())
+  "state": zod.record(zod.string(), zod.unknown()),
+  "profile": zod.object({
+  "id": zod.int(),
+  "userId": zod.int(),
+  "nickname": zod.string().nullable(),
+  "displayName": zod.string().nullable(),
+  "bio": zod.string().nullable(),
+  "avatarUrl": zod.string().nullable(),
+  "totalKeys": zod.int(),
+  "totalPotential": zod.number(),
+  "dayPotential": zod.number(),
+  "dayPotentialDay": zod.string().regex(saveMyStateResponseProfileDayPotentialDayRegExp).nullable(),
+  "closedDays": zod.int().min(saveMyStateResponseProfileClosedDaysMin),
+  "currentStreak": zod.int(),
+  "longestStreak": zod.int(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+}).optional()
+})
+
+
+export const PurchaseArticleParams = zod.object({
+  "articleId": zod.enum(['A2', 'A3', 'A4', 'A5'])
+})
+
+export const purchaseArticleResponseProfileDayPotentialDayRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+export const purchaseArticleResponseProfileClosedDaysMin = 0;
+
+
+
+export const PurchaseArticleResponse = zod.object({
+  "articleId": zod.string(),
+  "alreadyUnlocked": zod.boolean(),
+  "keys": zod.int(),
+  "state": zod.record(zod.string(), zod.unknown()),
+  "profile": zod.object({
+  "id": zod.int(),
+  "userId": zod.int(),
+  "nickname": zod.string().nullable(),
+  "displayName": zod.string().nullable(),
+  "bio": zod.string().nullable(),
+  "avatarUrl": zod.string().nullable(),
+  "totalKeys": zod.int(),
+  "totalPotential": zod.number(),
+  "dayPotential": zod.number(),
+  "dayPotentialDay": zod.string().regex(purchaseArticleResponseProfileDayPotentialDayRegExp).nullable(),
+  "closedDays": zod.int().min(purchaseArticleResponseProfileClosedDaysMin),
+  "currentStreak": zod.int(),
+  "longestStreak": zod.int(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+})
+
+
+export const completeArticleReadPathArticleIdRegExp = new RegExp('^A[1-5]$');
+
+
+export const CompleteArticleReadParams = zod.object({
+  "articleId": zod.coerce.string().regex(completeArticleReadPathArticleIdRegExp)
+})
+
+export const completeArticleReadResponseProfileDayPotentialDayRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+export const completeArticleReadResponseProfileClosedDaysMin = 0;
+
+
+
+export const CompleteArticleReadResponse = zod.object({
+  "articleId": zod.string(),
+  "alreadyRead": zod.boolean(),
+  "potential": zod.number(),
+  "state": zod.record(zod.string(), zod.unknown()),
+  "profile": zod.object({
+  "id": zod.int(),
+  "userId": zod.int(),
+  "nickname": zod.string().nullable(),
+  "displayName": zod.string().nullable(),
+  "bio": zod.string().nullable(),
+  "avatarUrl": zod.string().nullable(),
+  "totalKeys": zod.int(),
+  "totalPotential": zod.number(),
+  "dayPotential": zod.number(),
+  "dayPotentialDay": zod.string().regex(completeArticleReadResponseProfileDayPotentialDayRegExp).nullable(),
+  "closedDays": zod.int().min(completeArticleReadResponseProfileClosedDaysMin),
+  "currentStreak": zod.int(),
+  "longestStreak": zod.int(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
 })
 
 
@@ -132,6 +249,11 @@ export const MigrateLegacyStateBody = zod.object({
   "migrationKey": zod.string().min(migrateLegacyStateBodyMigrationKeyMin).max(migrateLegacyStateBodyMigrationKeyMax),
   "state": zod.record(zod.string(), zod.unknown())
 })
+
+export const migrateLegacyStateResponseProfileDayPotentialDayRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+export const migrateLegacyStateResponseProfileClosedDaysMin = 0;
+
+
 
 export const MigrateLegacyStateResponse = zod.object({
   "status": zod.enum(['imported', 'imported_with_warnings', 'already_imported']),
@@ -146,6 +268,9 @@ export const MigrateLegacyStateResponse = zod.object({
   "avatarUrl": zod.string().nullable(),
   "totalKeys": zod.int(),
   "totalPotential": zod.number(),
+  "dayPotential": zod.number(),
+  "dayPotentialDay": zod.string().regex(migrateLegacyStateResponseProfileDayPotentialDayRegExp).nullable(),
+  "closedDays": zod.int().min(migrateLegacyStateResponseProfileClosedDaysMin),
   "currentStreak": zod.int(),
   "longestStreak": zod.int(),
   "createdAt": zod.coerce.date(),
@@ -172,6 +297,10 @@ export const CompleteTechniqueBody = zod.object({
   "metadata": zod.record(zod.string(), zod.unknown())
 })
 
+export const completeTechniqueResponseClosedDaysMin = 0;
+
+
+
 export const CompleteTechniqueResponse = zod.object({
   "keys": zod.int(),
   "potential": zod.number(),
@@ -179,7 +308,9 @@ export const CompleteTechniqueResponse = zod.object({
   "newStreak": zod.int(),
   "longestStreak": zod.int(),
   "totalKeys": zod.int(),
-  "totalPotential": zod.number()
+  "totalPotential": zod.number(),
+  "dayClosed": zod.boolean(),
+  "closedDays": zod.int().min(completeTechniqueResponseClosedDaysMin)
 })
 
 

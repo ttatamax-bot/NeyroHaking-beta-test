@@ -146,33 +146,6 @@ paths:
               schema: { $ref: "#/components/schemas/ArticleReadResult" }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Conflict" }
-  /me/services/{serviceId}/purchase:
-    post:
-      operationId: purchaseService
-      tags: [account]
-      parameters:
-        - name: serviceId
-          in: path
-          required: true
-          schema: { type: string, enum: [consultation, mentoring] }
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [purchaseKey]
-              properties:
-                purchaseKey: { type: string, minLength: 16, maxLength: 128 }
-      responses:
-        "200":
-          description: Server-authorized service purchase
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/ServicePurchaseResult" }
-        "400": { $ref: "#/components/responses/BadRequest" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "409": { $ref: "#/components/responses/Conflict" }
   /me/migrate-legacy:
     post:
       operationId: migrateLegacyState
@@ -244,7 +217,7 @@ components:
         email: { type: ["string", "null"] }
     UserProfile:
       type: object
-      required: [id, userId, nickname, displayName, bio, avatarUrl, totalKeys, totalPotential, currentStreak, longestStreak, createdAt, updatedAt]
+      required: [id, userId, nickname, displayName, bio, avatarUrl, totalKeys, totalPotential, dayPotential, dayPotentialDay, closedDays, currentStreak, longestStreak, createdAt, updatedAt]
       properties:
         id: { type: integer }
         userId: { type: integer }
@@ -254,6 +227,9 @@ components:
         avatarUrl: { type: ["string", "null"] }
         totalKeys: { type: integer }
         totalPotential: { type: number }
+        dayPotential: { type: number }
+        dayPotentialDay: { type: ["string", "null"], pattern: "^\\d{4}-\\d{2}-\\d{2}$" }
+        closedDays: { type: integer, minimum: 0 }
         currentStreak: { type: integer }
         longestStreak: { type: integer }
         createdAt: { type: string, format: date-time }
@@ -329,13 +305,6 @@ components:
         potential: { type: number }
         state: { type: object, additionalProperties: true }
         profile: { $ref: "#/components/schemas/UserProfile" }
-    ServicePurchaseResult:
-      type: object
-      required: [serviceId, alreadyPurchased, profile]
-      properties:
-        serviceId: { type: string }
-        alreadyPurchased: { type: boolean }
-        profile: { $ref: "#/components/schemas/UserProfile" }
     TechniqueCompletionInput:
       type: object
       required: [techniqueId, clientDate, idempotencyKey, metadata]
@@ -348,7 +317,7 @@ components:
     TechniqueCompletionResult:
       type: object
       additionalProperties: true
-      required: [keys, potential, completedTechniqueId, newStreak, longestStreak, totalKeys, totalPotential]
+      required: [keys, potential, completedTechniqueId, newStreak, longestStreak, totalKeys, totalPotential, dayClosed, closedDays]
       properties:
         keys: { type: integer }
         potential: { type: number }
@@ -357,3 +326,5 @@ components:
         longestStreak: { type: integer }
         totalKeys: { type: integer }
         totalPotential: { type: number }
+        dayClosed: { type: boolean }
+        closedDays: { type: integer, minimum: 0 }

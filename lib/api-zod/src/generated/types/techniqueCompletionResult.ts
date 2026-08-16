@@ -14,5 +14,8 @@ export interface TechniqueCompletionResult {
   longestStreak: number;
   totalKeys: number;
   totalPotential: number;
+  dayClosed: boolean;
+  /** @minimum 0 */
+  closedDays: number;
   [key: string]: unknown;
  }

@@ -19,6 +19,14 @@ export interface UserProfile {
   avatarUrl: string | null;
   totalKeys: number;
   totalPotential: number;
+  dayPotential: number;
+  /**
+     * @nullable
+     * @pattern ^\d{4}-\d{2}-\d{2}$
+     */
+  dayPotentialDay: string | null;
+  /** @minimum 0 */
+  closedDays: number;
   currentStreak: number;
   longestStreak: number;
   createdAt: Date;

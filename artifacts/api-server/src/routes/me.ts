@@ -17,6 +17,7 @@ import {
 } from "../../../../lib/db/src/index.js";
 import {
   migrateLegacyState,
+  reconcileLegacyKeyLedger,
   stripNonAuthoritativeState,
 } from "../services/legacyMigration.js";
 import { createCompatibleRouter } from "./compatRouter.js";
@@ -43,10 +44,6 @@ const ARTICLE_COSTS: Record<string, number> = {
   A3: 10,
   A4: 20,
   A5: 400,
-};
-const SERVICE_COSTS: Record<string, number> = {
-  consultation: 25_000,
-  mentoring: 100_000,
 };
 
 async function getUser(clerkId: string) {
@@ -81,6 +78,7 @@ router.get("/me", async (req, res) => {
   const clerkId = requireUser(req, res);
   if (!clerkId) return;
   const user = await getUser(clerkId);
+  await reconcileLegacyKeyLedger(user.id);
   const state = await db.query.userStatesTable.findFirst({
     where: eq(userStatesTable.userId, user.id),
   });
@@ -190,27 +188,6 @@ router.post("/me/state", async (req, res) => {
       where: eq(userProfilesTable.userId, user.id),
     }) ?? (await tx.insert(userProfilesTable).values({ userId: user.id }).returning())[0];
 
-    // The first-three-goals reward is granted by the server exactly once.
-    // The client can submit goals, but cannot submit the balance mutation.
-    const activeGoals = Array.isArray(nextState.goals)
-      ? nextState.goals.filter((goal) =>
-          objectBody(goal) && goal.status === "active",
-        ).length
-      : 0;
-    if (activeGoals >= 3 && nextState.firstGoalBonusGiven !== true) {
-      const [updatedProfile] = await tx.update(userProfilesTable)
-        .set({ totalKeys: profile.totalKeys + 10, updatedAt: new Date() })
-        .where(eq(userProfilesTable.userId, user.id))
-        .returning();
-      await tx.insert(keyTransactionsTable).values({
-        userId: user.id,
-        amount: 10,
-        reason: "goal:first-three",
-      });
-      profile = updatedProfile;
-      nextState.firstGoalBonusGiven = true;
-    }
-
     const [row] = await tx.insert(userStatesTable).values({
       userId: user.id,
       state: nextState,
@@ -316,7 +293,7 @@ router.post("/me/articles/:articleId/read", async (req, res) => {
       ),
     });
     if (already) return { profile, state: currentState, alreadyRead: true } as const;
-    const reward = 0.15;
+    const reward = 0;
     await tx.insert(potentialTransactionsTable).values({
       userId: user.id,
       amount: reward,
@@ -354,54 +331,10 @@ router.post("/me/articles/:articleId/read", async (req, res) => {
   res.json({
     articleId,
     alreadyRead: result.alreadyRead,
-    potential: result.alreadyRead ? 0 : 0.15,
+    potential: 0,
     state: result.state,
     profile: result.profile,
   });
-});
-
-router.post("/me/services/:serviceId/purchase", async (req, res) => {
-  const clerkId = requireUser(req, res);
-  if (!clerkId) return;
-  const serviceId = String(req.params.serviceId);
-  const cost = SERVICE_COSTS[serviceId];
-  const purchaseKey = objectBody(req.body) && typeof req.body.purchaseKey === "string"
-    ? req.body.purchaseKey : "";
-  if (!cost || purchaseKey.length < 16 || purchaseKey.length > 128) {
-    res.status(400).json({ error: "Invalid service purchase payload" });
-    return;
-  }
-  const user = await getUser(clerkId);
-  const reason = `service:${serviceId}:${purchaseKey}`;
-  const result = await db.transaction(async (tx) => {
-    await tx.execute(sql`select pg_advisory_xact_lock(${user.id})`);
-    const existingPurchase = await tx.query.keyTransactionsTable.findFirst({
-      where: and(
-        eq(keyTransactionsTable.userId, user.id),
-        eq(keyTransactionsTable.reason, reason),
-      ),
-    });
-    const profile = await tx.query.userProfilesTable.findFirst({
-      where: eq(userProfilesTable.userId, user.id),
-    }) ?? (await tx.insert(userProfilesTable).values({ userId: user.id }).returning())[0];
-    if (existingPurchase) return { profile, alreadyPurchased: true } as const;
-    if (profile.totalKeys < cost) return null;
-    await tx.insert(keyTransactionsTable).values({
-      userId: user.id,
-      amount: -cost,
-      reason,
-    });
-    const [nextProfile] = await tx.update(userProfilesTable)
-      .set({ totalKeys: profile.totalKeys - cost, updatedAt: new Date() })
-      .where(eq(userProfilesTable.userId, user.id))
-      .returning();
-    return { profile: nextProfile, alreadyPurchased: false } as const;
-  });
-  if (!result) {
-    res.status(409).json({ error: "Not enough keys" });
-    return;
-  }
-  res.json({ serviceId, alreadyPurchased: result.alreadyPurchased, profile: result.profile });
 });
 
 router.post("/me/migrate-legacy", async (req, res) => {

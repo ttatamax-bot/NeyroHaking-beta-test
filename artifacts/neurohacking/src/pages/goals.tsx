@@ -6,10 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Plus, X, CheckCircle, XCircle, Pencil, Check } from "lucide-react";
 
-const FIRST_THREE_GOALS_BONUS = 10;
-
 export default function Goals() {
-  const { goals, firstGoalBonusGiven, updateState, goalFormOpen: showForm } = useAppStore();
+  const { goals, updateState, goalFormOpen: showForm } = useAppStore();
   const [name, setName] = useState("");
   const [desc, setDesc] = useState("");
   const [confirmId, setConfirmId] = useState<string | null>(null);
@@ -43,21 +41,10 @@ export default function Goals() {
 
     updateState(prev => {
       const newGoals = [...prev.goals, newGoal];
-      const totalActiveAfter = newGoals.filter(g => g.status === 'active').length;
-      const shouldGiveBonus = !prev.firstGoalBonusGiven && totalActiveAfter >= 3;
-      const now = new Date().toISOString();
 
       return {
         goals: newGoals,
         scenes: [...prev.scenes, newScene],
-        ...(shouldGiveBonus ? {
-          keys: prev.keys + FIRST_THREE_GOALS_BONUS,
-          firstGoalBonusGiven: true,
-          keysHistory: [
-            { date: now, source: 'Первые 3 цели', amount: FIRST_THREE_GOALS_BONUS, type: 'earn' as const },
-            ...prev.keysHistory,
-          ],
-        } : {}),
       };
     });
     setName("");
@@ -166,11 +153,6 @@ export default function Goals() {
               className="bg-surface-1 border-border text-primary body min-h-[120px]"
             />
           </div>
-          {activeGoals.length === 2 && !firstGoalBonusGiven && (
-            <div className="bg-blue-ultra-soft border border-[rgba(37,99,235,0.2)] rounded-[12px] p-3">
-              <p className="caption text-blue-light">+{FIRST_THREE_GOALS_BONUS} ключей за постановку 3 целей</p>
-            </div>
-          )}
           <button
             onClick={handleCreate}
             disabled={!name.trim()}

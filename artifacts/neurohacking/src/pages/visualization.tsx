@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useLocation } from "wouter";
-import { useAppStore, getTodayKeysFromSource, computeStreakUpdate } from "@/lib/store";
+import { useAppStore, getTodayKeysFromSource } from "@/lib/store";
+import { applyLocalCompletion } from "@/lib/store";
 import { TechniqueIntroPanel } from "@/components/TechniqueIntroPanel";
 import { MaximInfoModal } from "@/components/MaximInfoModal";
 import { motion, AnimatePresence } from "framer-motion";
@@ -184,25 +185,12 @@ export default function Visualization() {
       }
       return;
     }
-    const now = new Date().toISOString();
-    const keysToAward = isMaxedOut ? 0 : KEYS_REWARD;
-    updateState(prev => {
-      const streakUpdate = computeStreakUpdate(prev);
-      return {
-        todayTechniques: { ...prev.todayTechniques, T2: true },
-        keys: prev.keys + keysToAward,
-        potential: Math.min(100, prev.potential + POTENTIAL_REWARD),
-        keysHistory: keysToAward > 0
-          ? [{ date: now, source: SOURCE, amount: keysToAward, type: 'earn' as const }, ...prev.keysHistory]
-          : prev.keysHistory,
-        potentialHistory: [{ date: now, source: SOURCE, amount: POTENTIAL_REWARD }, ...prev.potentialHistory],
-        activityLog: [
-          { id: `act_${Date.now()}`, date: now, type: 'visualization' as const, keysGained: keysToAward, potentialGained: POTENTIAL_REWARD, details: { goalName: selectedGoal?.name ?? '', goalId: selectedGoal?.id ?? '', answers } },
-          ...prev.activityLog,
-        ],
-        ...streakUpdate,
-      };
-    });
+    updateState(prev => applyLocalCompletion(
+      prev,
+      'T2',
+      { goalName: selectedGoal?.name ?? '', goalId: selectedGoal?.id ?? '', answers },
+      'visualization',
+    ));
     setCompleted(true);
   }, [clearTimer, updateState, isMaxedOut, selectedGoal, isSignedIn, completeTechnique]);
 
@@ -286,7 +274,7 @@ export default function Visualization() {
           <div className="text-6xl mb-4">✦</div>
           <h1 className="display-l text-primary mb-3">Визуализация завершена</h1>
           <p className="body text-secondary mb-8">
-            {isMaxedOut && !completed ? 'Уже выполнено сегодня' : `+${KEYS_REWARD} ключей начислено`}
+            {isMaxedOut && !completed ? 'Уже выполнено сегодня' : '+10% потенциала начислено'}
           </p>
           <button onClick={() => setLocation('/techniques')}
             className="w-full h-[52px] rounded-[14px] bg-surface-1 border border-border text-primary body active:opacity-70">

@@ -12,10 +12,16 @@ export default function KeysStats() {
       <div className="bg-surface-1 border border-border rounded-[24px] p-6 text-center mt-4">
         <h1 className="title-m text-secondary mb-2">Ключи</h1>
         <span className="display-l text-primary">{keys}</span>
+        <p className="body-s text-secondary mt-3">
+          Ключи выдаются только за закрытие дня на 100%.
+        </p>
       </div>
 
       <div>
         <h2 className="title-s text-primary mb-4">История операций</h2>
+        <p className="caption text-secondary mb-4">
+          Источники ключей: награда за закрытие дня и покупки статей.
+        </p>
         {keysHistory.length === 0 ? (
           <p className="body-s text-secondary text-center py-8">Операций пока нет.</p>
         ) : (

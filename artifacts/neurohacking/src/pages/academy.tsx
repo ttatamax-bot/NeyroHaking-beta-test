@@ -44,14 +44,6 @@ import { useLocation } from "wouter";
     darkBg: 'rgba(192,132,252,0.08)',
   };
 
-  const GOLD = {
-    color: '#F59E0B',
-    bg: 'linear-gradient(135deg, rgba(245,158,11,0.22) 0%, rgba(245,158,11,0.08) 100%)',
-    border: 'rgba(245,158,11,0.28)',
-    glow: 'rgba(245,158,11,0.18)',
-    light: 'rgba(245,158,11,0.35)',
-  };
-
   const CARD_SHADOW = '0 8px 32px rgba(0,0,0,0.68), 0 0 0 1px rgba(255,255,255,0.1)';
 
   const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
@@ -66,75 +58,11 @@ import { useLocation } from "wouter";
 
     const isOnboarding = userState === 'onboarding';
     const hasHL       = isOnboarding && onboardingHighlight.length > 0;
-    const hlServices  = hasHL && onboardingHighlight.includes('ACAD_services');
     const hlArticles  = hasHL && onboardingHighlight.includes('ACAD_articles');
-    const dimServices = hasHL && !onboardingHighlight.includes('ACAD_services');
     const dimArticles = hasHL && !onboardingHighlight.includes('ACAD_articles');
-
-    const SERVICES = [
-      { title: 'Консультация', desc: 'Разбор твоей ситуации', cost: 25000, costRub: 999, route: '/consultation' },
-      { title: 'Личное ведение', desc: 'Системная работа со мной', cost: 100000, costRub: 9999, route: '/mentoring' },
-    ];
-
-    const serviceDirections = [-1, 1];
 
     return (
       <div className="flex flex-col h-[calc(100dvh-60px)] pt-2 overflow-hidden">
-        <motion.div
-          animate={{ opacity: dimServices ? 0.2 : 1 }}
-          transition={{ duration: 0.25 }}
-          className="px-4 pt-4 pb-4 shrink-0 relative z-10"
-        >
-          <h2 className="text-tertiary uppercase tracking-wider mb-3"
-            style={{ fontSize: 16, fontWeight: 600, letterSpacing: '0.08em' }}>
-            Услуги
-          </h2>
-          <div className="grid grid-cols-2 gap-3">
-            {SERVICES.map((s, idx) => (
-              <motion.button
-                key={s.route}
-                initial={{ opacity: 0, x: serviceDirections[idx] * 60 }}
-                animate={{ opacity: hlServices ? 1 : 1, x: 0, scale: hlServices ? 1.03 : 1 }}
-                transition={{ duration: 1.5, delay: idx * 0.15, ease: EASE }}
-                whileTap={isOnboarding ? {} : { scale: 0.95 }}
-                onClick={() => !isOnboarding && setLocation(s.route)}
-                className="rounded-[20px] p-4 flex flex-col text-left active:brightness-110 transition-all overflow-hidden relative btn-shimmer"
-                style={{
-                  background: GOLD.bg,
-                  border: `1px solid ${GOLD.border}`,
-                  boxShadow: CARD_SHADOW,
-                  minHeight: 160,
-                }}
-              >
-                <span className="inline-block self-start rounded-[8px] px-2.5 py-1 mb-2 relative text-[17px]"
-                  style={{
-                    background: 'rgba(255,255,255,0.1)',
-                    border: `1px solid ${GOLD.light}`,
-                    color: '#FFFFFF',
-                    fontSize: 14,
-                    fontWeight: 700,
-                    lineHeight: 1.3,
-                    textShadow: '0 1px 2px rgba(0,0,0,0.4)',
-                  }}>
-                  {s.title}
-                </span>
-                <p className="text-secondary leading-snug relative"
-                  style={{ fontSize: 12, opacity: 0.7 }}>
-                  {s.desc}
-                </p>
-                <div className="mt-auto flex flex-col gap-0.5 relative">
-                  <span className="label" style={{ color: GOLD.color, fontSize: 11 }}>
-                    {formatKeys(s.cost)} ключей
-                  </span>
-                  <span className="label" style={{ color: 'rgba(255,255,255,0.35)', fontSize: 10 }}>
-                    {s.costRub.toLocaleString('ru-RU')} руб.
-                  </span>
-                </div>
-              </motion.button>
-            ))}
-          </div>
-        </motion.div>
-
         <motion.div
           animate={{ opacity: dimArticles ? 0.2 : 1 }}
           transition={{ duration: 0.25 }}

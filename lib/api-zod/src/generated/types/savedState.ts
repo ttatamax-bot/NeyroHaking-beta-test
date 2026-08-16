@@ -6,7 +6,9 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { SavedStateState } from './savedStateState';
+import type { UserProfile } from './userProfile';
 
 export interface SavedState {
   state: SavedStateState;
+  profile?: UserProfile;
 }

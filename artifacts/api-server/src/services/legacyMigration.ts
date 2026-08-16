@@ -6,16 +6,13 @@ import {
   eq,
   keyTransactionsTable,
   legacyMigrationsTable,
-  potentialTransactionsTable,
   sql,
-  streakHistoryTable,
   userProfilesTable,
   userStatesTable,
 } from "../../../../lib/db/src/index.js";
 import {
   appDayKey,
   isTechniqueId,
-  rewardForMetadata,
   type TechniqueId,
   type TechniqueMetadata,
 } from "./techniqueRewards.js";
@@ -29,7 +26,13 @@ type LegacyActivity = {
   potentialGained?: number;
   details: TechniqueMetadata;
 };
-type LegacySpend = { articleId: string; amount: number; date: Date };
+type LegacyKeyEntry = {
+  index: number;
+  date: Date;
+  source: string;
+  amount: number;
+  type: "earn" | "spend";
+};
 
 export interface LegacyAudit {
   keysExpected: number | null;
@@ -42,6 +45,7 @@ export interface LegacyAudit {
   rejectedActivities: number;
   verifiedKeys: number;
   verifiedPotential: number;
+  keyHistoryImported?: boolean;
   warnings: string[];
 }
 
@@ -65,12 +69,12 @@ const protectedStateKeys = new Set([
   "keys",
   "potential",
   "streak",
+  "closedDays",
   "lastCompletedDate",
   "todayTechniques",
   "todayTechniquesDate",
   "profile",
   "unlockedArticles",
-  "purchaseHistory",
   "firstGoalBonusGiven",
 ]);
 
@@ -80,13 +84,6 @@ const legacyArticles: Record<string, { title: string; cost: number }> = {
   A3: { title: "Научись управлять своим дофамином с помощью нейровизуализации", cost: 10 },
   A4: { title: "Гайд на планирование дел на день. Научись точно предсказывать время на задачу.", cost: 20 },
   A5: { title: "Гайд на сон. Как засыпать за 3–5 минут и просыпаться восстановленным.", cost: 400 },
-};
-
-const dailyKeyCaps: Partial<Record<TechniqueId, number>> = {
-  T2: 40,
-  T3: 40,
-  T4: 80,
-  T5: 60,
 };
 
 export function stripNonAuthoritativeState(state: JsonObject): JsonObject {
@@ -140,7 +137,8 @@ function warning(audit: LegacyAudit, value: string): void {
   if (audit.warnings.length < 100) audit.warnings.push(value);
 }
 
-function parseHistoryAmounts(state: JsonObject, audit: LegacyAudit): void {
+function parseKeyHistory(state: JsonObject, audit: LegacyAudit): LegacyKeyEntry[] {
+  const entries: LegacyKeyEntry[] = [];
   const keysHistory = state.keysHistory;
   if (Array.isArray(keysHistory)) {
     for (const [index, raw] of keysHistory.entries()) {
@@ -150,11 +148,26 @@ function parseHistoryAmounts(state: JsonObject, audit: LegacyAudit): void {
       }
       const amount = finiteNonNegative(raw.amount);
       const date = parseDate(raw.date);
-      if (amount === null || !date || (raw.type !== "earn" && raw.type !== "spend")) {
+      const source = typeof raw.source === "string" ? raw.source.trim() : "";
+      if (
+        amount === null ||
+        !Number.isInteger(amount) ||
+        !date ||
+        source.length === 0 ||
+        source.length > 500 ||
+        (raw.type !== "earn" && raw.type !== "spend")
+      ) {
         warning(audit, `invalid_keys_history:${index}`);
         continue;
       }
       audit.keysFromHistory += raw.type === "spend" ? -amount : amount;
+      entries.push({
+        index,
+        date,
+        source,
+        amount,
+        type: raw.type,
+      });
     }
   }
 
@@ -173,6 +186,69 @@ function parseHistoryAmounts(state: JsonObject, audit: LegacyAudit): void {
       audit.potentialFromHistory += amount;
     }
   }
+  // Keep the user's original order in user state. Ledger rows retain each
+  // source timestamp, so transaction ordering does not depend on this array.
+  return entries;
+}
+
+function stateWithoutPotentialAndStreak(
+  sourceState: JsonObject,
+  keyHistory: LegacyKeyEntry[],
+): JsonObject {
+  const safeState = stripNonAuthoritativeState(sourceState);
+
+  // These values belong to the new server-side economy and must not be
+  // reconstructed from a client-controlled legacy snapshot.
+  for (const key of [
+    "potential",
+    "potentialHistory",
+    "totalPotential",
+    "dayPotential",
+    "dayPotentialDay",
+    "streak",
+    "streakHistory",
+    "currentStreak",
+    "longestStreak",
+    "closedDays",
+    "lastCompletedDate",
+    "todayTechniques",
+    "todayTechniquesDate",
+  ]) {
+    delete safeState[key];
+  }
+
+  safeState.keysHistory = keyHistory.map(({ date, source, amount, type }) => ({
+    date: date.toISOString(),
+    source,
+    amount,
+    type,
+  }));
+
+  if (Array.isArray(safeState.activityLog)) {
+    safeState.activityLog = safeState.activityLog
+      .filter(objectValue)
+      .map((activity) => {
+        const next = { ...activity };
+        delete next.potentialGained;
+        return next;
+      });
+  }
+
+  if (Array.isArray(safeState.history)) {
+    safeState.history = safeState.history
+      .filter(objectValue)
+      .map((day) => {
+        const next = { ...day };
+        delete next.potential;
+        delete next.streak;
+        return next;
+      });
+  }
+
+  // A legacy dayDone flag was derived from the old potential/streak rules.
+  // It must not lock the user after migration when no current day was moved.
+  if (safeState.userState === "dayDone") safeState.userState = "active";
+  return safeState;
 }
 
 function validatedArticlePurchases(state: JsonObject, audit: LegacyAudit): string[] {
@@ -197,26 +273,6 @@ function validatedArticlePurchases(state: JsonObject, audit: LegacyAudit): strin
     unlocked.add(article[0]);
   }
   return [...unlocked];
-}
-
-function validatedArticleSpends(state: JsonObject, audit: LegacyAudit): LegacySpend[] {
-  if (!Array.isArray(state.keysHistory)) return [];
-  const spends: LegacySpend[] = [];
-  for (const [index, raw] of state.keysHistory.entries()) {
-    if (!objectValue(raw) || raw.type !== "spend") continue;
-    const source = typeof raw.source === "string" ? raw.source : "";
-    const amount = finiteNonNegative(raw.amount);
-    const date = parseDate(raw.date);
-    const article = Object.entries(legacyArticles).find(([, item]) =>
-      source === `Статья: ${item.title}`,
-    );
-    if (!article || amount === null || amount !== article[1].cost || !date) {
-      warning(audit, `unverified_article_purchase:${index}`);
-      continue;
-    }
-    spends.push({ articleId: article[0], amount, date });
-  }
-  return spends;
 }
 
 function parseActivities(state: JsonObject, audit: LegacyAudit): LegacyActivity[] {
@@ -312,6 +368,98 @@ async function profileFor(
   return created;
 }
 
+/**
+ * Repairs accounts that completed the earlier migration implementation.
+ * That version kept keysHistory in user state but did not import the full
+ * ledger into key_transactions. The repair is idempotent and never imports
+ * potential or streak data.
+ */
+export async function reconcileLegacyKeyLedger(userId: number): Promise<void> {
+  await db.transaction(async (tx) => {
+    await tx.execute(sql`select pg_advisory_xact_lock(${userId})`);
+    const migration = await tx.query.legacyMigrationsTable.findFirst({
+      where: eq(legacyMigrationsTable.userId, userId),
+    });
+    if (!migration) return;
+
+    const existingAudit = objectValue(migration.audit) ? migration.audit : {};
+    if (existingAudit.keyHistoryImported === true) return;
+
+    const sourceState = objectValue(migration.sourceState) ? migration.sourceState : {};
+    const repairAudit: LegacyAudit = {
+      keysExpected: finiteNonNegative(sourceState.keys),
+      keysFromHistory: 0,
+      potentialExpected: finiteNonNegative(sourceState.potential),
+      potentialFromHistory: 0,
+      activityEntries: Array.isArray(sourceState.activityLog) ? sourceState.activityLog.length : 0,
+      verifiedActivities: 0,
+      importedActivities: 0,
+      rejectedActivities: 0,
+      verifiedKeys: 0,
+      verifiedPotential: 0,
+      warnings: [],
+    };
+    const keyHistory = parseKeyHistory(sourceState, repairAudit);
+    const transactions = await tx.select({
+      amount: keyTransactionsTable.amount,
+      reason: keyTransactionsTable.reason,
+    }).from(keyTransactionsTable).where(eq(keyTransactionsTable.userId, userId));
+    const existingReasons = new Set(transactions.map((transaction) => transaction.reason));
+
+    for (const entry of keyHistory) {
+      const reason = `legacy-key:${migration.migrationKey}:${entry.index}`;
+      if (existingReasons.has(reason)) continue;
+      await tx.insert(keyTransactionsTable).values({
+        userId,
+        amount: entry.type === "spend" ? -entry.amount : entry.amount,
+        reason,
+        createdAt: entry.date,
+      });
+      existingReasons.add(reason);
+    }
+
+    // Replace the old migration-era legacy balance with the source ledger,
+    // while retaining any legitimate server transactions created afterwards.
+    const nonLegacyBalance = transactions
+      .filter((transaction) => !transaction.reason.startsWith("legacy"))
+      .reduce((sum, transaction) => sum + transaction.amount, 0);
+    const importedKeyBalance = keyHistory.reduce(
+      (sum, entry) => sum + (entry.type === "spend" ? -entry.amount : entry.amount),
+      0,
+    );
+    await profileFor(tx, userId);
+    await tx.update(userProfilesTable)
+      .set({
+        totalKeys: Math.max(0, nonLegacyBalance + importedKeyBalance),
+        updatedAt: new Date(),
+      })
+      .where(eq(userProfilesTable.userId, userId));
+
+    repairAudit.verifiedKeys = keyHistory
+      .filter((entry) => entry.type === "earn")
+      .reduce((sum, entry) => sum + entry.amount, 0);
+    repairAudit.keyHistoryImported = true;
+    repairAudit.warnings = [
+      ...(Array.isArray(existingAudit.warnings)
+        ? existingAudit.warnings.filter((item): item is string => typeof item === "string")
+        : []),
+      "legacy_key_history_reconciled",
+    ];
+    const repairedState = stateWithoutPotentialAndStreak(sourceState, keyHistory);
+    await tx.update(legacyMigrationsTable)
+      .set({
+        sourceState: repairedState,
+        audit: repairAudit,
+        status: repairAudit.warnings.length ? "imported_with_warnings" : "imported",
+        importedAt: new Date(),
+      })
+      .where(eq(legacyMigrationsTable.id, migration.id));
+    await tx.update(userStatesTable)
+      .set({ state: repairedState, updatedAt: new Date() })
+      .where(eq(userStatesTable.userId, userId));
+  });
+}
+
 export async function migrateLegacyState(
   userId: number,
   migrationKey: string,
@@ -330,7 +478,7 @@ export async function migrateLegacyState(
     verifiedPotential: 0,
     warnings: [],
   };
-  parseHistoryAmounts(sourceState, audit);
+  const keyHistory = parseKeyHistory(sourceState, audit);
   if (audit.keysExpected !== null && Math.floor(audit.keysExpected) !== Math.floor(audit.keysFromHistory)) {
     warning(audit, "keys_history_mismatch");
   }
@@ -338,9 +486,8 @@ export async function migrateLegacyState(
     warning(audit, "potential_history_mismatch");
   }
 
-  const safeState = stripNonAuthoritativeState(sourceState);
+  const safeState = stateWithoutPotentialAndStreak(sourceState, keyHistory);
   const importedUnlockedArticles = validatedArticlePurchases(sourceState, audit);
-  const validatedSpends = validatedArticleSpends(sourceState, audit);
   safeState.unlockedArticles = importedUnlockedArticles;
   const activities = parseActivities(sourceState, audit);
   const now = new Date();
@@ -361,13 +508,11 @@ export async function migrateLegacyState(
     }
 
     const profileBefore = await profileFor(tx, userId);
-    const dailyKeys = new Map<string, number>();
-    const seededDays = new Set<string>();
-    const importedDays = new Set<string>();
-    let totalKeys = profileBefore.totalKeys;
-    let totalPotential = profileBefore.totalPotential;
-    let currentStreak = profileBefore.currentStreak;
-    let longestStreak = profileBefore.longestStreak;
+    const importedKeyBalance = keyHistory.reduce(
+      (sum, entry) => sum + (entry.type === "spend" ? -entry.amount : entry.amount),
+      0,
+    );
+    const totalKeys = Math.max(0, profileBefore.totalKeys + importedKeyBalance);
 
     for (const [index, activity] of activities.entries()) {
       if (activity.date > now) {
@@ -397,111 +542,33 @@ export async function migrateLegacyState(
       });
       if (existingCompletion) continue;
 
-      const existingForActivity = await tx.select({
-        metadata: completedTechniquesTable.metadata,
-      }).from(completedTechniquesTable).where(and(
-        eq(completedTechniquesTable.userId, userId),
-        eq(completedTechniquesTable.techniqueId, techniqueId),
-        eq(completedTechniquesTable.appDay, day),
-      ));
-      if (existingForActivity.some((row) => JSON.stringify(row.metadata) === JSON.stringify(metadata))) {
-        warning(audit, `duplicate_activity:${index}`);
-        continue;
-      }
-
-      if (techniqueId === "T1" || techniqueId === "T6") {
-        const sameDay = await tx.query.completedTechniquesTable.findFirst({
-          where: and(
-            eq(completedTechniquesTable.userId, userId),
-            eq(completedTechniquesTable.techniqueId, techniqueId),
-            eq(completedTechniquesTable.appDay, day),
-          ),
-        });
-        if (sameDay) {
-          audit.rejectedActivities += 1;
-          warning(audit, `duplicate_activity:${index}`);
-          continue;
-        }
-      }
-
-      const rawReward = rewardForMetadata(techniqueId, metadata);
-      const dailyCap = dailyKeyCaps[techniqueId];
-      const dayKey = `${techniqueId}:${day}`;
-      if (!seededDays.has(dayKey) && dailyCap !== undefined) {
-        const [{ total }] = await tx.select({
-          total: sql<number>`coalesce(sum(${completedTechniquesTable.keysAwarded}), 0)`,
-        }).from(completedTechniquesTable).where(and(
-          eq(completedTechniquesTable.userId, userId),
-          eq(completedTechniquesTable.techniqueId, techniqueId),
-          eq(completedTechniquesTable.appDay, day),
-        ));
-        dailyKeys.set(dayKey, Number(total ?? 0));
-        seededDays.add(dayKey);
-      }
-      let keys = Math.max(0, Math.floor(rawReward.keys));
-      if (dailyCap !== undefined) {
-        const remaining = Math.max(0, dailyCap - (dailyKeys.get(dayKey) ?? 0));
-        keys = Math.min(keys, remaining);
-        dailyKeys.set(dayKey, (dailyKeys.get(dayKey) ?? 0) + keys);
-      }
-      const potential = Math.max(0, rawReward.potential);
-      const [completion] = await tx.insert(completedTechniquesTable).values({
+      await tx.insert(completedTechniquesTable).values({
         userId,
         techniqueId,
         appDay: day,
         idempotencyKey,
         completedAt: activity.date,
-        keysAwarded: keys,
-        potentialAwarded: potential,
+        // Historical activities are preserved as history only. The current
+        // economy must not derive new potential or streak rewards from them.
+        keysAwarded: 0,
+        potentialAwarded: 0,
         metadata,
-      }).returning({ id: completedTechniquesTable.id });
-      await tx.insert(keyTransactionsTable).values({
-        userId, amount: keys, reason: `legacy:${techniqueId}`, relatedEntityId: completion.id,
-      });
-      await tx.insert(potentialTransactionsTable).values({
-        userId, amount: potential, reason: `legacy:${techniqueId}`, relatedEntityId: completion.id,
       });
       audit.importedActivities += 1;
-      audit.verifiedKeys += keys;
-      audit.verifiedPotential += potential;
-      totalKeys += keys;
-      totalPotential = Math.min(100, totalPotential + potential);
-      importedDays.add(day);
-
-      const previous = new Date(`${day}T00:00:00Z`);
-      previous.setUTCDate(previous.getUTCDate() - 1);
-      const previousDay = previous.toISOString().slice(0, 10);
-      const existingStreak = await tx.query.streakHistoryTable.findFirst({
-        where: and(eq(streakHistoryTable.userId, userId), eq(streakHistoryTable.date, day)),
-      });
-      const previousStreak = await tx.query.streakHistoryTable.findFirst({
-        where: and(eq(streakHistoryTable.userId, userId), eq(streakHistoryTable.date, previousDay)),
-      });
-      currentStreak = existingStreak?.streakCount
-        ?? (previousStreak ? currentStreak + 1 : 1);
-      longestStreak = Math.max(longestStreak, currentStreak);
-      await tx.insert(streakHistoryTable).values({
-        userId, date: day, status: "completed", streakCount: currentStreak,
-      }).onConflictDoUpdate({
-        target: [streakHistoryTable.userId, streakHistoryTable.date],
-        set: { status: "completed", streakCount: currentStreak },
-      });
     }
 
-    // Article unlocks are imported only when the legacy ledger contains a
-    // recognizable article/cost pair. Their negative transactions are part
-    // of the authoritative balance just like technique rewards.
-    for (const spend of validatedSpends) {
-      const amount = Math.min(spend.amount, Math.max(0, totalKeys));
-      if (amount !== spend.amount) warning(audit, "article_spend_exceeds_verified_balance");
-      if (amount <= 0) continue;
+    // Import the complete validated key ledger, including historical earnings
+    // that were not tied to a technique (and article spends).
+    for (const entry of keyHistory) {
       await tx.insert(keyTransactionsTable).values({
         userId,
-        amount: -amount,
-        reason: `legacy:article:${spend.articleId}`,
+        amount: entry.type === "spend" ? -entry.amount : entry.amount,
+        reason: `legacy-key:${migrationKey}:${entry.index}`,
+        createdAt: entry.date,
       });
-      totalKeys -= amount;
+      if (entry.type === "earn") audit.verifiedKeys += entry.amount;
     }
+    audit.keyHistoryImported = true;
 
     if (activities.some((activity) => activity.details.timezoneOffsetMinutes === undefined)) {
       warning(audit, "timezone_missing_for_some_activities");
@@ -531,16 +598,10 @@ export async function migrateLegacyState(
     const [profile] = await tx.insert(userProfilesTable).values({
       userId,
       totalKeys,
-      totalPotential,
-      currentStreak: importedDays.size ? currentStreak : profileBefore.currentStreak,
-      longestStreak,
     }).onConflictDoUpdate({
       target: userProfilesTable.userId,
       set: {
         totalKeys,
-        totalPotential,
-        currentStreak: importedDays.size ? currentStreak : profileBefore.currentStreak,
-        longestStreak,
         updatedAt: new Date(),
       },
     }).returning();

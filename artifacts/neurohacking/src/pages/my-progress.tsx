@@ -25,7 +25,7 @@ type Tab = 'goals' | 'activities';
 
 export default function MyProgress() {
   const [, setLocation] = useLocation();
-  const { goals, activityLog } = useAppStore();
+  const { goals, activityLog, profile, keys } = useAppStore();
   const [tab, setTab] = useState<Tab>('goals');
 
   const activeAndCompletedGoals = goals.filter(g => g.status !== 'cancelled');
@@ -78,6 +78,19 @@ export default function MyProgress() {
       </div>
 
       <div className="pt-[68px] px-4 pb-24">
+        <div className="glass rounded-[18px] p-4 mb-5">
+          <div className="flex items-center justify-between">
+            <span className="body-s text-secondary">Закрытые дни</span>
+            <span className="title-s text-primary num">{profile?.closedDays ?? 0}</span>
+          </div>
+          <div className="flex items-center justify-between mt-2">
+            <span className="body-s text-secondary">Ключи</span>
+            <span className="body-s text-primary num">{keys}</span>
+          </div>
+          <p className="caption text-tertiary mt-3">
+            Закрытый день — это 100% потенциала. Ключи начисляются один раз за каждый такой день.
+          </p>
+        </div>
         <div
           className="flex rounded-[14px] p-1 mb-6"
           style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(100,160,230,0.12)' }}

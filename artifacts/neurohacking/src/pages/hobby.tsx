@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useLocation } from "wouter";
-import { useAppStore, getTodayKeysFromSource, getTodayPotentialFromSource, computeStreakUpdate } from "@/lib/store";
+import { useAppStore, getTodayKeysFromSource, getTodayPotentialFromSource } from "@/lib/store";
+import { applyLocalCompletion } from "@/lib/store";
 import { TechniqueIntroPanel } from "@/components/TechniqueIntroPanel";
 import { MaximInfoModal } from "@/components/MaximInfoModal";
 import { motion, AnimatePresence } from "framer-motion";
@@ -95,26 +96,18 @@ export default function Hobby() {
       return;
     }
     updateState(prev => {
-      const keysActual = Math.min(dur.keys, Math.max(0, MAX_KEYS - getTodayKeysFromSource(prev.keysHistory, SOURCE)));
-      const prevTodayPot = getTodayPotentialFromSource(prev.potentialHistory, SOURCE);
-      const potActual = Math.max(0, (dur.potential + challengeBonus) - prevTodayPot);
-      const streakUpdate = computeStreakUpdate(prev);
       const updatedChallenges = { ...(prev.hobbyChallenges || {}) };
       if (challengeResult === 'done') {
         delete updatedChallenges[hobbyName];
       }
       return {
-        todayTechniques: { ...prev.todayTechniques, T5: true },
-        keys: prev.keys + keysActual,
-        potential: potActual > 0 ? Math.min(100, prev.potential + potActual) : prev.potential,
-        keysHistory: keysActual > 0 ? [{ date: now, source: SOURCE, amount: keysActual, type: 'earn' as const }, ...prev.keysHistory] : prev.keysHistory,
-        potentialHistory: potActual > 0 ? [{ date: now, source: SOURCE, amount: potActual }, ...prev.potentialHistory] : prev.potentialHistory,
+        ...applyLocalCompletion(
+          prev,
+          'T5',
+          { hobbyName, durationLabel: dur.label, hobbyChallenge: activeChallengeText, challengeResult },
+          'hobby',
+        ),
         hobbyChallenges: updatedChallenges,
-        activityLog: [
-          { id: `act_${Date.now()}`, date: now, type: 'hobby' as const, keysGained: keysActual, potentialGained: potActual, details: { hobbyName, durationLabel: dur.label, hobbyChallenge: activeChallengeText, challengeResult } },
-          ...prev.activityLog,
-        ],
-        ...streakUpdate,
       };
     });
     setCompletedKeys(dur.keys);
@@ -268,13 +261,11 @@ export default function Hobby() {
         <div className="relative z-10 text-center px-8">
           <div className="text-6xl mb-4">✦</div>
           <h1 className="display-l text-primary mb-2">{selectedHobby}</h1>
-          <p className="body text-secondary mb-8">+{completedKeys} ключей начислено</p>
-          {!isMaxedOut && (
-            <button onClick={() => { setCompletedKeys(null); setSelectedDur(null); completedRef.current = false; }}
-              className="w-full h-[52px] rounded-[14px] btn-grad btn-shimmer text-white title-s mb-3">
-              Ещё сессию
-            </button>
-          )}
+          <p className="body text-secondary mb-8">+10% потенциала начислено</p>
+          <button onClick={() => { setCompletedKeys(null); setSelectedDur(null); completedRef.current = false; }}
+            className="w-full h-[52px] rounded-[14px] btn-grad btn-shimmer text-white title-s mb-3">
+            Ещё сессию
+          </button>
           <button onClick={() => setLocation('/techniques')}
             className="w-full h-[52px] rounded-[14px] bg-surface-1 border border-border text-primary body active:opacity-70">
             Назад к техникам
@@ -384,7 +375,6 @@ export default function Hobby() {
   }
 
   if (selectedHobby && !selectedDur) {
-    const remaining = MAX_KEYS - todayEarned;
     const activeChallenge = (hobbyChallenges || {})[selectedHobby];
     return (
       <div className="flex flex-col h-[100dvh] relative overflow-hidden">
@@ -401,34 +391,22 @@ export default function Hobby() {
                 <p className="caption text-warning">🎯 Твой вызов: «{activeChallenge}»</p>
               </div>
             )}
-            {todayEarned > 0 && !isMaxedOut && (
-              <div className="mb-6 px-4 py-3 rounded-[12px] bg-blue-ultra-soft border border-[rgba(37,99,235,0.2)]">
-                <p className="caption text-blue-light">Сегодня: {todayEarned} / {MAX_KEYS} ключей</p>
-              </div>
-            )}
-            {isMaxedOut ? (
-              <div className="text-center">
-                <p className="title-s text-primary mb-2">Максимум за сегодня</p>
-                <p className="body text-secondary">Ты заработал {MAX_KEYS} ключей на хобби сегодня.</p>
-              </div>
-            ) : (
-              <>
+            <>
                 <p className="caption text-tertiary mb-3 uppercase tracking-wider">Длительность</p>
                 <div className="space-y-3 mb-5">
-                  {DURATION_OPTIONS.filter(o => o.keys <= remaining || remaining >= MAX_KEYS).map(opt => (
+                  {DURATION_OPTIONS.map(opt => (
                     <button key={opt.label} onClick={() => startSession(opt)}
                       className="w-full h-[56px] rounded-[14px] flex justify-between items-center px-5 active:brightness-110 transition-all btn-shimmer"
                       style={{ background: 'linear-gradient(135deg, rgba(245,158,11,0.22) 0%, rgba(245,158,11,0.08) 100%)', border: '1px solid rgba(245,158,11,0.28)', boxShadow: '0 6px 28px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,255,255,0.08), 0 1px 0 rgba(255,255,255,0.07) inset' }}>
                       <span className="title-s text-primary">{opt.label}</span>
                       <div className="flex flex-col items-end gap-0.5">
-                        <span className="body-s text-blue-light">+{opt.keys} ключей</span>
-                        <span className="caption text-tertiary flex items-center gap-1">+{opt.potential}% <Brain size={11} color="var(--text-tertiary)" /></span>
+                        <span className="body-s text-blue-light">+10% потенциала</span>
+                        <span className="caption text-tertiary flex items-center gap-1">Ключи — за закрытие дня <Brain size={11} color="var(--text-tertiary)" /></span>
                       </div>
                     </button>
                   ))}
                 </div>
               </>
-            )}
           </div>
         </div>
         <MaximInfoModal show={showTimerWarning} message={"Из-за технических ограничений таймер в приложении не работает фоном, пожалуйста, не закрывай приложение."} onClose={handleTimerWarningClose} />

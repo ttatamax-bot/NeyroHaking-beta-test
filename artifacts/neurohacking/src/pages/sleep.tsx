@@ -1,14 +1,16 @@
+import { useState } from "react";
 import { useLocation } from "wouter";
-import { useAppStore, computeStreakUpdate, getTodayKeysFromSource } from "@/lib/store";
+import { useAppStore } from "@/lib/store";
+import { applyLocalCompletion } from "@/lib/store";
 import { TechniqueIntroPanel } from "@/components/TechniqueIntroPanel";
 import { motion } from "framer-motion";
 import { Moon, ChevronLeft, Lock } from "lucide-react";
 
-function getSleepReward(): { keys: number; potential: number; label: string } {
+function getSleepLabel(): string {
   const hour = new Date().getHours();
-  if (hour < 22) return { keys: 30, potential: 0.2, label: "До 22:00 — максимальная награда" };
-  if (hour < 23) return { keys: 20, potential: 0.1, label: "22:00–23:00 — стандартная награда" };
-  return { keys: 0, potential: 0, label: "После 23:00 — награда не начисляется" };
+  if (hour < 22) return "До 22:00 — хороший момент завершить день";
+  if (hour < 23) return "22:00–23:00 — заверши день до 23:00";
+  return "После 23:00 — день закроется без дополнительного бонуса";
 }
 
 function isTooLateForSleep(): boolean {
@@ -26,7 +28,8 @@ export default function Sleep() {
   const [, setLocation] = useLocation();
 
   const activeTechniquesCount = Object.values(todayTechniques).filter(Boolean).length;
-  const reward = getSleepReward();
+  const sleepLabel = getSleepLabel();
+  const [completedKeys, setCompletedKeys] = useState(0);
   const isDone = todayTechniques.T6;
   const tooEarly = isTooEarlyForSleep();
   const isTooLate = isTooLateForSleep();
@@ -37,61 +40,41 @@ export default function Sleep() {
     const nowISO = now.toISOString();
     if (isSignedIn) {
       try {
-        await completeTechnique("T6", {
+          const result = await completeTechnique("T6", {
           sleepTime: nowISO,
           timezoneOffsetMinutes: now.getTimezoneOffset(),
         });
+          setCompletedKeys(result.keys);
       } catch {
         window.alert("Не удалось сохранить результат. Проверь соединение и попробуй ещё раз.");
       }
       return;
     }
 
+    let keysAwarded = 0;
     updateState(prev => {
-      const streakUpdate = computeStreakUpdate(prev);
-      const newStreak = (streakUpdate.streak as number | undefined) ?? prev.streak;
-      // Hard cap: max 30 keys per day from sleep technique
-      const alreadyEarned = getTodayKeysFromSource(prev.keysHistory, 'Техника: Сон');
-      const cappedKeys = Math.max(0, Math.min(reward.keys, 30 - alreadyEarned));
-
+      const updates = applyLocalCompletion(
+        prev,
+        'T6',
+        { sleepTime: now.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }) },
+        'sleep',
+        now,
+      );
       const historyRecord = {
         date: nowISO,
-        potential: reward.potential,
-        keys: cappedKeys,
-        streak: newStreak,
+        potential: updates.potential ?? prev.potential,
+        keys: (updates.keys ?? prev.keys) - prev.keys,
+        streak: updates.streak ?? prev.streak,
         techniques: { ...prev.todayTechniques, T6: true },
       };
 
+      keysAwarded = (updates.keys ?? prev.keys) - prev.keys;
       return {
-        todayTechniques: { ...prev.todayTechniques, T6: true },
-        keys: prev.keys + cappedKeys,
-        potential: reward.potential > 0 ? Math.min(100, prev.potential + reward.potential) : prev.potential,
-        userState: 'dayDone' as const,
+        ...updates,
         history: [historyRecord, ...prev.history],
-        keysHistory: cappedKeys > 0
-          ? [{ date: nowISO, source: 'Техника: Сон', amount: cappedKeys, type: 'earn' as const }, ...prev.keysHistory]
-          : prev.keysHistory,
-        potentialHistory: reward.potential > 0
-          ? [{ date: nowISO, source: 'Техника: Сон', amount: reward.potential }, ...prev.potentialHistory]
-          : prev.potentialHistory,
-        activityLog: [
-          {
-            id: `act_${Date.now()}`,
-            date: nowISO,
-            type: 'sleep' as const,
-            keysGained: cappedKeys,
-            potentialGained: reward.potential,
-            details: {
-              sleepTime: now.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }),
-            },
-          },
-          ...prev.activityLog,
-        ],
-        streakHistory: [{ date: nowISO, value: newStreak }, ...(prev.streakHistory || [])],
-        streak: newStreak,
-        lastCompletedDate: nowISO,
       };
     });
+    setCompletedKeys(keysAwarded);
   };
 
   if (isDone) {
@@ -107,14 +90,12 @@ export default function Sleep() {
           <div className="bg-surface-1 border border-border rounded-[20px] p-6 flex flex-col gap-4 mb-8">
             <div className="flex justify-between items-center">
               <span className="body-s text-secondary">Ключи</span>
-              <span className="title-s text-primary">{reward.keys > 0 ? `+${reward.keys}` : '±0'}</span>
+               <span className="title-s text-primary">{completedKeys > 0 ? `+${completedKeys}` : '0'}</span>
             </div>
-            {reward.potential > 0 && (
-              <div className="flex justify-between items-center">
-                <span className="body-s text-secondary">Потенциал</span>
-                <span className="title-s text-blue">+{reward.potential}%</span>
-              </div>
-            )}
+            <div className="flex justify-between items-center">
+              <span className="body-s text-secondary">Потенциал</span>
+              <span className="title-s text-blue">+10%</span>
+            </div>
             <div className="flex justify-between items-center">
               <span className="body-s text-secondary">Техник выполнено</span>
               <span className="title-s text-primary">{activeTechniquesCount}/6</span>
@@ -182,9 +163,9 @@ export default function Sleep() {
               <div className="bg-surface-1 border border-border rounded-[16px] p-4 mb-8">
                 <p className="caption text-tertiary mb-1">Награда за завершение</p>
                 <p className="title-s text-primary mb-1">
-                  {reward.keys > 0 ? `+${reward.keys} ключей · +${reward.potential}% потенциал` : '0 ключей'}
+                   +10% потенциала · ключи за закрытие дня
                 </p>
-                <p className="body-s text-secondary">{reward.label}</p>
+                <p className="body-s text-secondary">{sleepLabel}</p>
               </div>
 
               <p className="body-s text-secondary text-center mb-8 leading-relaxed">

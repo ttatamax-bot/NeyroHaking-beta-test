@@ -33,6 +33,14 @@ export interface UserProfile {
   avatarUrl: string | null;
   totalKeys: number;
   totalPotential: number;
+  dayPotential: number;
+  /**
+     * @nullable
+     * @pattern ^\d{4}-\d{2}-\d{2}$
+     */
+  dayPotentialDay: string | null;
+  /** @minimum 0 */
+  closedDays: number;
   currentStreak: number;
   longestStreak: number;
   createdAt: string;
@@ -111,6 +119,27 @@ export type SavedStateState = { [key: string]: unknown };
 
 export interface SavedState {
   state: SavedStateState;
+  profile?: UserProfile;
+}
+
+export type ArticlePurchaseResultState = { [key: string]: unknown };
+
+export interface ArticlePurchaseResult {
+  articleId: string;
+  alreadyUnlocked: boolean;
+  keys: number;
+  state: ArticlePurchaseResultState;
+  profile: UserProfile;
+}
+
+export type ArticleReadResultState = { [key: string]: unknown };
+
+export interface ArticleReadResult {
+  articleId: string;
+  alreadyRead: boolean;
+  potential: number;
+  state: ArticleReadResultState;
+  profile: UserProfile;
 }
 
 export type TechniqueCompletionInputTechniqueId = typeof TechniqueCompletionInputTechniqueId[keyof typeof TechniqueCompletionInputTechniqueId];
@@ -152,6 +181,9 @@ export interface TechniqueCompletionResult {
   longestStreak: number;
   totalKeys: number;
   totalPotential: number;
+  dayClosed: boolean;
+  /** @minimum 0 */
+  closedDays: number;
   [key: string]: unknown;
  }
 

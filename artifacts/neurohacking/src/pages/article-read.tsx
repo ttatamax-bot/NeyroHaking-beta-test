@@ -633,7 +633,6 @@ const ARTICLES_DATA: Record<string, { title: string; content: string }> = {
   },
 };
 
-const POTENTIAL_REWARD = 0.15;
 
 function renderBlock(block: string, i: number) {
   const lines = block.split('\n');
@@ -714,19 +713,14 @@ export default function ArticleRead() {
         const serverReward = isSignedIn ? await completeArticleRead(id || '') : null;
         if (isSignedIn) await refreshProfile();
         updateState(prev => ({
-          ...(isSignedIn ? {} : { potential: Math.min(100, prev.potential + POTENTIAL_REWARD) }),
           readArticles: [...prev.readArticles, id || ''],
-          potentialHistory: [
-            { date: now, source: `Статья: ${article?.title ?? id}`, amount: serverReward?.potential ?? POTENTIAL_REWARD },
-            ...prev.potentialHistory,
-          ],
           activityLog: [
             {
               id: `act_${Date.now()}`,
               date: now,
               type: 'article' as const,
               keysGained: 0,
-              potentialGained: serverReward?.potential ?? POTENTIAL_REWARD,
+              potentialGained: 0,
               details: { articleTitle: article?.title ?? id },
             },
             ...prev.activityLog,

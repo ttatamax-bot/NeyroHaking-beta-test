@@ -6,6 +6,10 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from './articlePurchaseResult';
+export * from './articlePurchaseResultState';
+export * from './articleReadResult';
+export * from './articleReadResultState';
 export * from './badRequestResponse';
 export * from './clientState';
 export * from './completedTechnique';
