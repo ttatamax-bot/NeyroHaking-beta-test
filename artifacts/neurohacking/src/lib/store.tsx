@@ -7,6 +7,7 @@ import {
   completeTechnique as apiCompleteTechnique,
   setApiAuthTokenProvider,
   type CompleteTechniqueResult,
+  type ServerCompletion,
   type ServerProfile,
 } from './api';
 
@@ -248,6 +249,111 @@ export function getAppDayKey(date: Date = new Date()): string {
   return getAppDayStart(date).toDateString();
 }
 
+function getServerAppDayKey(date: Date = new Date()): string {
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
+  if (local.getUTCHours() < 5) local.setUTCDate(local.getUTCDate() - 1);
+  return local.toISOString().slice(0, 10);
+}
+
+function completionActivityType(techniqueId: string): ActivityEntry['type'] {
+  return techniqueId === 'T1'
+    ? 'planner'
+    : techniqueId === 'T2'
+      ? 'visualization'
+      : techniqueId === 'T3'
+        ? 'meditation'
+        : techniqueId === 'T4'
+          ? 'walk'
+          : techniqueId === 'T5'
+            ? 'hobby'
+            : 'sleep';
+}
+
+export function applyServerCompletions(prev: AppState, completions: ServerCompletion[]): AppState {
+  const rows = completions.filter(row => row && Number.isFinite(row.id));
+  if (rows.length === 0) return prev;
+
+  const today = getServerAppDayKey();
+  const todayRows = rows.filter(row => row.appDay === today);
+  const todayTechniques = { ...prev.todayTechniques };
+  todayRows.forEach(row => {
+    if (row.techniqueId in todayTechniques) {
+      todayTechniques[row.techniqueId as keyof typeof todayTechniques] = true;
+    }
+  });
+
+  const activityLog = [...prev.activityLog];
+  const keysHistory = [...prev.keysHistory];
+  const potentialHistory = [...prev.potentialHistory];
+  for (const row of rows) {
+    const completedAt = new Date(row.completedAt);
+    const dateMs = completedAt.getTime();
+    const type = completionActivityType(row.techniqueId);
+    const metadata = row.metadata && typeof row.metadata === 'object'
+      ? row.metadata
+      : {};
+    const activityId = `completion:${row.id}`;
+    const hasActivity = activityLog.some(entry => (
+      entry.id === activityId ||
+      (
+        entry.type === type &&
+        entry.keysGained === row.keysAwarded &&
+        Math.abs(new Date(entry.date).getTime() - dateMs) < 120_000
+      )
+    ));
+    if (!hasActivity) {
+      activityLog.push({
+        id: activityId,
+        date: row.completedAt,
+        type,
+        keysGained: row.keysAwarded,
+        potentialGained: row.potentialAwarded,
+        details: metadata as ActivityEntry['details'],
+      });
+    }
+
+    const source = TECHNIQUE_SOURCES[row.techniqueId] ?? row.techniqueId;
+    if (row.keysAwarded > 0 && !keysHistory.some(entry => (
+      entry.type === 'earn' &&
+      entry.source === source &&
+      entry.amount === row.keysAwarded &&
+      Math.abs(new Date(entry.date).getTime() - dateMs) < 120_000
+    ))) {
+      keysHistory.push({
+        date: row.completedAt,
+        source,
+        amount: row.keysAwarded,
+        type: 'earn',
+      });
+    }
+    if (row.potentialAwarded > 0 && !potentialHistory.some(entry => (
+      entry.source === source &&
+      entry.amount === row.potentialAwarded &&
+      Math.abs(new Date(entry.date).getTime() - dateMs) < 120_000
+    ))) {
+      potentialHistory.push({
+        date: row.completedAt,
+        source,
+        amount: row.potentialAwarded,
+      });
+    }
+  }
+
+  const latestCompletion = rows[0]?.completedAt;
+  return {
+    ...prev,
+    todayTechniques,
+    todayTechniquesDate: todayRows.length > 0 ? getAppDayStart().toISOString() : prev.todayTechniquesDate,
+    activityLog,
+    keysHistory,
+    potentialHistory,
+    lastCompletedDate: latestCompletion && (
+      !prev.lastCompletedDate ||
+      new Date(latestCompletion).getTime() > new Date(prev.lastCompletedDate).getTime()
+    ) ? latestCompletion : prev.lastCompletedDate,
+  };
+}
+
 export function getTodayKeysFromSource(keysHistory: KeyEntry[], source: string, now: Date = new Date()): number {
   const todayKey = getAppDayKey(now);
   return keysHistory
@@ -314,7 +420,7 @@ export function applyServerCompletion(
       : prev.potentialHistory,
     activityLog: [
       {
-        id: `act_${Date.now()}`,
+        id: `completion:${result.completedTechniqueId}`,
         date: nowISO,
         type: (techniqueId === 'T1' ? 'planner' : techniqueId === 'T2' ? 'visualization' : techniqueId === 'T3' ? 'meditation' : techniqueId === 'T4' ? 'walk' : techniqueId === 'T5' ? 'hobby' : 'sleep') as ActivityEntry['type'],
         keysGained: result.keys,
@@ -426,9 +532,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }, 3000);
     };
     getServerState()
-      .then(({ state: serverState, profile }) => {
+      .then(({ state: serverState, profile, completedTechniques }) => {
         if (hydrationRequestRef.current !== userId) return;
-        const applyServer = (nextState: Record<string, unknown>, nextProfile: ServerProfile | null) => {
+        const applyServer = (
+          nextState: Record<string, unknown>,
+          nextProfile: ServerProfile | null,
+          completions: ServerCompletion[] = [],
+        ) => {
           hydratedUserRef.current = userId;
           const serverPartial = nextState as Partial<AppState>;
           const hasSavedNickname = Boolean(nextProfile?.nickname);
@@ -436,7 +546,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             hasSavedNickname && (!serverPartial.userState || serverPartial.userState === 'new')
               ? { userState: 'active' as const, onboardingComplete: true }
               : {};
-          setState(prev => ({
+          setState(prev => applyServerCompletions({
             ...prev,
             ...serverPartial,
             ...completedProfileFallback,
@@ -448,12 +558,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
                   profile: nextProfile,
                 }
               : {}),
-          }));
+          }, completions));
         };
         const localHasProgress = hasMeaningfulSyncState(guestSnapshot);
-        const serverHasProgress = hasMeaningfulSyncState(serverState);
+        const serverHasProgress = hasMeaningfulSyncState(serverState) || (completedTechniques?.length ?? 0) > 0;
         if (serverHasProgress || !localHasProgress) {
-          applyServer(serverState ?? {}, profile);
+          applyServer(serverState ?? {}, profile, completedTechniques);
           localStorage.removeItem('neyro_legacy_migration_key');
           return;
         }
@@ -467,7 +577,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         })
           .then(({ state: migratedState, profile: migratedProfile }) => {
             localStorage.removeItem('neyro_state');
-            applyServer(migratedState, migratedProfile);
+            applyServer(migratedState, migratedProfile, completedTechniques);
           })
           .catch(() => {
             // Do not mark hydration complete when the server is unavailable:
@@ -552,27 +662,35 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         throw error;
       }
     }
-    setState(prev => {
-      if (!isSignedIn || hydratedUserRef.current !== userId) return prev;
-      const updates = applyServerCompletion(prev, techniqueId, result, metadata);
-      return { ...prev, ...updates };
-    });
+    if (isSignedIn && userId) {
+      const immediateUpdates = applyServerCompletion(stateRef.current, techniqueId, result, metadata);
+      const immediateState = { ...stateRef.current, ...immediateUpdates };
+      stateRef.current = immediateState;
+      setState(prev => {
+        if (!isSignedIn || !userId) return prev;
+        const updates = applyServerCompletion(prev, techniqueId, result, metadata);
+        return { ...prev, ...updates };
+      });
+      if (hydratedUserRef.current === userId) {
+        void saveServerState(immediateState).catch(() => {});
+      }
+    }
     return result;
   }, [isSignedIn, userId]);
 
   const refreshProfile = useCallback(async () => {
     // /me also returns entitlements, so a purchase is visible immediately on
     // this device and not only after the next full hydration.
-    const { state: serverState, profile } = await getServerState();
+    const { state: serverState, profile, completedTechniques } = await getServerState();
     if (profile) {
-      setState(prev => ({
+      setState(prev => applyServerCompletions({
         ...prev,
         ...(serverState as Partial<AppState> | null),
         keys: profile.totalKeys,
         potential: Math.min(100, profile.totalPotential),
         streak: profile.currentStreak,
         profile,
-      }));
+      }, completedTechniques ?? []));
     }
   }, []);
 
