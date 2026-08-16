@@ -4,6 +4,17 @@ const BASE_URL = import.meta.env.VITE_API_BASE_URL
 
 export const API_BASE = BASE_URL.endsWith('/api') ? BASE_URL : `${BASE_URL}/api`;
 
+let authTokenProvider: (() => Promise<string | null>) | null = null;
+
+export function setApiAuthTokenProvider(provider: (() => Promise<string | null>) | null): void {
+  authTokenProvider = provider;
+}
+
+async function requestHeaders(headers: Record<string, string> = {}): Promise<Record<string, string>> {
+  const token = await authTokenProvider?.();
+  return token ? { ...headers, Authorization: `Bearer ${token}` } : headers;
+}
+
 export class ApiError extends Error {
   constructor(
     public status: number,
@@ -25,6 +36,7 @@ async function handleResponse(response: Response) {
 export async function apiGet<T = unknown>(path: string): Promise<T> {
   const response = await fetch(`${API_BASE}${path}`, {
     credentials: 'include',
+    headers: await requestHeaders(),
   });
   return handleResponse(response);
 }
@@ -32,7 +44,7 @@ export async function apiGet<T = unknown>(path: string): Promise<T> {
 export async function apiPost<T = unknown>(path: string, body: unknown): Promise<T> {
   const response = await fetch(`${API_BASE}${path}`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: await requestHeaders({ 'Content-Type': 'application/json' }),
     credentials: 'include',
     body: JSON.stringify(body),
   });
