@@ -1,2 +1,16 @@
 - [Legacy migration integrity](legacy-migration-integrity.md) — legacy totals are audit-only; authoritative balances come from server-verified activity metadata.
+- [Empty migration recovery](empty-migration-recovery.md) — an empty first-device import must not permanently block a later meaningful local snapshot.
 - [OpenAPI Zod compatibility](openapi-zod-compatibility.md) — Orval 8 Zod output requires the workspace Zod catalog to stay on Zod 4.
+- [Vercel API NodeNext compatibility](vercel-node-next-api.md) — keep API imports and CommonJS middleware types valid under strict NodeNext checking.
+- [Vercel API runtime configuration](vercel-api-runtime-config.md) — a locally healthy API can still fail as a Vercel function when production Clerk/database variables are missing.
+- [Guest auth redirect](guest-auth-redirect.md) — use base-aware full navigation after persisting guest state; in-memory routing was unreliable across SPA rewrites.
+- [Clerk passwordless flow](clerk-passwordless-flow.md) — current Clerk React hooks expose signal-based Future resources; finalize after email-code verification.
+- [Clerk sign-up requirements](clerk-signup-requirements.md) — email verification can leave sign-up in missing_requirements before a session exists.
+- [Clerk browser loading fallback](clerk-browser-loading.md) — Brave Shields can leave custom Clerk UI waiting; timeout must offer a retry and browser-specific guidance.
+- [Clerk auth transition race](clerk-auth-transition.md) — after email-code setActive, guard the short session-hydration window before guest redirects run.
+- [Email-only Clerk workaround](email-only-clerk-workaround.md) — when managed Clerk cannot disable password, keep it hidden and use email code plus app-level username.
+- [Auth merge verification](auth-merge-verification.md) — after Clerk-related merges, recheck guest redirects because auth changes can overwrite them.
+- [Vercel Clerk environment](vercel-clerk-env.md) — external Vercel builds must define the public Clerk key or Clerk stays stuck loading.
+- [Vercel nested API routes](vercel-nested-api-routes.md) — explicit Vercel entrypoints may be needed for nested API paths; normalize stripped prefixes before handing off to Express.
+- [Completion ledger hydration](completion-ledger-hydration.md) — cross-device checklist and activity UI must hydrate from server completion rows, not only debounced client state.
+- [Android step counter architecture](android-step-counter.md) — background counting requires a native foreground service; browser motion sensors are foreground-only.
