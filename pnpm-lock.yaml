@@ -182,9 +182,6 @@ importers:
       '@workspace/db':
         specifier: workspace:*
         version: link:../../lib/db
-      '@workspace/economy':
-        specifier: workspace:*
-        version: link:../../lib/economy
       cookie-parser:
         specifier: ^1.4.7
         version: 1.4.7
