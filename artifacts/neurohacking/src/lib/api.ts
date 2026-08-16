@@ -4,14 +4,19 @@ const BASE_URL = import.meta.env.VITE_API_BASE_URL
 
 export const API_BASE = BASE_URL.endsWith('/api') ? BASE_URL : `${BASE_URL}/api`;
 
-let authTokenProvider: (() => Promise<string | null>) | null = null;
+let authTokenProvider: ((forceRefresh?: boolean) => Promise<string | null>) | null = null;
 
-export function setApiAuthTokenProvider(provider: (() => Promise<string | null>) | null): void {
+export function setApiAuthTokenProvider(
+  provider: ((forceRefresh?: boolean) => Promise<string | null>) | null,
+): void {
   authTokenProvider = provider;
 }
 
-async function requestHeaders(headers: Record<string, string> = {}): Promise<Record<string, string>> {
-  const token = await authTokenProvider?.();
+async function requestHeaders(
+  headers: Record<string, string> = {},
+  forceRefresh = false,
+): Promise<Record<string, string>> {
+  const token = await authTokenProvider?.(forceRefresh);
   return token ? { ...headers, Authorization: `Bearer ${token}` } : headers;
 }
 
@@ -34,20 +39,24 @@ async function handleResponse(response: Response) {
 }
 
 export async function apiGet<T = unknown>(path: string): Promise<T> {
-  const response = await fetch(`${API_BASE}${path}`, {
+  const request = async (forceRefresh = false) => fetch(`${API_BASE}${path}`, {
     credentials: 'include',
-    headers: await requestHeaders(),
+    headers: await requestHeaders({}, forceRefresh),
   });
+  let response = await request();
+  if (response.status === 401 && authTokenProvider) response = await request(true);
   return handleResponse(response);
 }
 
 export async function apiPost<T = unknown>(path: string, body: unknown): Promise<T> {
-  const response = await fetch(`${API_BASE}${path}`, {
+  const request = async (forceRefresh = false) => fetch(`${API_BASE}${path}`, {
     method: 'POST',
-    headers: await requestHeaders({ 'Content-Type': 'application/json' }),
+    headers: await requestHeaders({ 'Content-Type': 'application/json' }, forceRefresh),
     credentials: 'include',
     body: JSON.stringify(body),
   });
+  let response = await request();
+  if (response.status === 401 && authTokenProvider) response = await request(true);
   return handleResponse(response);
 }
 
