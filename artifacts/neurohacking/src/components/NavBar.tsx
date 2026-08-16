@@ -58,7 +58,8 @@ import { useLocation } from "wouter";
     const hiddenRoutes = [
       '/technique/sleep', '/technique/visualization', '/technique/meditation',
       '/consultation', '/mentoring', '/profile-setup',
-      '/goals', '/history', '/settings', '/notifications',
+      '/goals', '/history', '/streak', '/keys-stats', '/potential-stats',
+      '/settings', '/notifications',
     ];
 
     const isHidden =
