@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import { useEffect, useState } from "react";
 import { EmailCodeAuthCard, type EmailCodeAuthStep } from "@/components/EmailCodeAuthCard";
 import { markAuthTransition } from "@/lib/auth-transition";
+import { getRememberedEmail } from "@/lib/remembered-email";
 function getClerkErrorMessage(error: unknown): string {
   const e = error as { errors?: Array<{ longMessage?: string; message?: string }>; message?: string; longMessage?: string };
   const message =
@@ -63,7 +64,7 @@ export default function SignInPage() {
   const [step, setStep] = useState<EmailCodeAuthStep>("email");
   const [isSecondFactor, setIsSecondFactor] = useState(false);
   const [secondFactor, setSecondFactor] = useState<CodeSecondFactor | null>(null);
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(() => getRememberedEmail());
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [authLoadFailed, setAuthLoadFailed] = useState(false);
