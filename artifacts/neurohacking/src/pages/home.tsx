@@ -26,11 +26,29 @@ export default function Home() {
     isSignedIn,
     isAuthLoaded,
     isAccountReady,
+    accountLoadError,
+    retryAccountHydration,
   } = useAppStore();
   const [, setLocation] = useLocation();
 
   const activeGoals = goals.filter(g => g.status === 'active');
   const filledArc   = ARC * (Math.min(100, potential) / 100);
+
+  if (isSignedIn && accountLoadError) {
+    return (
+      <div className="min-h-[100dvh] flex items-center justify-center px-6">
+        <div className="text-center max-w-[320px]">
+          <p className="body text-secondary mb-5">{accountLoadError}</p>
+          <button
+            className="btn-grad w-full h-[52px] rounded-[14px] title-s"
+            onClick={retryAccountHydration}
+          >
+            Повторить
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (!isAuthLoaded || (isSignedIn && !isAccountReady)) {
     return (
