@@ -10,7 +10,33 @@ if (!process.env.DATABASE_URL) {
   );
 }
 
-export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+function normalizePostgresConnectionString(value: string): string {
+  const schemeEnd = value.indexOf("://");
+  if (schemeEnd < 0) return value;
+
+  const credentialsStart = schemeEnd + 3;
+  const atIndex = value.lastIndexOf("@");
+  if (atIndex <= credentialsStart) return value;
+
+  const credentials = value.slice(credentialsStart, atIndex);
+  const separator = credentials.indexOf(":");
+  if (separator < 0) return value;
+
+  const username = credentials.slice(0, separator);
+  const rawPassword = credentials.slice(separator + 1);
+  let decodedPassword = rawPassword;
+  try {
+    decodedPassword = decodeURIComponent(rawPassword);
+  } catch {
+    // Keep malformed percent sequences intact before encoding them below.
+  }
+
+  return `${value.slice(0, credentialsStart)}${username}:${encodeURIComponent(decodedPassword)}${value.slice(atIndex)}`;
+}
+
+export const pool = new Pool({
+  connectionString: normalizePostgresConnectionString(process.env.DATABASE_URL),
+});
 export const db = drizzle(pool, { schema });
 
 // Re-export Drizzle query helpers so consumers never import from "drizzle-orm" directly.
