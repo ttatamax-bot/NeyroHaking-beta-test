@@ -385,7 +385,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [, setHydrationRetryTick] = useState(0);
 
   useEffect(() => {
-    setApiAuthTokenProvider(getToken);
+    setApiAuthTokenProvider((forceRefresh = false) =>
+      getToken(forceRefresh ? { skipCache: true } : undefined),
+    );
     return () => setApiAuthTokenProvider(null);
   }, [getToken]);
 
@@ -524,16 +526,32 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
-  const completeTechnique = useCallback(async (techniqueId: string, metadata: Record<string, unknown>) => {
+  const completeTechnique = useCallback(async (
+    techniqueId: string,
+    metadata: Record<string, unknown>,
+    idempotencyKey = `${techniqueId}:${Date.now()}:${Math.random().toString(36).slice(2)}`,
+  ) => {
     const clientDate = getAppDayStart().toISOString().slice(0, 10);
-    const idempotencyKey = `${techniqueId}:${Date.now()}:${Math.random().toString(36).slice(2)}`;
-    const result = await apiCompleteTechnique({
+    const input = {
       techniqueId,
       clientDate,
       idempotencyKey,
       timezoneOffsetMinutes: new Date().getTimezoneOffset(),
       metadata,
-    });
+    };
+    let result: CompleteTechniqueResult;
+    try {
+      result = await apiCompleteTechnique(input);
+    } catch (error) {
+      // A completed transaction can outlive a dropped response. The same
+      // idempotency key makes this retry safe for the server ledger.
+      if (error instanceof TypeError || (error instanceof Error && "status" in error && Number(error.status) >= 500)) {
+        await new Promise((resolve) => window.setTimeout(resolve, 600));
+        result = await apiCompleteTechnique(input);
+      } else {
+        throw error;
+      }
+    }
     setState(prev => {
       if (!isSignedIn || hydratedUserRef.current !== userId) return prev;
       const updates = applyServerCompletion(prev, techniqueId, result, metadata);
