@@ -81,10 +81,21 @@ export interface ServerProfile {
   updatedAt: string;
 }
 
+export interface ServerCompletion {
+  id: number;
+  techniqueId: string;
+  appDay: string;
+  completedAt: string;
+  keysAwarded: number;
+  potentialAwarded: number;
+  metadata: Record<string, unknown>;
+}
+
 export interface ServerMe {
   user: ServerUser;
   state: Record<string, unknown> | null;
   profile: ServerProfile | null;
+  completedTechniques?: ServerCompletion[];
 }
 
 export async function getServerState(): Promise<ServerMe> {
