@@ -10,14 +10,7 @@ export const userProfilesTable = pgTable("user_profiles", {
   bio: text("bio"),
   avatarUrl: text("avatar_url"),
   totalKeys: integer("total_keys").notNull().default(0),
-  /** Устаревшее накопительное поле, оставлено для совместимости со старыми данными. */
   totalPotential: real("total_potential").notNull().default(0),
-  /** Потенциал текущего дня, 0–100. */
-  dayPotential: real("day_potential").notNull().default(0),
-  /** День приложения (YYYY-MM-DD), к которому относится dayPotential. */
-  dayPotentialDay: text("day_potential_day"),
-  /** Количество дней, закрытых на 100%. */
-  closedDays: integer("closed_days").notNull().default(0),
   currentStreak: integer("current_streak").notNull().default(0),
   longestStreak: integer("longest_streak").notNull().default(0),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

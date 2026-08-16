@@ -107,14 +107,11 @@ export interface ServerProfile {
   bio: string | null;
   avatarUrl: string | null;
   totalKeys: number;
-  /** Устаревшее накопительное поле. */
   totalPotential: number;
-  /** Потенциал текущего дня, 0–100. */
-  dayPotential: number;
-  /** День приложения (YYYY-MM-DD), к которому относится dayPotential. */
-  dayPotentialDay: string | null;
-  /** Количество закрытых на 100% дней. */
-  closedDays: number;
+  /** Present only in the newer economy schema. */
+  dayPotential?: number;
+  dayPotentialDay?: string | null;
+  closedDays?: number;
   currentStreak: number;
   longestStreak: number;
   createdAt: string;
@@ -213,8 +210,8 @@ export interface CompleteTechniqueResult {
   longestStreak: number;
   totalKeys: number;
   totalPotential: number;
-  dayClosed: boolean;
-  closedDays: number;
+  dayClosed?: boolean;
+  closedDays?: number;
   alreadyCompleted?: boolean;
 }
 

@@ -272,8 +272,11 @@ function getServerAppDayKey(date: Date = new Date()): string {
 /** Потенциал дня из серверного профиля; на новом дне он равен нулю. */
 export function profileDayPotential(profile: ServerProfile | null | undefined, now: Date = new Date()): number {
   if (!profile) return 0;
+  if (typeof profile.dayPotentialDay !== 'string') {
+    return clampDayPotential(profile.totalPotential);
+  }
   if (profile.dayPotentialDay !== getServerAppDayKey(now)) return 0;
-  return clampDayPotential(profile.dayPotential);
+  return clampDayPotential(profile.dayPotential ?? 0);
 }
 
 function sameStateValue(left: unknown, right: unknown): boolean {
@@ -337,7 +340,7 @@ function mergeSavedServerState(
       ...next,
       keys: profile.totalKeys,
       potential: profileDayPotential(profile),
-      closedDays: profile.closedDays,
+      closedDays: profile.closedDays ?? 0,
       streak: profile.currentStreak,
       profile,
     };
@@ -546,18 +549,23 @@ export function applyServerCompletion(
   const now = new Date();
   const nowISO = now.toISOString();
   const source = TECHNIQUE_SOURCES[techniqueId] ?? techniqueId;
+  const closedDays = result.closedDays ?? prev.closedDays;
   const updates: Partial<AppState> = {
     keys: result.totalKeys,
     potential: clampDayPotential(result.totalPotential),
-    closedDays: result.closedDays,
+    closedDays,
     streak: result.newStreak,
     profile: prev.profile
       ? {
           ...prev.profile,
           totalKeys: result.totalKeys,
-          dayPotential: clampDayPotential(result.totalPotential),
-          dayPotentialDay: getServerAppDayKey(now),
-          closedDays: result.closedDays,
+           ...(typeof result.dayClosed === 'boolean'
+             ? {
+                 dayPotential: clampDayPotential(result.totalPotential),
+                 dayPotentialDay: getServerAppDayKey(now),
+                 closedDays,
+               }
+             : {}),
           currentStreak: result.newStreak,
           longestStreak: result.longestStreak,
         }
@@ -846,7 +854,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         ...(serverState as Partial<AppState> | null),
         keys: profile.totalKeys,
         potential: profileDayPotential(profile),
-        closedDays: profile.closedDays,
+        closedDays: profile.closedDays ?? 0,
         streak: profile.currentStreak,
         profile,
       }, completedTechniques ?? []));
