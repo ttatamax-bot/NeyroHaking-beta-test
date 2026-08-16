@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useLocation } from "wouter";
+import { ApiError } from "@/lib/api";
 import { useAppStore, getTodayKeysFromSource, getTodayPotentialFromSource, computeStreakUpdate } from "@/lib/store";
 import { TechniqueIntroPanel } from "@/components/TechniqueIntroPanel";
 import { MaximInfoModal } from "@/components/MaximInfoModal";
@@ -86,9 +87,12 @@ export default function Meditation() {
         setCompletedKeys(result.keys);
         setRunning(false);
         completionKeyRef.current = null;
-      } catch {
+      } catch (error) {
         completedRef.current = false;
-        window.alert("Не удалось сохранить результат. Проверь соединение и попробуй ещё раз.");
+        const detail = error instanceof ApiError
+          ? ` Код ${error.status}${typeof error.data === "object" && error.data !== null && "code" in error.data ? ` (${String(error.data.code)})` : ""}.`
+          : "";
+        window.alert(`Не удалось сохранить результат.${detail} Проверь соединение и попробуй ещё раз.`);
       }
       return;
     }
