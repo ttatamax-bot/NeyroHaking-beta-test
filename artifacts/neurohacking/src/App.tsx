@@ -278,9 +278,9 @@ function KnowledgeChatPanel({ onDone }: { onDone: () => void }) {
 }
 
 function OnboardingTutorial() {
-  const { userState, onboardingStep, updateState } = useAppStore();
+  const { userState, onboardingStep, updateState, isAccountReady } = useAppStore();
   const [, setLocation] = useLocation();
-  if (userState !== 'onboarding') return null;
+  if (!isAccountReady || userState !== 'onboarding') return null;
   if (onboardingStep === 0) {
     return <TechChatPanel onDone={() => { updateState({ onboardingStep: 1, onboardingHighlight: [] }); setLocation('/path'); }} />;
   }
