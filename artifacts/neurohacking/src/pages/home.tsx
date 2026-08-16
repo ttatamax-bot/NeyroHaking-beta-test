@@ -17,11 +17,31 @@ const ARC  = CIRC * (240 / 360);
 const GAP  = CIRC - ARC;
 
 export default function Home() {
-  const { userState, potential, goals, readNews, updateState } = useAppStore();
+  const {
+    userState,
+    potential,
+    goals,
+    readNews,
+    updateState,
+    isSignedIn,
+    isAuthLoaded,
+    isAccountReady,
+  } = useAppStore();
   const [, setLocation] = useLocation();
 
   const activeGoals = goals.filter(g => g.status === 'active');
   const filledArc   = ARC * (Math.min(100, potential) / 100);
+
+  if (!isAuthLoaded || (isSignedIn && !isAccountReady)) {
+    return (
+      <div className="min-h-[100dvh] flex items-center justify-center px-6">
+        <div className="text-center">
+          <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-2 border-blue-light border-t-transparent" />
+          <p className="body text-secondary">Загружаем твой прогресс…</p>
+        </div>
+      </div>
+    );
+  }
 
   if (userState === 'new') {
     return (
