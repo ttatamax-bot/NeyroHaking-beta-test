@@ -15,7 +15,7 @@ import {
   normalizeDayPotential,
   potentialForTechnique,
   type TechniqueId as EconomyTechniqueId,
-} from "@workspace/economy";
+} from "../../../../lib/economy/src/index.js";
 
 export type TechniqueId = "T1" | "T2" | "T3" | "T4" | "T5" | "T6";
 export type TechniqueMetadata = Record<string, unknown>;
