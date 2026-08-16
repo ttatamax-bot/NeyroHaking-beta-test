@@ -6,6 +6,7 @@ import {
   migrateLegacyState,
   completeTechnique as apiCompleteTechnique,
   setApiAuthTokenProvider,
+  ApiError,
   type CompleteTechniqueResult,
   type ServerCompletion,
   type ServerProfile,
@@ -229,6 +230,8 @@ interface AppContextType extends AppState {
   isSignedIn: boolean;
   isAuthLoaded: boolean;
   isAccountReady: boolean;
+  accountLoadError: string | null;
+  retryAccountHydration: () => void;
   updateState: (updates: UpdateFn) => void;
   completeTechnique: (techniqueId: string, metadata: Record<string, unknown>) => Promise<CompleteTechniqueResult>;
   refreshProfile: () => Promise<void>;
@@ -637,7 +640,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const hydrationRequestRef = useRef<string | null>(null);
   const stateRef = useRef(state);
   stateRef.current = state;
-  const [, setHydrationRetryTick] = useState(0);
+  const [hydrationRetryTick, setHydrationRetryTick] = useState(0);
+  const [accountLoadError, setAccountLoadError] = useState<string | null>(null);
+
+  const retryAccountHydration = useCallback(() => {
+    hydrationRequestRef.current = null;
+    setAccountLoadError(null);
+    setHydrationRetryTick((tick) => tick + 1);
+  }, []);
 
   useEffect(() => {
     setApiAuthTokenProvider((forceRefresh = false) =>
@@ -660,6 +670,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (!isSignedIn || !userId) {
       hydrationRequestRef.current = null;
       hydratedUserRef.current = null;
+      setAccountLoadError(null);
       const saved = localStorage.getItem('neyro_state');
       if (saved) {
         try {
@@ -671,6 +682,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       return undefined;
     }
     if (hydratedUserRef.current === userId || hydrationRequestRef.current === userId) return undefined;
+    setAccountLoadError(null);
     hydrationRequestRef.current = userId;
     const guestSnapshot = stateRef.current;
     let retryTimer: number | null = null;
@@ -730,20 +742,27 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             applyServer(migratedState, migratedProfile, completedTechniques);
           })
           .catch(() => {
-            // Do not mark hydration complete when the server is unavailable:
-            // a retry after the next auth/network event can still migrate.
+            setAccountLoadError('Не удалось синхронизировать прогресс. Проверь соединение и повтори попытку.');
             hydrationRequestRef.current = null;
             retryHydration();
           });
       })
-      .catch(() => {
+      .catch((error) => {
+        if (import.meta.env.DEV) {
+          console.error('Progress hydration failed', error instanceof ApiError ? error.status : error);
+        }
+        setAccountLoadError(
+          error instanceof ApiError && error.status === 401
+            ? 'Сессия не подтверждена. Повтори попытку входа.'
+            : 'Не удалось загрузить прогресс. Проверь соединение и повтори попытку.',
+        );
         hydrationRequestRef.current = null;
         retryHydration();
       });
     return () => {
       if (retryTimer !== null) window.clearTimeout(retryTimer);
     };
-  }, [isLoaded, isSignedIn, userId, setHydrationRetryTick]);
+  }, [isLoaded, isSignedIn, userId, hydrationRetryTick, retryAccountHydration]);
 
   useEffect(() => {
     if (!isSignedIn || !userId || hydratedUserRef.current !== userId) return;
@@ -840,6 +859,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       isSignedIn: Boolean(isSignedIn),
       isAuthLoaded: isLoaded,
       isAccountReady: isLoaded && (!isSignedIn || hydratedUserRef.current === userId),
+      accountLoadError,
+      retryAccountHydration,
       updateState,
       completeTechnique,
       refreshProfile,
