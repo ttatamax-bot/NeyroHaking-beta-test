@@ -40,10 +40,6 @@ app.use(CLERK_PROXY_PATH, clerkProxyMiddleware());
 app.use(cors({ credentials: true, origin: true }));
 app.use(express.json({ limit: "256kb" }));
 app.use(express.urlencoded({ extended: true }));
-app.use("/api", (_req: any, res: any, next: any) => {
-  res.setHeader("Cache-Control", "no-store");
-  next();
-});
 
 app.use(
   clerkMiddleware({
