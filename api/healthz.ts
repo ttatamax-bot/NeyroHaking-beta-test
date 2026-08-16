@@ -8,14 +8,41 @@ declare const process: {
   env: Record<string, string | undefined>;
 };
 
-export default function healthz(_req: unknown, res: HealthResponse) {
-  res.status(200).json({
-    status: "ok",
+export default async function healthz(_req: unknown, res: HealthResponse) {
+  let databaseReachable = false;
+  let databaseSchema = false;
+
+  if (process.env.DATABASE_URL) {
+    try {
+      const { pool } = await import("../lib/db/src/index.js");
+      await pool.query("select 1");
+      databaseReachable = true;
+      await pool.query("select 1 from users limit 0");
+      await pool.query("select 1 from user_profiles limit 0");
+      await pool.query("select 1 from user_states limit 0");
+      await pool.query("select 1 from legacy_migrations limit 0");
+      databaseSchema = true;
+    } catch {
+      // Keep health output safe for a public endpoint; the booleans identify
+      // whether the configured database can actually serve account sync.
+    }
+  }
+
+  const healthy = databaseReachable && databaseSchema &&
+    Boolean(process.env.CLERK_SECRET_KEY) &&
+    Boolean(process.env.CLERK_PUBLISHABLE_KEY);
+
+  res.status(healthy ? 200 : 503).json({
+    status: healthy ? "ok" : "degraded",
     runtime: "vercel",
     configuration: {
       database: Boolean(process.env.DATABASE_URL),
       clerkSecret: Boolean(process.env.CLERK_SECRET_KEY),
       clerkPublishable: Boolean(process.env.CLERK_PUBLISHABLE_KEY),
+    },
+    database: {
+      reachable: databaseReachable,
+      schema: databaseSchema,
     },
   });
 }
