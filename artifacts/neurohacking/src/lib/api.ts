@@ -108,10 +108,12 @@ export interface ServerProfile {
   avatarUrl: string | null;
   totalKeys: number;
   totalPotential: number;
-  /** Present only in the newer economy schema. */
-  dayPotential?: number;
-  dayPotentialDay?: string | null;
-  closedDays?: number;
+  /** Potential accumulated during the current app day (0–N). */
+  dayPotential: number;
+  /** YYYY-MM-DD key of the day dayPotential belongs to. */
+  dayPotentialDay: string | null;
+  /** Number of days closed at 100 % potential. */
+  closedDays: number;
   currentStreak: number;
   longestStreak: number;
   createdAt: string;
@@ -210,8 +212,8 @@ export interface CompleteTechniqueResult {
   longestStreak: number;
   totalKeys: number;
   totalPotential: number;
-  dayClosed?: boolean;
-  closedDays?: number;
+  dayClosed: boolean;
+  closedDays: number;
   alreadyCompleted?: boolean;
 }
 
