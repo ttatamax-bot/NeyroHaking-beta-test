@@ -64,6 +64,7 @@ export default function Meditation() {
   pausedRef.current = paused;
   const selectedRef = useRef(selected);
   selectedRef.current = selected;
+  const completionKeyRef = useRef<string | null>(null);
 
   const clearAll = useCallback(() => {
     if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null; }
@@ -77,9 +78,14 @@ export default function Meditation() {
     clearAll();
     if (isSignedIn) {
       try {
-        const result = await completeTechnique("T3", { durationLabel: dur.label });
+        const result = await completeTechnique(
+          "T3",
+          { durationLabel: dur.label },
+          completionKeyRef.current ?? undefined,
+        );
         setCompletedKeys(result.keys);
         setRunning(false);
+        completionKeyRef.current = null;
       } catch {
         completedRef.current = false;
         window.alert("Не удалось сохранить результат. Проверь соединение и попробуй ещё раз.");
@@ -114,6 +120,7 @@ export default function Meditation() {
 
   const doStart = (dur: typeof DURATION_OPTIONS[0]) => {
     completedRef.current = false;
+    completionKeyRef.current = `T3:${Date.now()}:${Math.random().toString(36).slice(2)}`;
     setSelected(dur); setTimeLeft(dur.seconds); setPhaseIdx(0);
     setPhaseCountdown(PHASE_DURATION); setPaused(false); setCompletedKeys(null); setRunning(true);
   };
@@ -137,7 +144,13 @@ export default function Meditation() {
   };
 
   const togglePause = () => setPaused(p => !p);
-  const exitEarly = () => { clearAll(); setRunning(false); setSelected(null); completedRef.current = false; };
+  const exitEarly = () => {
+    clearAll();
+    setRunning(false);
+    setSelected(null);
+    completionKeyRef.current = null;
+    completedRef.current = false;
+  };
 
   useEffect(() => {
     if (!running) return;
