@@ -21,7 +21,7 @@ export function MemoryTechniqueLogo({ size = 76, loading = false, className = ""
     <motion.div
       className={`relative shrink-0 ${className}`}
       style={{ width: size, height: size }}
-      initial={{ opacity: 0, scale: 0.72, rotate: -8 }}
+      initial={loading ? { opacity: 1, scale: 1, rotate: 0 } : { opacity: 0, scale: 0.72, rotate: -8 }}
       animate={{ opacity: 1, scale: loading ? [0.96, 1.04, 0.96] : [1, 1.035, 1], rotate: loading ? [-2, 2, -2] : [-1, 1, -1] }}
       transition={{
         opacity: { duration: 0.45 },
