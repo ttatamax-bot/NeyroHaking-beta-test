@@ -648,13 +648,13 @@ function renderBlock(block: string, i: number) {
         transition={{ delay: Math.min(i * 0.04, 0.6) }}
         className="text-balance"
         style={{
-          fontSize: 20,
-          lineHeight: 1.32,
-          fontWeight: 600,
-          letterSpacing: '-0.01em',
-          color: 'var(--text-blue)',
-          marginTop: 16,
-          marginBottom: -4,
+          fontSize: 23,
+          lineHeight: 1.25,
+          fontWeight: 700,
+          letterSpacing: '-0.02em',
+          color: 'var(--text-primary)',
+          marginTop: 22,
+          marginBottom: -2,
         }}
       >
         {block}
@@ -774,7 +774,8 @@ export default function ArticleRead() {
         <motion.h1
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          className="title-l text-primary mb-2 mt-4 leading-snug"
+          className="text-primary mb-2 mt-4 leading-tight"
+          style={{ fontSize: 30, lineHeight: 1.14, fontWeight: 700, letterSpacing: '-0.025em' }}
         >
           {article.title}
         </motion.h1>
