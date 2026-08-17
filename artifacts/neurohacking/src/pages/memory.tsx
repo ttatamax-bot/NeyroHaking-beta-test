@@ -137,6 +137,12 @@ export function MemoryModePage() {
               setError('Недостаточно ключей для открытия этой практики.');
             } else if (reason instanceof ApiError && reason.status === 400) {
               setError('Не удалось определить выбранный режим. Открой практику заново.');
+            } else if (reason instanceof ApiError) {
+              const data = reason.data;
+              const serverMessage = typeof data === 'object' && data !== null && 'error' in data
+                ? String((data as { error?: unknown }).error ?? '')
+                : '';
+              setError(`Ошибка открытия практики (${reason.status})${serverMessage ? `: ${serverMessage}` : '. Повтори попытку.'}`);
             } else {
               setError('Не удалось открыть практику. Проверь соединение и повтори попытку.');
             }
