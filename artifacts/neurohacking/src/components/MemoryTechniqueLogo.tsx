@@ -64,16 +64,7 @@ export function MemoryTechniqueLogo({ size = 76, loading = false, className = ""
         }}
       />
 
-      {loading ? (
-        <motion.div
-          className="absolute inset-0 flex items-center justify-center text-orange-100"
-          animate={{ filter: ["drop-shadow(0 0 8px rgba(249,115,22,.55))", "drop-shadow(0 0 19px rgba(255,196,72,.95))", "drop-shadow(0 0 8px rgba(249,115,22,.55))"] }}
-          transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-          aria-hidden="true"
-        >
-          <Brain size={Math.round(size * 0.62)} strokeWidth={1.25} />
-        </motion.div>
-      ) : imageFailed ? (
+      {imageFailed ? (
         <div className="absolute inset-0 flex items-center justify-center text-orange-200" aria-hidden="true">
           <Brain size={Math.round(size * 0.58)} strokeWidth={1.35} />
         </div>
