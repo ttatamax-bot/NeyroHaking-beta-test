@@ -1,4 +1,3 @@
-import { Brain } from "lucide-react";
 import { motion } from "framer-motion";
 import { useState } from "react";
 
@@ -7,6 +6,7 @@ const assetBase = import.meta.env.BASE_URL.endsWith("/")
   : `${import.meta.env.BASE_URL}/`;
 const memoryLogoUrl = `${assetBase}memory-logo.png`;
 const loadingLogoUrl = `${assetBase}memory-logo-transparent.png`;
+const appIconUrl = `${assetBase}icon-512x512.png`;
 
 interface MemoryTechniqueLogoProps {
   size?: number;
@@ -65,9 +65,12 @@ export function MemoryTechniqueLogo({ size = 76, loading = false, className = ""
       />
 
       {imageFailed ? (
-        <div className="absolute inset-0 flex items-center justify-center text-orange-200" aria-hidden="true">
-          <Brain size={Math.round(size * 0.58)} strokeWidth={1.35} />
-        </div>
+        <motion.img
+          src={appIconUrl}
+          alt=""
+          className="absolute inset-0 h-full w-full object-contain"
+          aria-hidden="true"
+        />
       ) : (
         <motion.img
           src={loading ? loadingLogoUrl : memoryLogoUrl}

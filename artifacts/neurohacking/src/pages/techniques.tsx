@@ -33,12 +33,12 @@ const TECHNIQUES: Technique[] = [
   },
   {
     id: 'T4', title: 'Прогулка', artwork: 'walk', route: '/technique/walk', dayKey: 'T4',
-    color: '#22C55E',
+    color: '#3DB770',
     repeatable: true,
   },
   {
     id: 'T5', title: 'Хобби', artwork: 'hobby', route: '/technique/hobby', dayKey: 'T5',
-    color: '#F43F5E',
+    color: '#DC576C',
     repeatable: true,
   },
   {
