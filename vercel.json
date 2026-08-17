@@ -4,6 +4,10 @@
   "outputDirectory": "artifacts/neurohacking/dist/public",
   "rewrites": [
     {
+      "source": "/api/me/:path*",
+      "destination": "/api/me?__me_path=/:path*"
+    },
+    {
       "source": "/((?!api/).*)",
       "destination": "/index.html"
     }

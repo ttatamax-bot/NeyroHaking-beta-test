@@ -14,7 +14,10 @@ export default async function meEntry(req: any, res: any) {
     return;
   }
 
-  const requestPath = String(req.url ?? req.path ?? req.originalUrl ?? "");
+  const rewrittenPath = req.query?.__me_path;
+  const requestPath = typeof rewrittenPath === "string"
+    ? rewrittenPath
+    : String(req.url ?? req.path ?? req.originalUrl ?? "");
   const normalizedPath = requestPath.startsWith("/api")
     ? requestPath
     : requestPath.startsWith("/me")
