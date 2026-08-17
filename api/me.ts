@@ -1,18 +1,3 @@
-function hasClerkToken(req: any): boolean {
-  const authorization = req.headers?.authorization;
-  const cookie = req.headers?.cookie ?? "";
-  return Boolean(
-    authorization ||
-      /(?:^|;\s*)__session=/.test(cookie) ||
-      /(?:^|;\s*)__client_uat=/.test(cookie),
-  );
-}
+import { handleMeEntry } from "./me/_handler.js";
 
-export default async function meEntry(req: any, res: any) {
-  if (!hasClerkToken(req)) {
-    res.status(401).json({ error: "Unauthorized" });
-    return;
-  }
-  const { default: app } = await import("../artifacts/api-server/src/app.js");
-  return app(req, res);
-}
+export default handleMeEntry;
