@@ -298,9 +298,11 @@ router.post("/me/articles/:articleId/purchase", async (req, res) => {
 router.post("/me/memory/purchase", async (req, res) => {
   const clerkId = requireUser(req, res);
   if (!clerkId) return;
+  const body = objectBody(req.body) ? req.body : {};
+  const queryMode = typeof req.query?.mode === "string" ? req.query.mode : undefined;
   const parsed = z.object({
     mode: z.enum(MEMORY_MODES),
-  }).safeParse(req.body);
+  }).safeParse({ mode: body.mode ?? queryMode });
   if (!parsed.success) {
     res.status(400).json({ error: "Invalid memory mode" });
     return;

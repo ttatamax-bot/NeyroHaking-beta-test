@@ -173,7 +173,7 @@ export interface MemoryPurchaseResult {
 }
 
 export async function purchaseMemoryMode(mode: MemoryMode): Promise<MemoryPurchaseResult> {
-  return apiPost<MemoryPurchaseResult>('/me/memory/purchase', { mode });
+  return apiPost<MemoryPurchaseResult>(`/me/memory/purchase?mode=${encodeURIComponent(mode)}`, { mode });
 }
 
 export async function completeArticleRead(articleId: string): Promise<{

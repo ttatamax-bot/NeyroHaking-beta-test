@@ -5,6 +5,7 @@ import { MemoryGame } from '@/features/memory/MemoryGame';
 import { MemoryHub } from '@/features/memory/MemoryHub';
 import { MEMORY_MODES } from '@/features/memory/config';
 import { DataLoadingScreen } from '@/components/DataLoadingScreen';
+import { ApiError } from '@/lib/api';
 
 function isMemoryMode(value: string | undefined): value is MemoryMode {
   return value === 'reverse' || value === 'matrix' || value === 'symbols';
@@ -73,6 +74,7 @@ export function MemoryModePage() {
     keys,
   } = useAppStore();
   const [error, setError] = useState<string | null>(null);
+  const [isPurchasing, setIsPurchasing] = useState(false);
   const returnToMemoryHub = () => {
     if (window.sessionStorage.getItem('memory-reward-pending') === '1') {
       window.sessionStorage.removeItem('memory-reward-pending');
@@ -128,11 +130,21 @@ export function MemoryModePage() {
             return;
           }
           try {
+            setIsPurchasing(true);
             await purchaseMemoryMode(selectedMode);
-          } catch {
-            setError('Не удалось открыть практику. Проверь баланс и повтори попытку.');
+          } catch (reason) {
+            if (reason instanceof ApiError && reason.status === 409) {
+              setError('Недостаточно ключей для открытия этой практики.');
+            } else if (reason instanceof ApiError && reason.status === 400) {
+              setError('Не удалось определить выбранный режим. Открой практику заново.');
+            } else {
+              setError('Не удалось открыть практику. Проверь соединение и повтори попытку.');
+            }
+          } finally {
+            setIsPurchasing(false);
           }
         }}
+        isPurchasing={isPurchasing}
         onBack={returnToMemoryHub}
         onLevelFiveComplete={() => {
           window.sessionStorage.setItem('memory-reward-pending', '1');
