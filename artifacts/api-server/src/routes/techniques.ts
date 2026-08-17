@@ -34,6 +34,10 @@ const metadataSchemas: Record<TechniqueId, z.ZodTypeAny> = {
     sleepTime: z.string().trim().min(1).max(64),
     timezoneOffsetMinutes: z.number().int().min(-840).max(840).optional(),
   }),
+  T7: z.object({
+    mode: z.enum(["reverse", "matrix", "symbols"]),
+    level: z.number().int().min(1).max(1000000),
+  }),
 };
 
 router.post("/techniques/complete", async (req, res) => {

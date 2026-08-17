@@ -34,6 +34,7 @@ import Meditation from "@/pages/meditation";
 import Walk from "@/pages/walk";
 import Hobby from "@/pages/hobby";
 import Sleep from "@/pages/sleep";
+import { MemoryHubPage, MemoryModePage } from "@/pages/memory";
 import NewsArticle from "@/pages/news";
 import PrivacyPolicy from "@/pages/privacy-policy";
 import MyProgress from "@/pages/my-progress";
@@ -395,6 +396,10 @@ function AppLogic() {
   // on the next app visit.
   useEffect(() => {
     if (!isAuthLoaded || redirectingRef.current) return undefined;
+    // The Vite dev server is the Replit preview. Keep the real Clerk
+    // registration flow intact for production/beta builds, but let the
+    // unauthenticated preview be used for local technique testing.
+    if (import.meta.env.DEV) return undefined;
 
     // setActive() updates Clerk's session cookie before React observes
     // isSignedIn. During that short window, never mistake the old guest
@@ -668,6 +673,8 @@ function Router() {
         <Route path="/technique/walk" component={Walk} />
         <Route path="/technique/hobby" component={Hobby} />
         <Route path="/technique/sleep" component={Sleep} />
+         <Route path="/technique/memory" component={MemoryHubPage} />
+         <Route path="/technique/memory/:mode" component={MemoryModePage} />
         <Route path="/privacy-policy" component={PrivacyPolicy} />
         <Route path="/my-progress" component={MyProgress} />
         <Route path="/sign-in/*?" component={SignInPage} />

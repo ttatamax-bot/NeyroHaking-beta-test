@@ -1,4 +1,5 @@
 - [Legacy migration integrity](legacy-migration-integrity.md) — legacy totals are audit-only; authoritative balances come from server-verified activity metadata.
+- [Non-blocking legacy repair](non-blocking-legacy-repair.md) — historical ledger repair must not prevent `/me` from returning the current account state.
 - [Empty migration recovery](empty-migration-recovery.md) — an empty first-device import must not permanently block a later meaningful local snapshot.
 - [OpenAPI Zod compatibility](openapi-zod-compatibility.md) — Orval 8 Zod output requires the workspace Zod catalog to stay on Zod 4.
 - [Vercel API NodeNext compatibility](vercel-node-next-api.md) — keep API imports and CommonJS middleware types valid under strict NodeNext checking.
@@ -7,11 +8,20 @@
 - [Clerk passwordless flow](clerk-passwordless-flow.md) — current Clerk React hooks expose signal-based Future resources; finalize after email-code verification.
 - [Clerk sign-up requirements](clerk-signup-requirements.md) — email verification can leave sign-up in missing_requirements before a session exists.
 - [Clerk browser loading fallback](clerk-browser-loading.md) — Brave Shields can leave custom Clerk UI waiting; timeout must offer a retry and browser-specific guidance.
+- [Clerk token request fallback](clerk-token-request-fallback.md) — same-origin API calls need a cookie fallback and bounded token/API waits so hydration cannot hang forever.
 - [Clerk auth transition race](clerk-auth-transition.md) — after email-code setActive, guard the short session-hydration window before guest redirects run.
 - [Email-only Clerk workaround](email-only-clerk-workaround.md) — when managed Clerk cannot disable password, keep it hidden and use email code plus app-level username.
 - [Auth merge verification](auth-merge-verification.md) — after Clerk-related merges, recheck guest redirects because auth changes can overwrite them.
 - [Vercel Clerk environment](vercel-clerk-env.md) — external Vercel builds must define the public Clerk key or Clerk stays stuck loading.
 - [Vercel nested API routes](vercel-nested-api-routes.md) — explicit Vercel entrypoints may be needed for nested API paths; normalize stripped prefixes before handing off to Express.
+- [Vercel external env setup](vercel-external-env-setup.md) — external Vercel projects do not inherit Replit Secrets; configure production Clerk and Supabase variables separately.
+- [Vercel frozen lockfile](vercel-frozen-lockfile.md) — any package.json rollback must update pnpm-lock.yaml before GitHub/Vercel deployment.
 - [Completion ledger hydration](completion-ledger-hydration.md) — cross-device checklist and activity UI must hydrate from server completion rows, not only debounced client state.
+- [Progress save loop](progress-save-loop.md) — ignore unchanged server save responses, especially volatile profile timestamps, or autosave can loop every few seconds.
+- [API hydration cache](api-hydration-cache.md) — authenticated progress GETs must bypass browser revalidation because Express 304 responses have no JSON body.
+- [Hydration retry dependencies](hydration-retry-dependencies.md) — retry state must be included in the hydration effect dependencies or one failed request leaves the app loading forever.
 - [Android step counter architecture](android-step-counter.md) — background counting requires a native foreground service; browser motion sensors are foreground-only.
 - [Daily potential display](daily-potential-display.md) — keep raw day potential above 100 internally; clamp only the displayed percentage.
+- [Vercel workspace source imports](vercel-workspace-source-imports.md) — serverless runtime cannot load workspace package exports pointing at `.ts`; bundle shared source through relative imports.
+- [Memory technique server state](memory-technique-server-state.md) — purchases, best levels, and the shared daily reward stay server-owned and idempotent.
+- [Preview auth bypass](preview-auth-bypass.md) — technique testing bypass is DEV-only; Clerk registration remains enforced in production builds.

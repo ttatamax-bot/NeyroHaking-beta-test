@@ -157,6 +157,25 @@ export async function purchaseArticle(articleId: string): Promise<ArticlePurchas
   return apiPost<ArticlePurchaseResult>(`/me/articles/${encodeURIComponent(articleId)}/purchase`, {});
 }
 
+export type MemoryMode = 'reverse' | 'matrix' | 'symbols';
+
+export interface MemoryPurchaseResult {
+  mode: MemoryMode;
+  alreadyPurchased: boolean;
+  keys: number;
+  memory: {
+    purchasedModes: MemoryMode[];
+    bestLevels: Partial<Record<MemoryMode, number>>;
+    rewardDay: string | null;
+  };
+  state: Record<string, unknown>;
+  profile: ServerProfile;
+}
+
+export async function purchaseMemoryMode(mode: MemoryMode): Promise<MemoryPurchaseResult> {
+  return apiPost<MemoryPurchaseResult>('/me/memory/purchase', { mode });
+}
+
 export async function completeArticleRead(articleId: string): Promise<{
   articleId: string;
   alreadyRead: boolean;

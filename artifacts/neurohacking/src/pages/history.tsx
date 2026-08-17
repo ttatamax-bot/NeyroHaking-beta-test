@@ -11,6 +11,7 @@ const TYPE_LABELS: Record<ActivityEntry['type'], string> = {
   walk: 'Прогулка',
   hobby: 'Хобби',
   sleep: 'Сон',
+  memory: 'Память',
   article: 'Статья',
 };
 
@@ -21,6 +22,7 @@ const TYPE_ICONS: Record<ActivityEntry['type'], React.ReactNode> = {
   walk: <Footprints size={16} />,
   hobby: <Palette size={16} />,
   sleep: <Moon size={16} />,
+  memory: <Brain size={16} />,
   article: <BookOpen size={16} />,
 };
 
@@ -31,6 +33,7 @@ const TYPE_COLORS: Record<ActivityEntry['type'], string> = {
   walk: 'rgba(34,197,94,0.2)',
   hobby: 'rgba(245,158,11,0.2)',
   sleep: 'rgba(99,102,241,0.2)',
+  memory: 'rgba(249,115,22,0.2)',
   article: 'rgba(236,72,153,0.2)',
 };
 
@@ -49,6 +52,8 @@ function getEntryDetail(entry: ActivityEntry): string {
       return `${d.hobbyName ?? ''}${d.durationLabel ? ` · ${d.durationLabel}` : ''}`;
     case 'sleep':
       return d.sleepTime ? `Отбой в ${d.sleepTime}` : '';
+    case 'memory':
+      return d.mode && d.level ? `${d.mode} · уровень ${d.level}` : 'Тренировка памяти';
     case 'article':
       return d.articleTitle ?? '';
     default:

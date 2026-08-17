@@ -5,9 +5,9 @@
  * Ключи выдаются только при закрытии дня на 100%.
  */
 
-export type TechniqueId = "T1" | "T2" | "T3" | "T4" | "T5" | "T6";
+export type TechniqueId = "T1" | "T2" | "T3" | "T4" | "T5" | "T6" | "T7";
 
-export const TECHNIQUE_IDS: TechniqueId[] = ["T1", "T2", "T3", "T4", "T5", "T6"];
+export const TECHNIQUE_IDS: TechniqueId[] = ["T1", "T2", "T3", "T4", "T5", "T6", "T7"];
 export const PLANNER_TECHNIQUE_ID: TechniqueId = "T1";
 export const TECHNIQUE_POTENTIAL_PERCENT = 10;
 export const DAY_POTENTIAL_TARGET = 100;

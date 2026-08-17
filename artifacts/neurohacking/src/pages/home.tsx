@@ -2,6 +2,7 @@ import { useAppStore } from "@/lib/store";
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { Sparkles, ChevronRight, Target, Map, Eye, Brain, LogIn } from "lucide-react";
+import { DataLoadingScreen } from "@/components/DataLoadingScreen";
 
 const NEWS_ITEMS = [
   { id: '1', title: "Новая техника нейровизуализации", description: "Обновлён алгоритм прохождения техники T2 — визуализация теперь более структурированная и точная.", date: "28.05.2026" },
@@ -51,14 +52,7 @@ export default function Home() {
   }
 
   if (!isAuthLoaded || (isSignedIn && !isAccountReady)) {
-    return (
-      <div className="min-h-[100dvh] flex items-center justify-center px-6">
-        <div className="text-center">
-          <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-2 border-blue-light border-t-transparent" />
-          <p className="body text-secondary">Загружаем твой прогресс…</p>
-        </div>
-      </div>
-    );
+    return <DataLoadingScreen />;
   }
 
   if (userState === 'new') {

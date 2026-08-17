@@ -76,6 +76,7 @@ const protectedStateKeys = new Set([
   "profile",
   "unlockedArticles",
   "firstGoalBonusGiven",
+  "memory",
 ]);
 
 const legacyArticles: Record<string, { title: string; cost: number }> = {

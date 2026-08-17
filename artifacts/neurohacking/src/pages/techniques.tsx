@@ -1,6 +1,6 @@
 import { useLocation } from "wouter";
 import { useAppStore } from "@/lib/store";
-import { ClipboardList, Eye, Wind, Footprints, Palette, Moon, Check } from "lucide-react";
+import { ClipboardList, Eye, Wind, Footprints, Palette, Moon, Brain, Check } from "lucide-react";
 import { motion } from "framer-motion";
 
 const TECHNIQUES = [
@@ -51,6 +51,14 @@ const TECHNIQUES = [
     bg: 'linear-gradient(135deg, rgba(59,130,246,0.22) 0%, rgba(59,130,246,0.08) 100%)',
     border: 'rgba(59,130,246,0.28)', glow: 'rgba(59,130,246,0.18)',
     repeatable: false,
+  },
+  {
+    id: 'T7', title: 'Память', desc: 'Тренируй память',
+    icon: Brain, route: '/technique/memory',
+    color: '#F97316',
+    bg: 'linear-gradient(135deg, rgba(249,115,22,0.22) 0%, rgba(249,115,22,0.08) 100%)',
+    border: 'rgba(249,115,22,0.28)', glow: 'rgba(249,115,22,0.18)',
+    repeatable: true,
   },
 ];
 

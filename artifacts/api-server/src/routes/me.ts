@@ -20,6 +20,7 @@ import {
   stripNonAuthoritativeState,
 } from "../services/legacyMigration.js";
 import { createCompatibleRouter } from "./compatRouter.js";
+import { z } from "zod";
 
 const router = createCompatibleRouter();
 
@@ -44,6 +45,37 @@ const ARTICLE_COSTS: Record<string, number> = {
   A4: 20,
   A5: 400,
 };
+
+const MEMORY_MODES = ["reverse", "matrix", "symbols"] as const;
+type MemoryMode = typeof MEMORY_MODES[number];
+const MEMORY_COST = 400;
+
+function memoryState(value: unknown): {
+  purchasedModes: MemoryMode[];
+  bestLevels: Partial<Record<MemoryMode, number>>;
+  rewardDay: string | null;
+  onboardingSeen: MemoryMode[];
+} {
+  const raw = objectBody(value) ? value : {};
+  const purchasedModes = Array.isArray(raw.purchasedModes)
+    ? raw.purchasedModes.filter((mode): mode is MemoryMode => MEMORY_MODES.includes(mode as MemoryMode))
+    : [];
+  const onboardingSeen = Array.isArray(raw.onboardingSeen)
+    ? raw.onboardingSeen.filter((mode): mode is MemoryMode => MEMORY_MODES.includes(mode as MemoryMode))
+    : [];
+  const rawBest = objectBody(raw.bestLevels) ? raw.bestLevels : {};
+  const bestLevels: Partial<Record<MemoryMode, number>> = {};
+  for (const mode of MEMORY_MODES) {
+    const best = Number(rawBest[mode]);
+    if (Number.isInteger(best) && best >= 1) bestLevels[mode] = best;
+  }
+  return {
+    purchasedModes: [...new Set(purchasedModes)],
+    bestLevels,
+    rewardDay: typeof raw.rewardDay === "string" ? raw.rewardDay : null,
+    onboardingSeen: [...new Set(onboardingSeen)],
+  };
+}
 
 async function getUser(clerkId: string) {
   const existing = await db.query.usersTable.findFirst({
@@ -259,6 +291,83 @@ router.post("/me/articles/:articleId/purchase", async (req, res) => {
     alreadyUnlocked: result.alreadyUnlocked,
     keys: result.profile.totalKeys,
     state: result.state,
+    profile: result.profile,
+  });
+});
+
+router.post("/me/memory/purchase", async (req, res) => {
+  const clerkId = requireUser(req, res);
+  if (!clerkId) return;
+  const parsed = z.object({
+    mode: z.enum(MEMORY_MODES),
+  }).safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Invalid memory mode" });
+    return;
+  }
+
+  const user = await getUser(clerkId);
+  const mode = parsed.data.mode;
+  const result = await db.transaction(async (tx) => {
+    await tx.execute(sql`select pg_advisory_xact_lock(${user.id})`);
+    const profile = await tx.query.userProfilesTable.findFirst({
+      where: eq(userProfilesTable.userId, user.id),
+    }) ?? (await tx.insert(userProfilesTable).values({ userId: user.id }).returning())[0];
+    const row = await tx.query.userStatesTable.findFirst({
+      where: eq(userStatesTable.userId, user.id),
+    });
+    const currentState = objectBody(row?.state) ? row.state : {};
+    const currentMemory = memoryState(currentState.memory);
+    if (currentMemory.purchasedModes.includes(mode)) {
+      return {
+        profile,
+        state: currentState,
+        memory: currentMemory,
+        alreadyPurchased: true,
+      };
+    }
+    if (profile.totalKeys < MEMORY_COST) return null;
+
+    const nextKeys = profile.totalKeys - MEMORY_COST;
+    await tx.insert(keyTransactionsTable).values({
+      userId: user.id,
+      amount: -MEMORY_COST,
+      reason: `memory:${mode}`,
+    });
+    const [nextProfile] = await tx.update(userProfilesTable)
+      .set({ totalKeys: nextKeys, updatedAt: new Date() })
+      .where(eq(userProfilesTable.userId, user.id))
+      .returning();
+    const nextMemory = {
+      ...currentMemory,
+      purchasedModes: [...currentMemory.purchasedModes, mode],
+    };
+    const nextState = { ...currentState, memory: nextMemory };
+    await tx.insert(userStatesTable).values({
+      userId: user.id,
+      state: nextState,
+    }).onConflictDoUpdate({
+      target: userStatesTable.userId,
+      set: { state: nextState, updatedAt: new Date() },
+    });
+    return {
+      profile: nextProfile,
+      state: nextState,
+      memory: nextMemory,
+      alreadyPurchased: false,
+    };
+  });
+
+  if (!result) {
+    res.status(409).json({ error: "Not enough keys" });
+    return;
+  }
+  res.json({
+    mode,
+    alreadyPurchased: result.alreadyPurchased,
+    keys: result.profile.totalKeys,
+    state: result.state,
+    memory: result.memory,
     profile: result.profile,
   });
 });

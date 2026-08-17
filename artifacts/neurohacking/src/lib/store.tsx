@@ -5,6 +5,7 @@ import {
   saveServerState,
   migrateLegacyState,
   completeTechnique as apiCompleteTechnique,
+  purchaseMemoryMode as apiPurchaseMemoryMode,
   setApiAuthTokenProvider,
   ApiError,
   type CompleteTechniqueResult,
@@ -50,7 +51,7 @@ export interface DayRecord {
 export interface ActivityEntry {
   id: string;
   date: string;
-  type: 'planner' | 'visualization' | 'meditation' | 'walk' | 'hobby' | 'sleep' | 'article';
+   type: 'planner' | 'visualization' | 'meditation' | 'walk' | 'hobby' | 'sleep' | 'memory' | 'article';
   keysGained: number;
   potentialGained: number;
   details: {
@@ -66,6 +67,8 @@ export interface ActivityEntry {
     articleTitle?: string;
     hobbyChallenge?: string;
     challengeResult?: 'done' | 'partial' | 'none';
+     mode?: 'reverse' | 'matrix' | 'symbols';
+     level?: number;
   };
 }
 
@@ -102,6 +105,15 @@ export interface PlannerTask {
   durationMin: number;
   completed: boolean;
   createdAt: string;
+}
+
+export type MemoryMode = 'reverse' | 'matrix' | 'symbols';
+
+export interface MemoryState {
+  purchasedModes: MemoryMode[];
+  bestLevels: Partial<Record<MemoryMode, number>>;
+  rewardDay: string | null;
+  onboardingSeen: MemoryMode[];
 }
 
 export interface AppState {
@@ -144,9 +156,12 @@ export interface AppState {
   attentionRemindersEnabled: boolean;
   attentionReminderInterval: number;
   goalFormOpen: boolean;
+  memoryHubOnboardingSeen: boolean;
   coachingShown: string[];
   timerWarningShown: boolean;
   walkWarningShown: boolean;
+  memoryOnboardingSeen: MemoryMode[];
+  memory: MemoryState;
   profile?: ServerProfile | null;
 }
 
@@ -190,9 +205,17 @@ export const defaultState: AppState = {
   attentionRemindersEnabled: true,
   attentionReminderInterval: 120,
   goalFormOpen: false,
+  memoryHubOnboardingSeen: false,
   coachingShown: [],
   timerWarningShown: false,
   walkWarningShown: false,
+  memoryOnboardingSeen: [],
+  memory: {
+    purchasedModes: [],
+    bestLevels: {},
+    rewardDay: null,
+    onboardingSeen: [],
+  },
   profile: null,
 };
 
@@ -235,6 +258,7 @@ interface AppContextType extends AppState {
   updateState: (updates: UpdateFn) => void;
   completeTechnique: (techniqueId: string, metadata: Record<string, unknown>) => Promise<CompleteTechniqueResult>;
   refreshProfile: () => Promise<void>;
+  purchaseMemoryMode: (mode: MemoryMode) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -246,6 +270,7 @@ export const TECHNIQUE_SOURCES: Record<string, string> = {
   T4: 'Техника: Прогулка',
   T5: 'Техника: Хобби',
   T6: 'Техника: Сон',
+  T7: 'Техника: Память',
 };
 
 // The app day starts at 05:00 local time. Sleeping before 23:00 locks the app
@@ -407,8 +432,10 @@ function completionActivityType(techniqueId: string): ActivityEntry['type'] {
         : techniqueId === 'T4'
           ? 'walk'
           : techniqueId === 'T5'
-            ? 'hobby'
-            : 'sleep';
+             ? 'hobby'
+             : techniqueId === 'T6'
+               ? 'sleep'
+               : 'memory';
 }
 
 export function applyServerCompletions(prev: AppState, completions: ServerCompletion[]): AppState {
@@ -570,7 +597,9 @@ export function applyServerCompletion(
           longestStreak: result.longestStreak,
         }
       : prev.profile,
-    todayTechniques: { ...prev.todayTechniques, [techniqueId]: true },
+     todayTechniques: techniqueId in prev.todayTechniques
+       ? { ...prev.todayTechniques, [techniqueId]: true }
+       : prev.todayTechniques,
     keysHistory: result.keys > 0
       ? [{ date: nowISO, source, amount: result.keys, type: 'earn' as const }, ...prev.keysHistory]
       : prev.keysHistory,
@@ -581,7 +610,7 @@ export function applyServerCompletion(
       {
         id: `completion:${result.completedTechniqueId}`,
         date: nowISO,
-        type: (techniqueId === 'T1' ? 'planner' : techniqueId === 'T2' ? 'visualization' : techniqueId === 'T3' ? 'meditation' : techniqueId === 'T4' ? 'walk' : techniqueId === 'T5' ? 'hobby' : 'sleep') as ActivityEntry['type'],
+         type: completionActivityType(techniqueId),
         keysGained: result.keys,
         potentialGained: result.potential,
         details: metadata as ActivityEntry['details'],
@@ -591,6 +620,21 @@ export function applyServerCompletion(
     lastCompletedDate: nowISO,
     streakHistory: [{ date: nowISO, value: result.newStreak }, ...prev.streakHistory],
   };
+
+  if (techniqueId === 'T7') {
+    const mode = metadata.mode;
+    const level = Number(metadata.level);
+    if (mode === 'reverse' || mode === 'matrix' || mode === 'symbols') {
+      updates.memory = {
+        ...prev.memory,
+        bestLevels: {
+          ...prev.memory.bestLevels,
+          [mode]: Math.max(prev.memory.bestLevels[mode] ?? 1, Number.isFinite(level) ? level : 1),
+        },
+        ...(result.potential > 0 ? { rewardDay: getServerAppDayKey(now) } : {}),
+      };
+    }
+  }
 
   if (result.dayClosed) {
     updates.userState = 'dayDone';
@@ -794,7 +838,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         'keys', 'potential', 'streak', 'lastCompletedDate', 'todayTechniques',
         'todayTechniquesDate', 'keysHistory', 'potentialHistory', 'streakHistory',
         'activityLog', 'history', 'unlockedArticles', 'purchaseHistory',
-        'firstGoalBonusGiven',
+        'firstGoalBonusGiven', 'memory',
       ] as const) {
         delete safeUpdates[key];
       }
@@ -807,6 +851,34 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     metadata: Record<string, unknown>,
     idempotencyKey = `${techniqueId}:${Date.now()}:${Math.random().toString(36).slice(2)}`,
   ) => {
+    if (import.meta.env.DEV && !isSignedIn) {
+      const previewState = stateRef.current;
+      const level = Number(metadata.level);
+      const isMemoryReward =
+        techniqueId === 'T7' &&
+        Number.isFinite(level) &&
+        level >= 5 &&
+        previewState.memory.rewardDay !== getServerAppDayKey();
+      const previewPotential = techniqueId === 'T7'
+        ? (isMemoryReward ? 10 : 0)
+        : potentialForTechnique(techniqueId as TechniqueId);
+      const previewResult: CompleteTechniqueResult = {
+        keys: 0,
+        potential: previewPotential,
+        completedTechniqueId: Date.now(),
+        newStreak: previewState.streak + 1,
+        longestStreak: Math.max(previewState.streak + 1, previewState.profile?.longestStreak ?? 0),
+        totalKeys: previewState.keys,
+        totalPotential: previewState.potential + previewPotential,
+        dayClosed: false,
+        closedDays: previewState.closedDays,
+      };
+      const immediateUpdates = applyServerCompletion(previewState, techniqueId, previewResult, metadata);
+      stateRef.current = { ...previewState, ...immediateUpdates };
+      setState(prev => ({ ...prev, ...applyServerCompletion(prev, techniqueId, previewResult, metadata) }));
+      return previewResult;
+    }
+
     const clientDate = getAppDayStart().toISOString().slice(0, 10);
     const input = {
       techniqueId,
@@ -861,6 +933,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  const purchaseMemoryMode = useCallback(async (mode: MemoryMode) => {
+    const result = await apiPurchaseMemoryMode(mode);
+    setState(prev => ({
+      ...prev,
+      keys: result.profile.totalKeys,
+      profile: result.profile,
+      memory: {
+        ...prev.memory,
+        ...result.memory,
+        onboardingSeen: prev.memory.onboardingSeen,
+      },
+    }));
+  }, []);
+
   return (
     <AppContext.Provider value={{
       ...state,
@@ -872,6 +958,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       updateState,
       completeTechnique,
       refreshProfile,
+      purchaseMemoryMode,
     }}>
       {children}
     </AppContext.Provider>

@@ -8,6 +8,7 @@ import {
   sql,
   streakHistoryTable,
   userProfilesTable,
+  userStatesTable,
 } from "../../../../lib/db/src/index.js";
 import {
   dayCloseReward,
@@ -17,7 +18,7 @@ import {
   type TechniqueId as EconomyTechniqueId,
 } from "../../../../lib/economy/src/index.js";
 
-export type TechniqueId = "T1" | "T2" | "T3" | "T4" | "T5" | "T6";
+export type TechniqueId = "T1" | "T2" | "T3" | "T4" | "T5" | "T6" | "T7";
 export type TechniqueMetadata = Record<string, unknown>;
 
 export interface CompletionResult {
@@ -33,10 +34,20 @@ export interface CompletionResult {
   alreadyCompleted?: boolean;
 }
 
-const techniqueIds: TechniqueId[] = ["T1", "T2", "T3", "T4", "T5", "T6"];
+const techniqueIds: TechniqueId[] = ["T1", "T2", "T3", "T4", "T5", "T6", "T7"];
 
 /** T1 (Planner) and T6 (Sleep) can be completed only once per app-day. */
 const singleCompletionTechniques = new Set<TechniqueId>(["T1", "T6"]);
+
+type MemoryMode = "reverse" | "matrix" | "symbols";
+
+function isMemoryMode(value: unknown): value is MemoryMode {
+  return value === "reverse" || value === "matrix" || value === "symbols";
+}
+
+function objectBody(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
 
 export function isTechniqueId(value: string): value is TechniqueId {
   return techniqueIds.includes(value as TechniqueId);
@@ -124,8 +135,40 @@ export async function recordTechniqueCompletion(
       }
     }
 
+    // Memory has one shared level-5 reward per app-day across all three modes.
+    // Purchases, best levels, and the reward day live in the server-owned state.
+    let currentState: Record<string, unknown> = {};
+    let memoryMode: MemoryMode | null = null;
+    let memoryLevel = 0;
+    let memoryRewardAwarded = false;
+    if (techniqueId === "T7") {
+      memoryMode = isMemoryMode(metadata.mode) ? metadata.mode : null;
+      memoryLevel = Number.isInteger(metadata.level) ? Number(metadata.level) : 0;
+      if (!memoryMode || memoryLevel < 1 || memoryLevel > 1000000) {
+        const error = new Error("Invalid memory completion");
+        Object.assign(error, { code: "invalid_memory_completion" });
+        throw error;
+      }
+      const stateRow = await tx.query.userStatesTable.findFirst({
+        where: eq(userStatesTable.userId, userId),
+      });
+      currentState = objectBody(stateRow?.state) ? stateRow.state : {};
+      const memory = objectBody(currentState.memory) ? currentState.memory : {};
+      const purchasedModes = Array.isArray(memory.purchasedModes)
+        ? memory.purchasedModes.filter(isMemoryMode)
+        : [];
+      if (!purchasedModes.includes(memoryMode)) {
+        const error = new Error("Memory mode is not purchased");
+        Object.assign(error, { code: "memory_mode_not_purchased" });
+        throw error;
+      }
+      memoryRewardAwarded = memoryLevel >= 5 && memory.rewardDay !== day;
+    }
+
     // ── 3. Calculate potential this technique earns ──────────────────────────
-    const rawPotential = potentialForTechnique(techniqueId as EconomyTechniqueId, metadata);
+    const rawPotential = techniqueId === "T7" && !memoryRewardAwarded
+      ? 0
+      : potentialForTechnique(techniqueId as EconomyTechniqueId, metadata);
     const potential = normalizeDayPotential(rawPotential);
 
     // ── 4. Day-potential bookkeeping ─────────────────────────────────────────
@@ -229,6 +272,30 @@ export async function recordTechniqueCompletion(
         updatedAt: new Date(),
       },
     }).returning();
+
+    if (techniqueId === "T7" && memoryMode) {
+      const memory = objectBody(currentState.memory) ? currentState.memory : {};
+      const bestLevels = objectBody(memory.bestLevels) ? memory.bestLevels : {};
+      const nextMemory = {
+        ...memory,
+        purchasedModes: Array.isArray(memory.purchasedModes)
+          ? memory.purchasedModes.filter(isMemoryMode)
+          : [memoryMode],
+        bestLevels: {
+          ...bestLevels,
+          [memoryMode]: Math.max(Number(bestLevels[memoryMode]) || 1, memoryLevel),
+        },
+        ...(memoryRewardAwarded ? { rewardDay: day } : {}),
+      };
+      const nextState = { ...currentState, memory: nextMemory };
+      await tx.insert(userStatesTable).values({
+        userId,
+        state: nextState,
+      }).onConflictDoUpdate({
+        target: userStatesTable.userId,
+        set: { state: nextState, updatedAt: new Date() },
+      });
+    }
 
     return {
       keys,
