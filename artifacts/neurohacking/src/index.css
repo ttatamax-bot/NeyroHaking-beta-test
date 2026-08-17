@@ -35,7 +35,7 @@
   --color-destructive: var(--error);
   --color-destructive-foreground: #ffffff;
 
-  --font-sans: 'Onest', sans-serif;
+  --font-sans: 'IBM Plex Sans', sans-serif;
   --font-display: 'IBM Plex Sans', sans-serif;
   --font-num: 'Space Mono', monospace;
 }
