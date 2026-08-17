@@ -258,6 +258,7 @@ interface AppContextType extends AppState {
   updateState: (updates: UpdateFn) => void;
   completeTechnique: (techniqueId: string, metadata: Record<string, unknown>) => Promise<CompleteTechniqueResult>;
   refreshProfile: () => Promise<void>;
+  applyTrustedServerResult: (state: Record<string, unknown> | null | undefined, profile: ServerProfile) => void;
   purchaseMemoryMode: (mode: MemoryMode) => Promise<void>;
 }
 
@@ -933,12 +934,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  const applyTrustedServerResult = useCallback((
+    serverState: Record<string, unknown> | null | undefined,
+    profile: ServerProfile,
+  ) => {
+    setState(prev => mergeSavedServerState(prev, serverState, profile));
+  }, []);
+
   const purchaseMemoryMode = useCallback(async (mode: MemoryMode) => {
     const result = await apiPurchaseMemoryMode(mode);
     setState(prev => ({
-      ...prev,
-      keys: result.profile.totalKeys,
-      profile: result.profile,
+      ...mergeSavedServerState(prev, result.state, result.profile),
       memory: {
         ...prev.memory,
         ...result.memory,
@@ -958,6 +964,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       updateState,
       completeTechnique,
       refreshProfile,
+      applyTrustedServerResult,
       purchaseMemoryMode,
     }}>
       {children}

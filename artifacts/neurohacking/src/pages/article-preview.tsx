@@ -49,7 +49,7 @@ function formatKeys(n: number) {
 export default function ArticlePreview() {
   const { id } = useParams<{ id: string }>();
   const [, setLocation] = useLocation();
-  const { keys, unlockedArticles, readArticles, updateState, isSignedIn, refreshProfile } = useAppStore();
+  const { keys, unlockedArticles, readArticles, updateState, isSignedIn, applyTrustedServerResult } = useAppStore();
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [purchasing, setPurchasing] = useState(false);
 
@@ -71,9 +71,8 @@ export default function ArticlePreview() {
       setPurchasing(true);
       try {
         if (isSignedIn) {
-          await purchaseArticle(id!);
-          await refreshProfile();
-          updateState(prev => ({ unlockedArticles: [...new Set([...prev.unlockedArticles, id!])] }));
+          const result = await purchaseArticle(id!);
+          applyTrustedServerResult(result.state, result.profile);
         } else {
           updateState(prev => ({
             keys: prev.keys - article.cost,

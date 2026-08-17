@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useParams } from "wouter";
 import { motion } from "framer-motion";
-import { Check, Gift, Loader2, LogIn, Sparkles } from "lucide-react";
+import { Check, ChevronLeft, Gift, Loader2, LogIn } from "lucide-react";
 import { useAuthInfo } from "@/lib/clerk";
 import { ApiError, claimReferral, getReferral, type ReferralPreview } from "@/lib/api";
 import { useAppStore } from "@/lib/store";
@@ -11,13 +11,14 @@ export default function ReferralPage() {
   const { code = "" } = useParams<{ code: string }>();
   const [, setLocation] = useLocation();
   const { isLoaded: isAuthLoaded, isSignedIn } = useAuthInfo();
-  const { refreshProfile } = useAppStore();
+  const { applyTrustedServerResult } = useAppStore();
   const [referral, setReferral] = useState<ReferralPreview | null>(null);
   const [loading, setLoading] = useState(true);
   const [claiming, setClaiming] = useState(false);
   const [claimedAmount, setClaimedAmount] = useState<number | null>(null);
   const [counter, setCounter] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const claimInFlightRef = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -58,16 +59,18 @@ export default function ReferralPage() {
   }, [claimedAmount, error, referral?.available]);
 
   const claim = async () => {
+    if (claimInFlightRef.current) return;
     if (!isSignedIn) {
       sessionStorage.setItem("neuro-referral-return", window.location.pathname);
       setLocation("/sign-in");
       return;
     }
+    claimInFlightRef.current = true;
     setClaiming(true);
     setError(null);
     try {
       const result = await claimReferral(code);
-      await refreshProfile().catch(() => {});
+      applyTrustedServerResult(undefined, result.profile);
       setReferral((previous) => previous ? { ...previous, available: false } : previous);
       setClaimedAmount(result.amount);
     } catch (reason) {
@@ -78,6 +81,7 @@ export default function ReferralPage() {
         setReferral((previous) => previous ? { ...previous, available: false } : previous);
       }
     } finally {
+      claimInFlightRef.current = false;
       setClaiming(false);
     }
   };
@@ -91,7 +95,16 @@ export default function ReferralPage() {
   }
 
   return (
-    <ScreenTransition className="min-h-[100dvh] px-5 flex items-center justify-center">
+    <ScreenTransition className="relative min-h-[100dvh] px-5 flex items-center justify-center">
+      <button
+        type="button"
+        onClick={() => setLocation("/")}
+        className="absolute left-4 top-[max(12px,env(safe-area-inset-top,12px))] z-20 p-2 text-primary active:scale-95"
+        aria-label="Выйти"
+        data-testid="button-referral-back"
+      >
+        <ChevronLeft size={28} />
+      </button>
       <div className="w-full max-w-[350px] text-center">
         <motion.div
           initial={{ scale: 0.82, opacity: 0 }}
@@ -103,7 +116,7 @@ export default function ReferralPage() {
             boxShadow: "0 0 50px rgba(249,115,22,0.22)",
           }}
         >
-          {claimedAmount !== null ? <Sparkles size={42} color="#FDBA74" /> : <Gift size={42} color="#FDBA74" />}
+          <Gift size={42} color="#FDBA74" />
         </motion.div>
         <p className="label uppercase tracking-[0.22em] mb-3" style={{ color: "#FDBA74" }}>НейроХакинг</p>
         <h1 className="title-xl text-primary mb-3">{title}</h1>
@@ -113,7 +126,7 @@ export default function ReferralPage() {
         ) : claimedAmount !== null ? (
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
             <div className="display-l mb-2" style={{ color: "#FDBA74" }}>+{counter}</div>
-            <p className="body text-secondary mb-7">ключей начислено на твой аккаунт</p>
+            <p className="body text-secondary mb-5">ключей начислено на твой аккаунт</p>
             <div className="flex items-center justify-center gap-2 body-s text-green-300">
               <Check size={16} /> Получение подтверждено
             </div>
