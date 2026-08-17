@@ -18,7 +18,7 @@ interface TechniqueArtworkProps {
   highlighted?: boolean;
 }
 
-const ICON_SIZE = 128;
+const ICON_SIZE = 74;
 
 function iconMotion(reduced: boolean | null, kind: TechniqueArtworkKind) {
   if (reduced) return {};
@@ -174,34 +174,55 @@ function ArtworkSvg({ kind, color, reduced }: { kind: TechniqueArtworkKind; colo
 export function TechniqueArtwork({ kind, color, done = false, highlighted = false }: TechniqueArtworkProps) {
   const reduced = useReducedMotion();
   const animation = iconMotion(reduced, kind);
+  const rgb = color.slice(1).match(/.{2}/g)?.map((part) => parseInt(part, 16)).join(",") ?? "249,115,22";
 
   return (
-    <div className="relative flex h-[clamp(124px,32vw,168px)] w-full items-center justify-center">
+    <div className="relative flex h-[clamp(144px,36vw,176px)] w-full items-center justify-center">
       <motion.div
-        aria-hidden="true"
-        className="absolute h-24 w-24 rounded-full blur-2xl"
-        style={{ background: `rgba(${color.slice(1).match(/.{2}/g)?.map((part) => parseInt(part, 16)).join(",") ?? "249,115,22"},0.24)` }}
-        animate={reduced ? undefined : { scale: [0.78, 1.2, 0.78], opacity: [0.25, 0.55, 0.25] }}
-        transition={{ duration: highlighted ? 2.8 : 4.6, repeat: Infinity, ease: "easeInOut" }}
-      />
-      <motion.div
-        className="relative z-10"
-        {...animation}
-        style={{ color, filter: `drop-shadow(0 0 16px ${color}66)` }}
+        className="relative flex aspect-square w-[clamp(108px,29vw,136px)] items-center justify-center overflow-visible rounded-[21px] border"
+        style={{
+          background: `linear-gradient(145deg, rgba(${rgb},0.2), rgba(${rgb},0.07))`,
+          borderColor: highlighted ? `${color}a6` : `${color}58`,
+          boxShadow: highlighted
+            ? `0 0 0 2px ${color}26, 0 0 28px ${color}32, inset 0 1px 0 rgba(255,255,255,0.12)`
+            : `0 0 20px ${color}16, inset 0 1px 0 rgba(255,255,255,0.08)`,
+        }}
+        animate={reduced ? undefined : { y: [0, -3, 0] }}
+        transition={{ duration: highlighted ? 2.8 : 4.8, repeat: Infinity, ease: "easeInOut" }}
       >
-        <ArtworkSvg kind={kind} color={color} reduced={reduced} />
-      </motion.div>
-      {done && (
-        <motion.span
-          initial={{ scale: 0, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          className="absolute right-[12%] top-[16%] z-20 flex h-7 w-7 items-center justify-center rounded-full border"
-          style={{ color, borderColor: `${color}99`, background: `${color}1c` }}
-          aria-label="Выполнено"
+        <motion.div
+          aria-hidden="true"
+          className="pointer-events-none absolute h-20 w-20 rounded-full blur-2xl"
+          style={{ background: `rgba(${rgb},0.42)` }}
+          animate={reduced ? undefined : { scale: [0.72, 1.12, 0.72], opacity: [0.3, 0.62, 0.3] }}
+          transition={{ duration: highlighted ? 2.2 : 4.2, repeat: Infinity, ease: "easeInOut" }}
+        />
+        <motion.div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-2 rounded-[16px] border"
+          style={{ borderColor: `${color}26` }}
+          animate={reduced ? undefined : { opacity: [0.35, 0.8, 0.35], scale: [0.98, 1, 0.98] }}
+          transition={{ duration: 3.4, repeat: Infinity, ease: "easeInOut" }}
+        />
+        <motion.div
+          className="relative z-10"
+          {...animation}
+          style={{ color, filter: `drop-shadow(0 0 12px ${color}88)` }}
         >
-          <Check size={14} strokeWidth={2.2} />
-        </motion.span>
-      )}
+          <ArtworkSvg kind={kind} color={color} reduced={reduced} />
+        </motion.div>
+        {done && (
+          <motion.span
+            initial={{ scale: 0, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="absolute -right-2 -top-2 z-20 flex h-7 w-7 items-center justify-center rounded-full border"
+            style={{ color, borderColor: `${color}99`, background: `${color}26` }}
+            aria-label="Выполнено"
+          >
+            <Check size={14} strokeWidth={2.2} />
+          </motion.span>
+        )}
+      </motion.div>
     </div>
   );
 }
