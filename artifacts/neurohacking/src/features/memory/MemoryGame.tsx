@@ -436,6 +436,7 @@ export function MemoryGame({
   const beginRound = (nextLevel: number) => {
     clearGameTimer();
     initMemorySound();
+    playTap();
     onStartMode?.(mode);
     setLevel(nextLevel);
     setChallenge(createChallenge(mode, nextLevel));
