@@ -641,15 +641,24 @@ function renderBlock(block: string, i: number) {
 
   if (isHeader && i > 0) {
     return (
-      <motion.p
+      <motion.h2
         key={i}
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: Math.min(i * 0.04, 0.6) }}
-        style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-blue)', marginTop: 8 }}
+        className="text-balance"
+        style={{
+          fontSize: 20,
+          lineHeight: 1.32,
+          fontWeight: 600,
+          letterSpacing: '-0.01em',
+          color: 'var(--text-blue)',
+          marginTop: 16,
+          marginBottom: -4,
+        }}
       >
         {block}
-      </motion.p>
+      </motion.h2>
     );
   }
 
