@@ -41,6 +41,7 @@ import MyProgress from "@/pages/my-progress";
 import SignInPage from "@/pages/sign-in";
 import SignUpPage from "@/pages/sign-up";
 import ProfileSetup from "@/pages/profile-setup";
+import ReferralPage from "@/pages/referral";
 
 const queryClient = new QueryClient();
 
@@ -379,7 +380,7 @@ function AppLogic() {
   const store = useAppStore();
   const { userState, updateState } = store;
   const { isLoaded: isAuthLoaded, isSignedIn } = useAuthInfo();
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
   const storeRef = useRef(store);
   storeRef.current = store;
   // Prevent duplicate redirect after we already decided to navigate away.
@@ -389,6 +390,14 @@ function AppLogic() {
   useEffect(() => {
     document.documentElement.classList.add('dark');
   }, []);
+
+  useEffect(() => {
+    if (!isAuthLoaded || !isSignedIn || !location.startsWith('/sign-')) return;
+    const referralReturn = sessionStorage.getItem('neuro-referral-return');
+    if (!referralReturn?.startsWith('/referral/')) return;
+    sessionStorage.removeItem('neuro-referral-return');
+    setLocation(referralReturn);
+  }, [isAuthLoaded, isSignedIn, location, setLocation]);
 
   // Guests keep their first results locally, but server-backed progress starts
   // with Clerk registration. New guests are sent to sign-up after their first
@@ -645,7 +654,8 @@ function Router() {
     location.startsWith('/sign-up') ||
     location === '/privacy-policy' ||
     location === '/my-progress' ||
-    location.includes('/read');
+    location.includes('/read') ||
+    location.startsWith('/referral/');
   const Layout = isFullscreen ? FullscreenLayout : AppLayout;
   return (
     <>
@@ -677,6 +687,7 @@ function Router() {
          <Route path="/technique/memory/:mode" component={MemoryModePage} />
         <Route path="/privacy-policy" component={PrivacyPolicy} />
         <Route path="/my-progress" component={MyProgress} />
+        <Route path="/referral/:code" component={ReferralPage} />
         <Route path="/sign-in/*?" component={SignInPage} />
         <Route path="/sign-up/*?" component={SignUpPage} />
         <Route>

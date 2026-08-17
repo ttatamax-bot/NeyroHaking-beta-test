@@ -26,12 +26,18 @@ import type {
   ClientState,
   CompletedTechnique,
   ConflictResponse,
+  ForbiddenResponse,
   GetMyTechniqueHistoryParams,
   GetMyTransactionsParams,
   HealthStatus,
   LegacyMigrationInput,
   LegacyMigrationResult,
+  NotFoundResponse,
   ProfileUpdateInput,
+  ReferralClaimResult,
+  ReferralCreateInput,
+  ReferralCreateResult,
+  ReferralPreview,
   SavedState,
   ServerMe,
   TechniqueCompletionInput,
@@ -825,5 +831,206 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
         TContext
       > => {
       return useMutation(getCompleteTechniqueMutationOptions(options));
+    }
+
+export const getCreateReferralUrl = () => {
+
+
+
+
+  return `/api/referrals`
+}
+
+export const createReferral = async (referralCreateInput?: ReferralCreateInput, options?: Parameters<typeof customFetch>[1]): Promise<ReferralCreateResult> => {
+
+  return customFetch<ReferralCreateResult>(getCreateReferralUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(referralCreateInput)
+  }
+);}
+
+
+
+
+
+export const getCreateReferralMutationOptions = <TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createReferral>>, TError,{data?: BodyType<ReferralCreateInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createReferral>>, TError,{data?: BodyType<ReferralCreateInput>}, TContext> => {
+
+const mutationKey = ['createReferral'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createReferral>>, {data?: BodyType<ReferralCreateInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createReferral(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateReferralMutationResult = NonNullable<Awaited<ReturnType<typeof createReferral>>>
+    export type CreateReferralMutationBody = BodyType<ReferralCreateInput> | undefined
+    export type CreateReferralMutationError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>
+
+    export const useCreateReferral = <TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createReferral>>, TError,{data?: BodyType<ReferralCreateInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createReferral>>,
+        TError,
+        {data?: BodyType<ReferralCreateInput>},
+        TContext
+      > => {
+      return useMutation(getCreateReferralMutationOptions(options));
+    }
+
+export const getGetReferralUrl = (code: string,) => {
+
+
+
+
+  return `/api/referrals/${code}`
+}
+
+export const getReferral = async (code: string, options?: Parameters<typeof customFetch>[1]): Promise<ReferralPreview> => {
+
+  return customFetch<ReferralPreview>(getGetReferralUrl(code),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetReferralQueryKey = (code: string,) => {
+    return [
+    `/api/referrals/${code}`
+    ] as const;
+    }
+
+
+export const getGetReferralQueryOptions = <TData = Awaited<ReturnType<typeof getReferral>>, TError = ErrorType<NotFoundResponse>>(code: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getReferral>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetReferralQueryKey(code);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getReferral>>> = ({ signal }) => getReferral(code, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: code !== null && code !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getReferral>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetReferralQueryResult = NonNullable<Awaited<ReturnType<typeof getReferral>>>
+export type GetReferralQueryError = ErrorType<NotFoundResponse>
+
+
+
+export function useGetReferral<TData = Awaited<ReturnType<typeof getReferral>>, TError = ErrorType<NotFoundResponse>>(
+ code: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getReferral>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetReferralQueryOptions(code,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getClaimReferralUrl = (code: string,) => {
+
+
+
+
+  return `/api/referrals/${code}/claim`
+}
+
+export const claimReferral = async (code: string, options?: Parameters<typeof customFetch>[1]): Promise<ReferralClaimResult> => {
+
+  return customFetch<ReferralClaimResult>(getClaimReferralUrl(code),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getClaimReferralMutationOptions = <TError = ErrorType<UnauthorizedResponse | NotFoundResponse | ConflictResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof claimReferral>>, TError,{code: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof claimReferral>>, TError,{code: string}, TContext> => {
+
+const mutationKey = ['claimReferral'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof claimReferral>>, {code: string}> = (props) => {
+          const {code} = props ?? {};
+
+          return  claimReferral(code,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ClaimReferralMutationResult = NonNullable<Awaited<ReturnType<typeof claimReferral>>>
+
+    export type ClaimReferralMutationError = ErrorType<UnauthorizedResponse | NotFoundResponse | ConflictResponse>
+
+    export const useClaimReferral = <TError = ErrorType<UnauthorizedResponse | NotFoundResponse | ConflictResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof claimReferral>>, TError,{code: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof claimReferral>>,
+        TError,
+        {code: string},
+        TContext
+      > => {
+      return useMutation(getClaimReferralMutationOptions(options));
     }
 

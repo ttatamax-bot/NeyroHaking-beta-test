@@ -240,6 +240,37 @@ export async function completeTechnique(input: CompleteTechniqueInput): Promise<
   return apiPost<CompleteTechniqueResult>('/techniques/complete', input);
 }
 
+export interface ReferralPreview {
+  code: string;
+  amount: number;
+  available: boolean;
+}
+
+export interface ReferralCreateResult {
+  code: string;
+  amount: number;
+  createdAt: string;
+}
+
+export interface ReferralClaimResult {
+  code: string;
+  amount: number;
+  totalKeys: number;
+  profile: ServerProfile;
+}
+
+export async function getReferral(code: string): Promise<ReferralPreview> {
+  return apiGet<ReferralPreview>(`/referrals/${encodeURIComponent(code)}`);
+}
+
+export async function createReferral(amount = 1000): Promise<ReferralCreateResult> {
+  return apiPost<ReferralCreateResult>('/referrals', { amount });
+}
+
+export async function claimReferral(code: string): Promise<ReferralClaimResult> {
+  return apiPost<ReferralClaimResult>(`/referrals/${encodeURIComponent(code)}/claim`, {});
+}
+
 export interface LegacyMigrationInput {
   migrationKey: string;
   state: Record<string, unknown>;

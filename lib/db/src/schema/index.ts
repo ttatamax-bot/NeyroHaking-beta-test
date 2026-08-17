@@ -6,3 +6,4 @@ export * from "./keyTransactions.js";
 export * from "./potentialTransactions.js";
 export * from "./streakHistory.js";
 export * from "./legacyMigrations.js";
+export * from "./referralCoupons.js";

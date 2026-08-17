@@ -314,3 +314,69 @@ export const CompleteTechniqueResponse = zod.object({
 })
 
 
+export const createReferralBodyAmountDefault = 1000;
+export const createReferralBodyAmountMax = 100000;
+
+
+
+export const CreateReferralBody = zod.object({
+  "amount": zod.int().min(1).max(createReferralBodyAmountMax).default(createReferralBodyAmountDefault)
+})
+
+export const CreateReferralResponse = zod.object({
+  "code": zod.string(),
+  "amount": zod.int(),
+  "createdAt": zod.coerce.date()
+})
+
+
+export const getReferralPathCodeRegExp = new RegExp('^[A-Z0-9]{10,32}$');
+
+
+export const GetReferralParams = zod.object({
+  "code": zod.coerce.string().regex(getReferralPathCodeRegExp)
+})
+
+export const GetReferralResponse = zod.object({
+  "code": zod.string(),
+  "amount": zod.int(),
+  "available": zod.boolean()
+})
+
+
+export const claimReferralPathCodeRegExp = new RegExp('^[A-Z0-9]{10,32}$');
+
+
+export const ClaimReferralParams = zod.object({
+  "code": zod.coerce.string().regex(claimReferralPathCodeRegExp)
+})
+
+export const claimReferralResponseProfileDayPotentialDayRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+export const claimReferralResponseProfileClosedDaysMin = 0;
+
+
+
+export const ClaimReferralResponse = zod.object({
+  "code": zod.string(),
+  "amount": zod.int(),
+  "totalKeys": zod.int(),
+  "profile": zod.object({
+  "id": zod.int(),
+  "userId": zod.int(),
+  "nickname": zod.string().nullable(),
+  "displayName": zod.string().nullable(),
+  "bio": zod.string().nullable(),
+  "avatarUrl": zod.string().nullable(),
+  "totalKeys": zod.int(),
+  "totalPotential": zod.number(),
+  "dayPotential": zod.number(),
+  "dayPotentialDay": zod.string().regex(claimReferralResponseProfileDayPotentialDayRegExp).nullable(),
+  "closedDays": zod.int().min(claimReferralResponseProfileClosedDaysMin),
+  "currentStreak": zod.int(),
+  "longestStreak": zod.int(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+})
+
+

@@ -187,6 +187,33 @@ export interface TechniqueCompletionResult {
   [key: string]: unknown;
  }
 
+export interface ReferralCreateInput {
+  /**
+     * @minimum 1
+     * @maximum 100000
+     */
+  amount?: number;
+}
+
+export interface ReferralCreateResult {
+  code: string;
+  amount: number;
+  createdAt: string;
+}
+
+export interface ReferralPreview {
+  code: string;
+  amount: number;
+  available: boolean;
+}
+
+export interface ReferralClaimResult {
+  code: string;
+  amount: number;
+  totalKeys: number;
+  profile: UserProfile;
+}
+
 /**
  * Invalid request
  */
@@ -201,6 +228,16 @@ export type UnauthorizedResponse = ErrorResponse;
  * Conflict
  */
 export type ConflictResponse = ErrorResponse;
+
+/**
+ * Access denied
+ */
+export type ForbiddenResponse = ErrorResponse;
+
+/**
+ * Resource not found
+ */
+export type NotFoundResponse = ErrorResponse;
 
 export type GetMyTechniqueHistoryParams = {
 /**

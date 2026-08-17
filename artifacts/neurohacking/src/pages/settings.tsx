@@ -4,7 +4,8 @@ import { useUser, SignOutButton } from "@clerk/react";
 import { useAppStore } from "@/lib/store";
 import { ScreenTransition } from "@/components/ScreenTransition";
 import { BackButton } from "@/components/BackButton";
-import { ChevronRight, Bell, User } from "lucide-react";
+import { ChevronRight, Bell, User, Copy, Check, Gift, Loader2 } from "lucide-react";
+import { ApiError, createReferral } from "@/lib/api";
 
 function subscribeOneSignal() {
   const win = window as any;
@@ -65,7 +66,35 @@ function NotificationConfirmDialog({ open, onClose, onConfirm }: { open: boolean
 export default function Settings() {
   const [, setLocation] = useLocation();
   const [showConfirm, setShowConfirm] = useState(false);
+  const [referralLink, setReferralLink] = useState<string | null>(null);
+  const [referralBusy, setReferralBusy] = useState(false);
+  const [referralCopied, setReferralCopied] = useState(false);
+  const [referralError, setReferralError] = useState<string | null>(null);
   const { isSignedIn, user } = useUser();
+  const isReferralAdmin = user?.primaryEmailAddress?.emailAddress?.toLowerCase() === 'ttatamax@gmail.com';
+
+  const issueReferral = async () => {
+    setReferralBusy(true);
+    setReferralError(null);
+    try {
+      const result = await createReferral(1000);
+      const base = import.meta.env.BASE_URL.endsWith('/') ? import.meta.env.BASE_URL : `${import.meta.env.BASE_URL}/`;
+      setReferralLink(new URL(`${base}referral/${result.code}`, window.location.origin).toString());
+    } catch (error) {
+      setReferralError(error instanceof ApiError && error.status === 403
+        ? 'Выпуск ссылок недоступен для этого аккаунта.'
+        : 'Не удалось создать ссылку. Попробуй ещё раз.');
+    } finally {
+      setReferralBusy(false);
+    }
+  };
+
+  const copyReferral = async () => {
+    if (!referralLink) return;
+    await navigator.clipboard?.writeText(referralLink);
+    setReferralCopied(true);
+    window.setTimeout(() => setReferralCopied(false), 1800);
+  };
 
   return (
     <ScreenTransition className="pt-[56px] px-4 pb-24">
@@ -112,6 +141,47 @@ export default function Settings() {
           </button>
         )}
       </div>
+
+      {isSignedIn && isReferralAdmin && (
+        <div
+          className="rounded-[16px] p-4 mb-4"
+          style={{
+            background: 'linear-gradient(135deg, rgba(249,115,22,0.18), rgba(234,88,12,0.06))',
+            border: '1px solid rgba(249,115,22,0.38)',
+          }}
+        >
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-10 h-10 rounded-[12px] flex items-center justify-center" style={{ background: 'rgba(249,115,22,0.18)' }}>
+              <Gift size={19} color="#FDBA74" />
+            </div>
+            <div>
+              <div className="body text-primary">Реферальная ссылка</div>
+              <div className="body-s text-secondary mt-0.5">Одноразовый подарок на 1000 ключей</div>
+            </div>
+          </div>
+          {referralLink ? (
+            <div className="flex gap-2">
+              <div className="flex-1 min-w-0 rounded-[10px] px-3 flex items-center body-s truncate" style={{ background: 'rgba(0,0,0,0.2)', color: '#FED7AA' }}>
+                {referralLink}
+              </div>
+              <button onClick={copyReferral} className="w-[44px] h-[44px] rounded-[10px] flex items-center justify-center shrink-0" style={{ background: 'rgba(249,115,22,0.22)' }}>
+                {referralCopied ? <Check size={18} color="#86EFAC" /> : <Copy size={18} color="#FDBA74" />}
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={issueReferral}
+              disabled={referralBusy}
+              className="w-full h-[44px] rounded-[12px] title-s flex items-center justify-center gap-2 disabled:opacity-60"
+              style={{ background: 'rgba(249,115,22,0.22)', color: '#FED7AA', border: '1px solid rgba(249,115,22,0.35)' }}
+            >
+              {referralBusy && <Loader2 size={16} className="animate-spin" />}
+              {referralBusy ? 'Создаём…' : 'Создать ссылку'}
+            </button>
+          )}
+          {referralError && <p className="body-s text-red-300 mt-2">{referralError}</p>}
+        </div>
+      )}
 
       <div className="bg-surface-1 border border-border rounded-[16px] overflow-hidden mb-4">
         <button

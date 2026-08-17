@@ -10,6 +10,7 @@ tags:
   - name: health
   - name: account
   - name: techniques
+  - name: referrals
 paths:
   /healthz:
     get:
@@ -180,6 +181,58 @@ paths:
               schema: { $ref: "#/components/schemas/TechniqueCompletionResult" }
         "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthorized" }
+  /referrals:
+    post:
+      operationId: createReferral
+      tags: [referrals]
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ReferralCreateInput" }
+      responses:
+        "201":
+          description: Created one-time referral link
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ReferralCreateResult" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /referrals/{code}:
+    get:
+      operationId: getReferral
+      tags: [referrals]
+      parameters:
+        - name: code
+          in: path
+          required: true
+          schema: { type: string, pattern: "^[A-Z0-9]{10,32}$" }
+      responses:
+        "200":
+          description: Referral link status
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ReferralPreview" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /referrals/{code}/claim:
+    post:
+      operationId: claimReferral
+      tags: [referrals]
+      parameters:
+        - name: code
+          in: path
+          required: true
+          schema: { type: string, pattern: "^[A-Z0-9]{10,32}$" }
+      responses:
+        "200":
+          description: Claimed referral reward
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ReferralClaimResult" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
 components:
   responses:
     BadRequest:
@@ -194,6 +247,16 @@ components:
           schema: { $ref: "#/components/schemas/ErrorResponse" }
     Conflict:
       description: Conflict
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+    Forbidden:
+      description: Access denied
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+    NotFound:
+      description: Resource not found
       content:
         application/json:
           schema: { $ref: "#/components/schemas/ErrorResponse" }
@@ -328,3 +391,29 @@ components:
         totalPotential: { type: number }
         dayClosed: { type: boolean }
         closedDays: { type: integer, minimum: 0 }
+    ReferralCreateInput:
+      type: object
+      properties:
+        amount: { type: integer, minimum: 1, maximum: 100000, default: 1000 }
+    ReferralCreateResult:
+      type: object
+      required: [code, amount, createdAt]
+      properties:
+        code: { type: string }
+        amount: { type: integer }
+        createdAt: { type: string, format: date-time }
+    ReferralPreview:
+      type: object
+      required: [code, amount, available]
+      properties:
+        code: { type: string }
+        amount: { type: integer }
+        available: { type: boolean }
+    ReferralClaimResult:
+      type: object
+      required: [code, amount, totalKeys, profile]
+      properties:
+        code: { type: string }
+        amount: { type: integer }
+        totalKeys: { type: integer }
+        profile: { $ref: "#/components/schemas/UserProfile" }
