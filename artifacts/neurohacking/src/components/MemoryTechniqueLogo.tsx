@@ -64,7 +64,7 @@ export function MemoryTechniqueLogo({ size = 76, loading = false, className = ""
         }}
       />
 
-      {imageFailed ? (
+      {imageFailed && !loading ? (
         <motion.img
           src={appIconUrl}
           alt=""
@@ -76,7 +76,7 @@ export function MemoryTechniqueLogo({ size = 76, loading = false, className = ""
           src={loading ? loadingLogoUrl : memoryLogoUrl}
           alt=""
           className="absolute inset-0 h-full w-full object-contain"
-          onError={() => setImageFailed(true)}
+          onError={loading ? undefined : () => setImageFailed(true)}
           animate={{ filter: ["saturate(1.08) brightness(1.05) drop-shadow(0 0 8px rgba(249,115,22,.55))", "saturate(1.28) brightness(1.2) drop-shadow(0 0 18px rgba(255,196,72,.9))", "saturate(1.08) brightness(1.05) drop-shadow(0 0 8px rgba(249,115,22,.55))"] }}
           transition={{ duration: loading ? 2 : 3, repeat: Infinity, ease: "easeInOut" }}
           style={{
