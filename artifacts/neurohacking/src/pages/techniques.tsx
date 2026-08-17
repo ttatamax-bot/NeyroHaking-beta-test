@@ -88,7 +88,7 @@ export default function Techniques() {
         </span>
       </motion.div>
 
-      <div className="grid grid-cols-2 gap-x-3 gap-y-5">
+      <div className="grid grid-cols-2 gap-x-[6px] gap-y-[10px]">
         {TECHNIQUES.map((t, idx) => {
           const isDone        = Boolean(t.dayKey && todayTechniques[t.dayKey]);
           const isHighlighted = hasHighlight && onboardingHighlight.includes(t.id);
@@ -124,7 +124,7 @@ export default function Techniques() {
               <TechniqueArtwork kind={t.artwork} color={t.color} done={isDone} highlighted={isHighlighted} />
               <h3
                 className="max-w-full px-1 text-primary leading-tight"
-                style={{ fontSize: 12, fontWeight: 400, letterSpacing: '0.02em', opacity: isDone ? 0.58 : 0.88, wordBreak: 'break-word' }}
+                style={{ fontSize: 12, fontWeight: 300, letterSpacing: '0.06em', textTransform: 'uppercase', opacity: isDone ? 0.58 : 0.88, wordBreak: 'break-word' }}
               >
                 {t.title}
               </h3>

@@ -1,4 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Outfit:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
 @layer theme, base, clerk, components, utilities;
 @import "tailwindcss";
 @import "tw-animate-css";
@@ -36,8 +35,8 @@
   --color-destructive: var(--error);
   --color-destructive-foreground: #ffffff;
 
-  --font-sans: 'Outfit', sans-serif;
-  --font-display: 'Instrument Serif', Georgia, serif;
+  --font-sans: 'Onest', sans-serif;
+  --font-display: 'IBM Plex Sans', sans-serif;
   --font-num: 'Space Mono', monospace;
 }
 
