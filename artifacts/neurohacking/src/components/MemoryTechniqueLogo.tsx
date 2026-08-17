@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import memoryLogoUrl from "../assets/memory-logo.png";
 
 interface MemoryTechniqueLogoProps {
   size?: number;
@@ -55,7 +56,7 @@ export function MemoryTechniqueLogo({ size = 76, loading = false, className = ""
       />
 
       <motion.img
-        src="/memory-logo.png"
+        src={memoryLogoUrl}
         alt=""
         className="absolute inset-0 h-full w-full object-contain"
         animate={{ filter: ["saturate(1.08) brightness(1.05) drop-shadow(0 0 8px rgba(249,115,22,.55))", "saturate(1.28) brightness(1.2) drop-shadow(0 0 18px rgba(255,196,72,.9))", "saturate(1.08) brightness(1.05) drop-shadow(0 0 8px rgba(249,115,22,.55))"] }}
