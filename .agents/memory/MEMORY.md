@@ -25,3 +25,5 @@
 - [Vercel workspace source imports](vercel-workspace-source-imports.md) — serverless runtime cannot load workspace package exports pointing at `.ts`; bundle shared source through relative imports.
 - [Memory technique server state](memory-technique-server-state.md) — purchases, best levels, and the shared daily reward stay server-owned and idempotent.
 - [Preview auth bypass](preview-auth-bypass.md) — technique testing bypass is DEV-only; Clerk registration remains enforced in production builds.
+- [Supabase connector authentication](supabase-connector-auth.md) — an added connection can still return 401 without an authenticated client; never mutate beta data until access is verified.
+- [Referral schema provisioning](referral-schema-provisioning.md) — new persistent tables require the idempotent schema bootstrap before route checks or production enablement.
