@@ -5,7 +5,7 @@ const assetBase = import.meta.env.BASE_URL.endsWith("/")
   ? import.meta.env.BASE_URL
   : `${import.meta.env.BASE_URL}/`;
 const memoryLogoUrl = `${assetBase}memory-logo.png`;
-const loadingLogoUrl = `${assetBase}memory-logo-transparent.png`;
+const loadingLogoUrl = `${assetBase}memory-logo-transparent.png?v=2`;
 const appIconUrl = `${assetBase}icon-512x512.png`;
 
 interface MemoryTechniqueLogoProps {
