@@ -27,3 +27,4 @@
 - [Preview auth bypass](preview-auth-bypass.md) — technique testing bypass is DEV-only; Clerk registration remains enforced in production builds.
 - [Supabase connector authentication](supabase-connector-auth.md) — an added connection can still return 401 without an authenticated client; never mutate beta data until access is verified.
 - [Referral schema provisioning](referral-schema-provisioning.md) — new persistent tables require the idempotent schema bootstrap before route checks or production enablement.
+- [Preview static assets](preview-static-assets.md) — loading visuals should use BASE_URL-aware public assets, not root-relative Vite source imports.
