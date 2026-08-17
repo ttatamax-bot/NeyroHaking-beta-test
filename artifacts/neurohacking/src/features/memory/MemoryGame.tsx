@@ -148,7 +148,7 @@ function ShowingState({ challenge, level }: { challenge: MemoryChallenge; level:
         </div>
       )}
       {challenge.mode === "matrix" && (
-        <div className="grid w-[min(70vw,246px)] gap-2" style={{ gridTemplateColumns: `repeat(${challenge.size}, minmax(0, 1fr))` }} data-testid="memory-matrix-display">
+        <div className="memory-grid grid w-[min(70vw,246px)] gap-2" style={{ gridTemplateColumns: `repeat(${challenge.size}, minmax(0, 1fr))` }} data-testid="memory-matrix-display">
           {Array.from({ length: challenge.size * challenge.size }, (_, index) => (
             <span
               key={index}
@@ -201,7 +201,7 @@ function MatrixInput({ challenge, selected, onCell }: { challenge: MatrixChallen
   return (
     <div className="flex min-h-[330px] flex-col items-center justify-center rounded-[25px] border border-white/[.08] bg-[#0a1c31] p-5" data-testid="memory-matrix-input">
       <p className="caption mb-5 text-tertiary">ВОССТАНОВИ КЛЕТКИ · {selected.length}/{challenge.cells.length}</p>
-      <div className="grid w-[min(70vw,246px)] gap-2" style={{ gridTemplateColumns: `repeat(${challenge.size}, minmax(0, 1fr))` }}>
+      <div className="memory-grid grid w-[min(70vw,246px)] gap-2" style={{ gridTemplateColumns: `repeat(${challenge.size}, minmax(0, 1fr))` }}>
         {Array.from({ length: challenge.size * challenge.size }, (_, index) => {
           const active = selected.includes(index);
           return (

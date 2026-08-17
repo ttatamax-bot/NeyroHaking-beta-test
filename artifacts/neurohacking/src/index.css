@@ -104,6 +104,30 @@
   .num { font-family: var(--font-num); letter-spacing: 0.04em; font-weight: 400; }
   .serif { font-family: var(--font-display); }
 
+  /* iOS treats game cells as selectable text after a long touch unless the
+     interactive board opts out explicitly. */
+  .memory-grid,
+  .memory-grid * {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+  }
+
+  .memory-grid {
+    touch-action: manipulation;
+  }
+
+  .memory-grid button {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-user-drag: none;
+    outline: none;
+  }
+
+  .memory-grid button:focus-visible {
+    outline: 2px solid rgba(249, 115, 22, 0.9);
+    outline-offset: 2px;
+  }
+
   .bg-base      { background-color: var(--bg-base); }
   .bg-surface-1 { background-color: var(--bg-surface-1); }
   .bg-surface-2 { background-color: var(--bg-surface-2); }
