@@ -22,6 +22,7 @@ export default async function healthz(_req: unknown, res: HealthResponse) {
       await pool.query("select 1 from user_profiles limit 0");
       await pool.query("select 1 from user_states limit 0");
       await pool.query("select 1 from legacy_migrations limit 0");
+      await pool.query("select 1 from referral_coupons limit 0");
       databaseSchema = true;
     } catch (error) {
       // Keep health output safe for a public endpoint; the booleans identify
