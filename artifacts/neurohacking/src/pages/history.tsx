@@ -6,8 +6,8 @@ import { Key, Zap, BookOpen, Brain, Footprints, Moon, Palette, ListTodo } from "
 
 const TYPE_LABELS: Record<ActivityEntry['type'], string> = {
   planner: 'Планер',
-  visualization: 'Нейровизуализация',
-  meditation: 'Нейромедитация',
+  visualization: 'Визуализация',
+  meditation: 'Медитация',
   walk: 'Прогулка',
   hobby: 'Хобби',
   sleep: 'Сон',

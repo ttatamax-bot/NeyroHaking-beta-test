@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useLocation } from "wouter";
 import { useAppStore } from "@/lib/store";
 import { motion } from "framer-motion";
@@ -21,12 +22,12 @@ const TECHNIQUES: Technique[] = [
     repeatable: false,
   },
   {
-    id: 'T2', title: 'Нейровизуализация', artwork: 'visualization', route: '/technique/visualization', dayKey: 'T2',
+    id: 'T2', title: 'Визуализация', artwork: 'visualization', route: '/technique/visualization', dayKey: 'T2',
     color: '#C084FC',
     repeatable: true,
   },
   {
-    id: 'T3', title: 'Нейромедитация', artwork: 'meditation', route: '/technique/meditation', dayKey: 'T3',
+    id: 'T3', title: 'Медитация', artwork: 'meditation', route: '/technique/meditation', dayKey: 'T3',
     color: '#06B6D4',
     repeatable: true,
   },
@@ -60,6 +61,7 @@ const TECHNIQUES: Technique[] = [
 export default function Techniques() {
   const { userState, todayTechniques, onboardingHighlight } = useAppStore();
   const [, setLocation] = useLocation();
+  const [pressedTechnique, setPressedTechnique] = useState<string | null>(null);
 
   const isOnboarding = userState === 'onboarding';
   const hasHighlight = isOnboarding && onboardingHighlight.length > 0;
@@ -88,7 +90,7 @@ export default function Techniques() {
         </span>
       </motion.div>
 
-      <div className="grid grid-cols-2 gap-x-[6px] gap-y-[10px]">
+      <div className="mx-auto grid w-[min(100%,280px)] grid-cols-2 gap-x-0 gap-y-1">
         {TECHNIQUES.map((t, idx) => {
           const isDone        = Boolean(t.dayKey && todayTechniques[t.dayKey]);
           const isHighlighted = hasHighlight && onboardingHighlight.includes(t.id);
@@ -107,8 +109,12 @@ export default function Techniques() {
               transition={{ delay: isOnboarding ? 0 : idx * 0.08, duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
               whileTap={isOnboarding || isDone || !t.route ? {} : { scale: 0.97 }}
               onClick={() => handleTap(t, isDone)}
+              onPointerDown={() => t.route && setPressedTechnique(t.id)}
+              onPointerUp={() => setPressedTechnique(null)}
+              onPointerCancel={() => setPressedTechnique(null)}
+              onPointerLeave={() => setPressedTechnique(null)}
               aria-label={t.title}
-              className="group relative flex min-h-[188px] flex-col items-center justify-center overflow-visible rounded-[24px] px-1 py-2 text-center outline-none focus-visible:ring-1 focus-visible:ring-white/40 disabled:cursor-default"
+              className="group relative flex min-h-[158px] flex-col items-center justify-center overflow-visible rounded-[24px] px-1 py-1 text-center outline-none focus-visible:ring-1 focus-visible:ring-white/40 disabled:cursor-default"
               style={{
                 cursor: t.route && !isDone ? 'pointer' : 'default',
               }}
@@ -121,7 +127,13 @@ export default function Techniques() {
                   transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
                 />
               )}
-              <TechniqueArtwork kind={t.artwork} color={t.color} done={isDone} highlighted={isHighlighted} />
+              <TechniqueArtwork
+                kind={t.artwork}
+                color={t.color}
+                done={isDone}
+                highlighted={isHighlighted}
+                pressed={pressedTechnique === t.id}
+              />
               <h3
                 className="max-w-full px-1 text-primary leading-tight"
                 style={{ fontSize: 12, fontWeight: 300, letterSpacing: '0.06em', textTransform: 'uppercase', opacity: isDone ? 0.58 : 0.88, wordBreak: 'break-word' }}

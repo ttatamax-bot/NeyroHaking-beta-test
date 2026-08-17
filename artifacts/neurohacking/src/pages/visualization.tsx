@@ -129,7 +129,7 @@ const VIZ_TIMER_SECONDS = 180;
 const KEYS_REWARD = 20;
 const MAX_KEYS_PER_DAY = 40;
 const POTENTIAL_REWARD = 0.2;
-const SOURCE = 'Техника: Нейровизуализация';
+const SOURCE = 'Техника: Визуализация';
 const MIN_CHARS = 20;
 
 type Phase = 'goal-select' | 'questions' | 'timer';
@@ -310,7 +310,7 @@ export default function Visualization() {
             <button onClick={() => setLocation('/techniques')} className="p-1 text-tertiary mr-3">
               <ChevronLeft size={28} />
             </button>
-            <h1 className="title-l text-primary">Нейровизуализация</h1>
+            <h1 className="title-l text-primary">Визуализация</h1>
           </div>
           <p className="body text-secondary mb-8">Выбери цель для визуализации:</p>
           <div className="space-y-3">

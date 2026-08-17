@@ -16,12 +16,26 @@ interface TechniqueArtworkProps {
   color: string;
   done?: boolean;
   highlighted?: boolean;
+  pressed?: boolean;
 }
 
 const ICON_SIZE = 74;
 
-function iconMotion(reduced: boolean | null, kind: TechniqueArtworkKind) {
+function iconMotion(reduced: boolean | null, kind: TechniqueArtworkKind, pressed: boolean) {
   if (reduced) return {};
+  if (pressed) {
+    return {
+      animate: {
+        y: [0, 2, -1, 0],
+        rotate: [0, -3, 2, 0],
+        scale: [1, 0.84, 1.06, 0.96],
+      },
+      transition: {
+        duration: 0.48,
+        ease: "easeOut" as const,
+      },
+    };
+  }
   const direction = kind === "sleep" || kind === "visualization" ? -1 : 1;
   return {
     animate: {
@@ -37,7 +51,7 @@ function iconMotion(reduced: boolean | null, kind: TechniqueArtworkKind) {
   };
 }
 
-function ArtworkSvg({ kind, color, reduced }: { kind: TechniqueArtworkKind; color: string; reduced: boolean | null }) {
+function ArtworkSvg({ kind, color, reduced, pressed }: { kind: TechniqueArtworkKind; color: string; reduced: boolean | null; pressed: boolean }) {
   const common = {
     width: ICON_SIZE,
     height: ICON_SIZE,
@@ -47,6 +61,7 @@ function ArtworkSvg({ kind, color, reduced }: { kind: TechniqueArtworkKind; colo
     strokeWidth: 1.5,
     strokeLinecap: "round" as const,
     strokeLinejoin: "round" as const,
+    overflow: "visible" as const,
     "aria-hidden": true,
   };
 
@@ -71,8 +86,12 @@ function ArtworkSvg({ kind, color, reduced }: { kind: TechniqueArtworkKind; colo
         </motion.g>
         <motion.path
           d="M14 19C14 19 15.5 19.5 16.5 21C16.5 21 18 17 22 15"
-          animate={reduced ? undefined : { pathLength: [0.7, 1, 0.7], opacity: [0.65, 1, 0.65] }}
-          transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
+          animate={reduced ? undefined : pressed
+            ? { pathLength: [0.02, 1, 1], opacity: [0.2, 1, 1] }
+            : { pathLength: [0.02, 1, 1], opacity: [0.35, 1, 0.95] }}
+          transition={pressed
+            ? { duration: 0.5, ease: "easeOut" }
+            : { duration: 2.8, repeat: Infinity, ease: "easeInOut" }}
         />
         <path d="M2 7H5M2 7H5" />
       </motion.svg>
@@ -84,8 +103,13 @@ function ArtworkSvg({ kind, color, reduced }: { kind: TechniqueArtworkKind; colo
       <motion.svg {...common}>
         <motion.path
           d="M13.5001 22L13.7318 20.8445C13.8936 20.0376 14.5333 19.4121 15.3436 19.2685L16.156 19.1244C17.214 18.9261 17.9047 17.9391 17.6987 16.9201L17.3258 15.0749L18.7846 13.9936C18.9503 13.8708 19.0298 13.6683 18.9898 13.4705C18.9714 13.3797 18.9288 13.295 18.866 13.2249L16.752 10.9684C16.5071 10.707 16.3452 10.3827 16.2275 10.0444C15.5249 8.02369 13.1412 5.11904 8.23162 6.25555C3.07736 7.44871 2.78666 11.9991 3.07736 13.4378C3.46185 15.3407 4.31306 16.452 5.18511 17.4085C6.24497 18.5711 6.26308 20.2323 5.32602 21.4957L4.95195 22"
-          animate={reduced ? undefined : { pathLength: [0.94, 1, 0.94], opacity: [0.78, 1, 0.78] }}
-          transition={{ duration: 3.4, repeat: Infinity, ease: "easeInOut" }}
+          animate={reduced ? undefined : pressed
+            ? { y: [0, -2.2, 0], rotate: [0, -6, 0], pathLength: [0.96, 1, 0.98], opacity: [0.8, 1, 0.9] }
+            : { y: [0, -1.4, 0, 0.5, 0], rotate: [0, -4.5, 0, 2, 0], pathLength: [0.94, 1, 1, 1], opacity: [0.78, 1, 0.92, 1] }}
+          transition={pressed
+            ? { duration: 0.5, ease: "easeOut" }
+            : { duration: 4.6, repeat: Infinity, ease: "easeInOut" }}
+          style={{ transformOrigin: "12px 15px" }}
         />
         <motion.g
           animate={reduced ? undefined : { scale: [0.9, 1.1, 0.9], opacity: [0.45, 1, 0.45] }}
@@ -102,8 +126,12 @@ function ArtworkSvg({ kind, color, reduced }: { kind: TechniqueArtworkKind; colo
     return (
       <motion.svg {...common}>
         <motion.g
-          animate={reduced ? undefined : { y: [0, 1.5, 0], scaleX: [1, 1.025, 1] }}
-          transition={{ duration: 4.2, repeat: Infinity, ease: "easeInOut" }}
+          animate={reduced ? undefined : pressed
+            ? { y: [0, 2, -1, 0], scaleX: [1, 0.92, 1.04, 1] }
+            : { y: [0, 1.5, 0], scaleX: [1, 1.025, 1] }}
+          transition={pressed
+            ? { duration: 0.5, ease: "easeOut" }
+            : { duration: 4.2, repeat: Infinity, ease: "easeInOut" }}
           style={{ transformOrigin: "12px 15px" }}
         >
           <path d="M7.88598 10C8.57173 11.3968 9.30442 12.7049 9.1352 14.3142C8.86468 16.8869 5.74512 17.8552 3.75022 19.0404C2.44325 19.8169 2.9319 22 4.53582 22C6.48047 22 8.21607 21.8448 9.9706 21.0201L13.4111 18.9028C13.8887 18.6783 14.4913 18.774 15 19" />
@@ -112,8 +140,12 @@ function ArtworkSvg({ kind, color, reduced }: { kind: TechniqueArtworkKind; colo
         </motion.g>
         <motion.path
           d="M10 4C10 5.10457 10.8954 6 12 6C13.1046 6 14 5.10457 14 4C14 2.89543 13.1046 2 12 2C10.8954 2 10 2.89543 10 4Z"
-          animate={reduced ? undefined : { y: [0, -2, 0], opacity: [0.65, 1, 0.65] }}
-          transition={{ duration: 3.1, repeat: Infinity, ease: "easeInOut" }}
+          animate={reduced ? undefined : pressed
+            ? { y: [0, 1, -1, 0], scale: [1, 0.82, 1.08, 1], opacity: [0.7, 1, 0.8, 1] }
+            : { y: [0, 0.8, 0], opacity: [0.65, 1, 0.65] }}
+          transition={pressed
+            ? { duration: 0.5, ease: "easeOut" }
+            : { duration: 3.1, repeat: Infinity, ease: "easeInOut" }}
         />
       </motion.svg>
     );
@@ -122,12 +154,20 @@ function ArtworkSvg({ kind, color, reduced }: { kind: TechniqueArtworkKind; colo
   if (kind === "sleep") {
     return (
       <motion.svg {...common}>
-        <motion.path
-          d="M17.7422 2.25L18.037 3.0466C18.4235 4.09117 18.6167 4.61345 18.9977 4.99445C19.3787 5.37545 19.901 5.56871 20.9456 5.95523L21.7422 6.25L20.9456 6.54477C19.901 6.93129 19.3787 7.12455 18.9977 7.50555C18.6167 7.88655 18.4235 8.40883 18.037 9.4534L17.7422 10.25L17.4474 9.4534C17.0609 8.40883 16.8676 7.88655 16.4866 7.50555C16.1056 7.12455 15.5834 6.93129 14.5388 6.54477L13.7422 6.25L14.5388 5.95523C15.5834 5.56871 16.1056 5.37545 16.4866 4.99445C16.8676 4.61345 17.0609 4.09117 17.4474 3.0466L17.7422 2.25Z"
-          animate={reduced ? undefined : { rotate: [0, 8, 0], scale: [1, 1.08, 1], opacity: [0.6, 1, 0.6] }}
-          transition={{ duration: 3.8, repeat: Infinity, ease: "easeInOut" }}
-          style={{ transformOrigin: "17.7px 6.2px" }}
-        />
+        <motion.g
+          animate={reduced ? undefined : pressed ? { rotate: [0, 32, 0], scale: [1, 1.12, 1] } : { rotate: [0, 360] }}
+          transition={pressed
+            ? { duration: 0.55, ease: "easeOut" }
+            : { duration: 9.5, repeat: Infinity, ease: "linear" }}
+          style={{ transformOrigin: "12px 12px" }}
+        >
+          <motion.path
+            d="M17.7422 2.25L18.037 3.0466C18.4235 4.09117 18.6167 4.61345 18.9977 4.99445C19.3787 5.37545 19.901 5.56871 20.9456 5.95523L21.7422 6.25L20.9456 6.54477C19.901 6.93129 19.3787 7.12455 18.9977 7.50555C18.6167 7.88655 18.4235 8.40883 18.037 9.4534L17.7422 10.25L17.4474 9.4534C17.0609 8.40883 16.8676 7.88655 16.4866 7.50555C16.1056 7.12455 15.5834 6.93129 14.5388 6.54477L13.7422 6.25L14.5388 5.95523C15.5834 5.56871 16.1056 5.37545 16.4866 4.99445C16.8676 4.61345 17.0609 4.09117 17.4474 3.0466L17.7422 2.25Z"
+            animate={reduced ? undefined : { scale: [1, 1.1, 1], opacity: [0.55, 1, 0.55] }}
+            transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
+            style={{ transformOrigin: "17.7px 6.2px" }}
+          />
+        </motion.g>
         <path d="M21.2422 14.3284C20.0425 14.9689 18.6723 15.3321 17.2173 15.3321C12.4913 15.3321 8.66011 11.5009 8.66011 6.77485C8.66011 5.31986 9.02324 3.94968 9.66382 2.75C5.40984 3.74698 2.24219 7.56513 2.24219 12.1231C2.24219 17.4399 6.55229 21.75 11.8691 21.75C16.4271 21.75 20.2452 18.5824 21.2422 14.3284Z" />
       </motion.svg>
     );
@@ -143,8 +183,18 @@ function ArtworkSvg({ kind, color, reduced }: { kind: TechniqueArtworkKind; colo
         >
           <path d="M16 21.9995V21.4995C16 20.395 16.9321 19.5 17.9223 19.0106C18.8846 18.5349 19.6943 17.7507 19.7965 16.8308L20 14.9995L22 13.9995L19.5 10.2495C19.5 5.94601 16.2049 2.41209 12 2.03317" />
           <path d="M6.5 16.9957V21.9995M6.5 16.9957C5.46656 16.2668 4.60808 15.3063 4 14.1898M6.5 16.9957C7.25065 17.5253 8.09362 17.9326 9 18.189" />
-          <path d="M8 4H6C5.05719 4 4.58579 4 4.29289 4.29289C4 4.58579 4 5.05719 4 6V8C4 8.94281 4 9.41421 4.29289 9.70711C4.58579 10 5.05719 10 6 10H8C8.94281 10 9.41421 10 9.70711 9.70711C10 9.41421 10 9.05719 10 8V6C10 5.05719 9.70711 4.58579 9.29289 4.29289C9 4 8.94281 4 8 4Z" />
-          <path d="M5.5 9.99997V12M8.5 9.99997V12M5.5 1.99997V3.99997M8.5 1.99997V3.99997M4 5.49997H2M4 8.49997H2M12 5.49997H10M12 8.49997H10" />
+          <motion.g
+            animate={reduced ? undefined : pressed
+              ? { opacity: [0.45, 1, 0.35, 1], scale: [0.94, 1.04, 0.96, 1] }
+              : { opacity: [0.3, 1, 0.3], scale: [0.96, 1, 0.96] }}
+            transition={pressed
+              ? { duration: 0.65, ease: "easeOut" }
+              : { duration: 2.6, repeat: Infinity, ease: "easeInOut" }}
+            style={{ transformOrigin: "7px 7px" }}
+          >
+            <path d="M8 4H6C5.05719 4 4.58579 4 4.29289 4.29289C4 4.58579 4 5.05719 4 6V8C4 8.94281 4 9.41421 4.29289 9.70711C4.58579 10 5.05719 10 6 10H8C8.94281 10 9.41421 10 9.70711 9.70711C10 9.41421 10 9.05719 10 8V6C10 5.05719 9.70711 4.29289 9.29289 4.29289C9 4 9 4 8 4Z" />
+            <path d="M5.5 9.99997V12M8.5 9.99997V12M5.5 1.99997V3.99997M8.5 1.99997V3.99997M4 5.49997H2M4 8.49997H2M12 5.49997H10M12 8.49997H10" />
+          </motion.g>
         </motion.g>
       </motion.svg>
     );
@@ -152,18 +202,22 @@ function ArtworkSvg({ kind, color, reduced }: { kind: TechniqueArtworkKind; colo
 
   return (
     <motion.svg {...common}>
-      <motion.circle
-        cx="11"
-        cy="12.002"
-        r="8"
-        animate={reduced ? undefined : { r: [8, 8.35, 8], opacity: [0.72, 1, 0.72] }}
-        transition={{ duration: 2.8, repeat: Infinity, ease: "easeInOut" }}
-      />
       <motion.g
-        animate={reduced ? undefined : { rotate: [0, 8, 0] }}
-        transition={{ duration: 4.5, repeat: Infinity, ease: "easeInOut" }}
+        animate={reduced ? undefined : { rotate: [0, 360] }}
+        transition={{ duration: 7.5, repeat: Infinity, ease: "linear" }}
         style={{ transformOrigin: "11px 12px" }}
       >
+        <motion.circle
+          cx="11"
+          cy="12.002"
+          r="8"
+          animate={reduced ? undefined : pressed
+            ? { r: [8, 8, 12.2, 8], opacity: [0.8, 1, 0.12, 0.72] }
+            : { r: [8, 8, 8, 11.5, 8], opacity: [0.72, 1, 1, 0.12, 0.72] }}
+          transition={pressed
+            ? { duration: 0.65, ease: "easeOut" }
+            : { duration: 4.8, repeat: Infinity, ease: "easeInOut", times: [0, 0.52, 0.72, 0.8, 1] }}
+        />
         <path d="M11 11.752V12.002M11.5 12.002C11.5 12.2781 11.2761 12.502 11 12.502C10.7239 12.502 10.5 12.2781 10.5 12.002C10.5 11.7258 10.7239 11.502 11 11.502C11.2761 11.502 11.5 11.7258 11.5 12.002Z" />
         <path d="M11 2.00195V6.00195M11 18.002V22.002M21 12.002L17 12.001M5 12.002H1" />
       </motion.g>
@@ -171,13 +225,13 @@ function ArtworkSvg({ kind, color, reduced }: { kind: TechniqueArtworkKind; colo
   );
 }
 
-export function TechniqueArtwork({ kind, color, done = false, highlighted = false }: TechniqueArtworkProps) {
+export function TechniqueArtwork({ kind, color, done = false, highlighted = false, pressed = false }: TechniqueArtworkProps) {
   const reduced = useReducedMotion();
-  const animation = iconMotion(reduced, kind);
+  const animation = iconMotion(reduced, kind, pressed);
   const rgb = color.slice(1).match(/.{2}/g)?.map((part) => parseInt(part, 16)).join(",") ?? "249,115,22";
 
   return (
-    <div className="relative flex h-[clamp(144px,36vw,176px)] w-full items-center justify-center">
+    <div className="relative flex h-[clamp(124px,31vw,150px)] w-full items-center justify-center">
       <motion.div
         className="relative flex aspect-square w-[clamp(108px,29vw,136px)] items-center justify-center overflow-visible rounded-[21px] border"
         style={{
@@ -187,15 +241,23 @@ export function TechniqueArtwork({ kind, color, done = false, highlighted = fals
             ? `0 0 0 2px ${color}26, 0 0 28px ${color}32, inset 0 1px 0 rgba(255,255,255,0.12)`
             : `0 0 20px ${color}16, inset 0 1px 0 rgba(255,255,255,0.08)`,
         }}
-        animate={reduced ? undefined : { y: [0, -3, 0] }}
-        transition={{ duration: highlighted ? 2.8 : 4.8, repeat: Infinity, ease: "easeInOut" }}
+        animate={reduced ? undefined : pressed
+          ? { scale: 0.91, y: 2, rotate: -1.2 }
+          : { y: [0, -3, 0], scale: [1, 1, 1] }}
+        transition={pressed
+          ? { duration: 0.18, ease: "easeOut" }
+          : { duration: highlighted ? 2.8 : 4.8, repeat: Infinity, ease: "easeInOut" }}
       >
         <motion.div
           aria-hidden="true"
           className="pointer-events-none absolute h-20 w-20 rounded-full blur-2xl"
           style={{ background: `rgba(${rgb},0.42)` }}
-          animate={reduced ? undefined : { scale: [0.72, 1.12, 0.72], opacity: [0.3, 0.62, 0.3] }}
-          transition={{ duration: highlighted ? 2.2 : 4.2, repeat: Infinity, ease: "easeInOut" }}
+          animate={reduced ? undefined : pressed
+            ? { scale: [0.8, 1.35, 0.95], opacity: [0.35, 0.9, 0.45] }
+            : { scale: [0.72, 1.12, 0.72], opacity: [0.3, 0.62, 0.3] }}
+          transition={pressed
+            ? { duration: 0.48, ease: "easeOut" }
+            : { duration: highlighted ? 2.2 : 4.2, repeat: Infinity, ease: "easeInOut" }}
         />
         <motion.div
           aria-hidden="true"
@@ -209,7 +271,7 @@ export function TechniqueArtwork({ kind, color, done = false, highlighted = fals
           {...animation}
           style={{ color, filter: `drop-shadow(0 0 12px ${color}88)` }}
         >
-          <ArtworkSvg kind={kind} color={color} reduced={reduced} />
+          <ArtworkSvg kind={kind} color={color} reduced={reduced} pressed={pressed} />
         </motion.div>
         {done && (
           <motion.span

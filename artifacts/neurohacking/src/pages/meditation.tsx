@@ -194,7 +194,7 @@ export default function Meditation() {
             <button onClick={() => setLocation('/techniques')} className="p-1 text-tertiary mr-3">
               <ChevronLeft size={28} />
             </button>
-            <h1 className="title-l text-primary">Нейромедитация</h1>
+            <h1 className="title-l text-primary">Медитация</h1>
           </div>
           <div className="flex-1 flex flex-col justify-center px-4 overflow-y-auto pb-4">
               <p className="body text-secondary mb-8 leading-relaxed">
