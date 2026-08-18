@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useLocation } from "wouter";
 import { useAppStore } from "@/lib/store";
 import { motion, useReducedMotion } from "framer-motion";
@@ -100,25 +100,91 @@ const TECHNIQUE_PARTICLES = [
   { left: "84%", top: "93%", size: 2, color: "#FFE4B5", delay: 1.55, drift: 15 },
 ];
 
+const TECHNIQUE_STACK_OFFSET = 8;
+const TECHNIQUE_STACK_RELEASE = 260;
+const TECHNIQUE_EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
+
 function TechniqueCardMotion({
   children,
   techniqueIdx,
-  isDimmed,
 }: {
   children: ReactNode;
   techniqueIdx: number;
-  isDimmed: boolean;
 }) {
   return (
     <div
       className="technique-stack-card relative w-full"
-      style={{
-        zIndex: TECHNIQUES.length - techniqueIdx,
-        opacity: isDimmed ? 0.24 : 1,
-      }}
+      style={{ zIndex: TECHNIQUES.length - techniqueIdx }}
     >
       {children}
     </div>
+  );
+}
+
+function TechniqueCardVisualMotion({
+  children,
+  techniqueIdx,
+  stackProgress,
+  isDimmed,
+}: {
+  children: ReactNode;
+  techniqueIdx: number;
+  stackProgress: number;
+  isDimmed: boolean;
+}) {
+  const hasMounted = useRef(false);
+  const row = Math.floor(techniqueIdx / 2);
+  const column = techniqueIdx % 2;
+  const stackRelease = 1 - stackProgress;
+  const stackOffset = row * TECHNIQUE_STACK_OFFSET * stackRelease;
+  const stackTilt = row === 0
+    ? 0
+    : (column === 0 ? -1.2 : 1.2) * stackRelease;
+  const perspectiveTilt = -(11 + row * 0.8) * stackRelease;
+  const convergeX = (column === 0 ? -1 : 1) * row * 1.5 * stackRelease;
+
+  useEffect(() => {
+    hasMounted.current = true;
+  }, []);
+
+  return (
+    <motion.div
+      className="pointer-events-none relative flex min-h-[172px] w-full flex-col items-center justify-center overflow-visible rounded-[24px] py-1 text-center"
+      style={{
+        transformOrigin: "top center",
+        transformStyle: "preserve-3d",
+        willChange: "transform, opacity, filter",
+      }}
+      initial={{
+        opacity: 0,
+        x: convergeX,
+        y: 44 - stackOffset,
+        rotateX: perspectiveTilt + 16,
+        rotateZ: stackTilt + (column === 0 ? -1.8 : 1.8),
+        scale: 0.94,
+        filter: "blur(6px)",
+        transformPerspective: 680,
+      }}
+      animate={{
+        opacity: isDimmed ? 0.24 : 1,
+        x: convergeX,
+        y: -stackOffset,
+        rotateX: perspectiveTilt,
+        rotateZ: stackTilt,
+        scale: 1,
+        filter: "blur(0px)",
+        transformPerspective: 680,
+      }}
+      transition={hasMounted.current
+        ? { duration: 0.2, ease: "easeOut" }
+        : {
+            duration: 0.9 + row * 0.06,
+            delay: 0.1 + techniqueIdx * 0.07,
+            ease: TECHNIQUE_EASE,
+          }}
+    >
+      {children}
+    </motion.div>
   );
 }
 
@@ -571,13 +637,42 @@ export default function Techniques() {
   const { userState, todayTechniques, onboardingHighlight } = useAppStore();
   const [, setLocation] = useLocation();
   const [pressedTechnique, setPressedTechnique] = useState<string | null>(null);
+  const [stackProgress, setStackProgress] = useState(0);
+  const techniquesRef = useRef<HTMLDivElement | null>(null);
+  const scrollFrame = useRef<number | null>(null);
 
   const isOnboarding = userState === 'onboarding';
   const hasHighlight = isOnboarding && onboardingHighlight.length > 0;
   const doneCount = TECHNIQUES.filter(t => t.dayKey && todayTechniques[t.dayKey]).length;
 
+  useEffect(() => {
+    const page = techniquesRef.current;
+    const scrollParent = page?.parentElement;
+    if (!scrollParent) return;
+
+    const handleScroll = () => {
+      if (scrollFrame.current !== null) {
+        cancelAnimationFrame(scrollFrame.current);
+      }
+      scrollFrame.current = requestAnimationFrame(() => {
+        scrollFrame.current = null;
+        setStackProgress(Math.min(1, Math.max(0, scrollParent.scrollTop / TECHNIQUE_STACK_RELEASE)));
+      });
+    };
+
+    handleScroll();
+    scrollParent.addEventListener("scroll", handleScroll, { passive: true });
+    return () => {
+      scrollParent.removeEventListener("scroll", handleScroll);
+      if (scrollFrame.current !== null) {
+        cancelAnimationFrame(scrollFrame.current);
+        scrollFrame.current = null;
+      }
+    };
+  }, []);
+
   return (
-    <div className="relative isolate min-h-full pt-[56px] pb-24">
+    <div ref={techniquesRef} className="relative isolate min-h-full pt-[56px] pb-24">
       <MainLikeInstrumentAtmosphere />
 
       <div className="relative z-10 mx-auto w-full max-w-[390px] px-4">
@@ -609,7 +704,6 @@ export default function Techniques() {
             <TechniqueCardMotion
               key={t.id}
               techniqueIdx={idx}
-              isDimmed={isDimmed}
             >
               <button
                 type="button"
@@ -621,7 +715,7 @@ export default function Techniques() {
                 onPointerUp={() => setPressedTechnique(null)}
                 onPointerCancel={() => setPressedTechnique(null)}
                 onPointerLeave={() => setPressedTechnique(null)}
-                className="group relative flex min-h-[172px] w-full flex-col items-center justify-center overflow-visible rounded-[24px] px-0 py-1 text-center outline-none focus-visible:ring-1 focus-visible:ring-white/40"
+                className="group relative min-h-[172px] w-full appearance-none rounded-[24px] border-0 bg-transparent p-0 text-center outline-none focus-visible:ring-1 focus-visible:ring-white/40"
                 style={{
                   cursor: t.route ? "pointer" : "default",
                   touchAction: "manipulation",
@@ -629,27 +723,33 @@ export default function Techniques() {
                   zIndex: 1,
                 }}
               >
-                {isHighlighted && (
-                  <motion.span
-                    aria-hidden="true"
-                    className="pointer-events-none absolute inset-2 rounded-[28px] border border-white/25"
-                    animate={{ opacity: [0.25, 0.8, 0.25], scale: [0.96, 1.03, 0.96] }}
-                    transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
-                  />
-                )}
-                <TechniqueArtwork
-                  kind={t.artwork}
-                  color={t.color}
-                  done={isDone}
-                  highlighted={isHighlighted}
-                  pressed={pressedTechnique === t.id}
-                />
-                <h3
-                  className="max-w-full px-1 text-primary leading-tight"
-                  style={{ fontSize: 12, fontWeight: 300, letterSpacing: "0.06em", textTransform: "uppercase", opacity: isDone ? 0.58 : 0.88, wordBreak: "break-word" }}
+                <TechniqueCardVisualMotion
+                  techniqueIdx={idx}
+                  stackProgress={stackProgress}
+                  isDimmed={isDimmed}
                 >
-                  {t.title}
-                </h3>
+                  {isHighlighted && (
+                    <motion.span
+                      aria-hidden="true"
+                      className="pointer-events-none absolute inset-2 rounded-[28px] border border-white/25"
+                      animate={{ opacity: [0.25, 0.8, 0.25], scale: [0.96, 1.03, 0.96] }}
+                      transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
+                    />
+                  )}
+                  <TechniqueArtwork
+                    kind={t.artwork}
+                    color={t.color}
+                    done={isDone}
+                    highlighted={isHighlighted}
+                    pressed={pressedTechnique === t.id}
+                  />
+                  <h3
+                    className="max-w-full px-1 text-primary leading-tight"
+                    style={{ fontSize: 12, fontWeight: 300, letterSpacing: "0.06em", textTransform: "uppercase", opacity: isDone ? 0.58 : 0.88, wordBreak: "break-word" }}
+                  >
+                    {t.title}
+                  </h3>
+                </TechniqueCardVisualMotion>
               </button>
             </TechniqueCardMotion>
           );

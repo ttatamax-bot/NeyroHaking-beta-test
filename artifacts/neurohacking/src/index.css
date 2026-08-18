@@ -273,11 +273,13 @@
   }
 
   .technique-stack-list {
-    position: relative;
+    perspective: 1100px;
+    transform-style: preserve-3d;
   }
 
   .technique-stack-card {
-    position: relative;
+    backface-visibility: hidden;
+    transform-style: preserve-3d;
   }
 
   .technique-atmosphere,
