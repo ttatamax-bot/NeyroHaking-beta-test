@@ -96,7 +96,7 @@ import { useLocation } from "wouter";
           className="fixed left-0 right-0 z-50 flex justify-center"
           style={{ bottom: 'max(20px, env(safe-area-inset-bottom, 20px))', padding: '0 16px' }}
         >
-          <div className="w-full max-w-[390px]">
+          <div className="w-full max-w-none">
             <div
               className="relative h-[62px] flex items-center justify-around"
               style={{

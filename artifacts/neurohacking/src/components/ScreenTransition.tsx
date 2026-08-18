@@ -16,7 +16,7 @@ export function ScreenTransition({ children, className = "" }: { children: React
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.12, ease: "easeOut" }}
-      className={`w-full min-h-screen ${className}`}
+      className={`w-full min-h-[100dvh] ${className}`}
     >
       {children}
     </motion.div>

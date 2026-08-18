@@ -78,6 +78,7 @@
 
   html {
     background-color: #0F2035;
+    min-height: 100%;
   }
 
   body {
@@ -85,6 +86,11 @@
     font-size: 18px;
     letter-spacing: 0.015em;
     background: #0F2035;
+    min-height: 100dvh;
+    overscroll-behavior: none;
+  }
+
+  #root {
     min-height: 100dvh;
   }
 }

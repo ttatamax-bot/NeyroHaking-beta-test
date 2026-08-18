@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { useLocation } from "wouter";
 import { useAppStore } from "@/lib/store";
 import { motion, useReducedMotion } from "framer-motion";
 import { Check } from "lucide-react";
@@ -619,7 +618,6 @@ function MainLikeInstrumentAtmosphere() {
 
 export default function Techniques() {
   const { userState, todayTechniques, onboardingHighlight } = useAppStore();
-  const [, setLocation] = useLocation();
   const [pressedTechnique, setPressedTechnique] = useState<string | null>(null);
   const [stackProgress, setStackProgress] = useState(0);
   const techniquesRef = useRef<HTMLDivElement | null>(null);

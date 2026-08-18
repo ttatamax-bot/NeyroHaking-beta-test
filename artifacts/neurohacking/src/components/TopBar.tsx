@@ -7,6 +7,7 @@ export function TopBar() {
   const { potential, keys, streak, userState } = useAppStore();
 
   const isReadMode = /\/article\/[^/]+\/read/.test(location);
+  const isArticleRoute = location.startsWith('/article/');
   const isAcademyRoute =
     location === '/academy' ||
     location.startsWith('/academy') ||
@@ -15,7 +16,7 @@ export function TopBar() {
     location === '/keys-stats' ||
     location === '/potential-stats';
 
-  if (!isAcademyRoute || isReadMode || userState === 'new' || userState === 'dayDone') return null;
+  if (!isAcademyRoute || isArticleRoute || isReadMode || userState === 'new' || userState === 'dayDone') return null;
 
   return (
     <div
