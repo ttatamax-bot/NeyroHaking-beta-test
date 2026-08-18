@@ -1,6 +1,6 @@
 import { useAppStore } from "@/lib/store";
 import { useLocation } from "wouter";
-import { motion, useReducedMotion } from "framer-motion";
+import { motion, useInView, useReducedMotion } from "framer-motion";
 import { useEffect, useRef, useState, type UIEvent } from "react";
 import { Sparkles, ChevronRight, LogIn } from "lucide-react";
 import { DataLoadingScreen } from "@/components/DataLoadingScreen";
@@ -72,50 +72,51 @@ function NewsCardMotion({
   newsIdx: number;
   stackProgress: number;
 }) {
-  const hasMounted = useRef(false);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const isInView = useInView(cardRef, {
+    once: true,
+    amount: 0.2,
+    margin: "0px 0px -8% 0px",
+  });
   const stackRelease = 1 - stackProgress;
   const stackOffset = newsIdx * NEWS_STACK_OFFSET * stackRelease;
-  const stackTilt = newsIdx === 0 ? 0 : (newsIdx % 2 === 0 ? 0.55 : -0.55) * stackRelease;
-  const perspectiveTilt = -(12 + newsIdx * 0.8) * stackRelease;
-
-  useEffect(() => {
-    hasMounted.current = true;
-  }, []);
 
   return (
     <motion.div
+      ref={cardRef}
       className="news-stack-card relative w-full"
       style={{
         transformOrigin: "top center",
         transformStyle: "preserve-3d",
         willChange: "transform, opacity, filter",
         zIndex: 3 - newsIdx,
+        pointerEvents: "none",
       }}
       initial={{
         opacity: 0,
-        y: 46 - stackOffset,
-        rotateX: perspectiveTilt + 16,
-        rotateZ: stackTilt + (newsIdx % 2 === 0 ? -1.5 : 1.5),
+        y: 44,
+        rotateX: 0,
+        rotateZ: 0,
         scale: 0.95,
         filter: "blur(6px)",
         transformPerspective: 680,
       }}
       animate={{
-        opacity: 1,
-        y: -stackOffset,
-        rotateX: perspectiveTilt,
-        rotateZ: stackTilt,
+        opacity: isInView ? 1 : 0,
+        y: isInView ? -stackOffset : 44,
+        rotateX: 0,
+        rotateZ: 0,
         scale: 1,
-        filter: "blur(0px)",
+        filter: isInView ? "blur(0px)" : "blur(6px)",
         transformPerspective: 680,
       }}
-      transition={hasMounted.current
-        ? { duration: 0.2, ease: "easeOut" }
-        : {
-            duration: 0.82 + newsIdx * 0.08,
-            delay: 0.12 + newsIdx * 0.08,
+      transition={isInView
+        ? {
+            duration: stackProgress > 0 ? 0.18 : 0.72,
+            delay: stackProgress > 0 ? 0 : newsIdx * 0.1,
             ease: NEWS_EASE,
-          }}
+          }
+        : { duration: 0.2, ease: "easeOut" }}
     >
       {children}
     </motion.div>
@@ -555,6 +556,8 @@ export default function Home() {
   const [devPotential, setDevPotentialState] = useState(() => getDevPotential());
   const [newsStackProgress, setNewsStackProgress] = useState(0);
   const newsScrollFrame = useRef<number | null>(null);
+  const homeScrollRef = useRef<HTMLDivElement>(null);
+  const newsSectionRef = useRef<HTMLElement>(null);
 
   const waitingForAccount =
     !import.meta.env.DEV && (!isAuthLoaded || (isSignedIn && !isAccountReady));
@@ -584,18 +587,40 @@ export default function Home() {
     };
   }, []);
 
-  const handleHomeScroll = (event: UIEvent<HTMLDivElement>) => {
+  const updateNewsStackProgress = (container: HTMLDivElement) => {
+    const section = newsSectionRef.current;
+    if (!section) return;
+
+    const containerRect = container.getBoundingClientRect();
+    const sectionRect = section.getBoundingClientRect();
+    const sectionTop = sectionRect.top - containerRect.top + container.scrollTop;
+    const revealStart = Math.max(0, sectionTop - container.clientHeight * 0.62);
+    const nextProgress = Math.min(
+      1,
+      Math.max(0, (container.scrollTop - revealStart) / NEWS_STACK_RELEASE),
+    );
+
     if (newsScrollFrame.current !== null) {
       cancelAnimationFrame(newsScrollFrame.current);
     }
-    const nextProgress = Math.min(
-      1,
-      Math.max(0, (event.currentTarget.scrollTop - 360) / NEWS_STACK_RELEASE),
-    );
     newsScrollFrame.current = requestAnimationFrame(() => {
       newsScrollFrame.current = null;
       setNewsStackProgress(nextProgress);
     });
+  };
+
+  useEffect(() => {
+    if (homeScrollRef.current) {
+      updateNewsStackProgress(homeScrollRef.current);
+    }
+  }, []);
+
+  const handleHomeScroll = (event: UIEvent<HTMLDivElement>) => {
+    const container = event.currentTarget;
+    if (newsScrollFrame.current !== null) {
+      cancelAnimationFrame(newsScrollFrame.current);
+    }
+    updateNewsStackProgress(container);
   };
 
   const visualPotential = developerToolsEnabled ? devPotential : potential;
@@ -717,7 +742,7 @@ export default function Home() {
   }
 
   return (
-    <div className="relative pb-[110px] overflow-y-auto min-h-[100dvh]" onScroll={handleHomeScroll}>
+    <div ref={homeScrollRef} className="relative pb-[110px] overflow-y-auto min-h-[100dvh]" onScroll={handleHomeScroll}>
       <div className="relative z-10">
 
         <div className="flex items-center justify-between px-6 pt-[38px] pb-1">
@@ -751,7 +776,7 @@ export default function Home() {
 
         <div className="mx-5 mt-4 mb-6 h-px" style={{ background: 'rgba(100,160,230,0.1)' }} />
 
-        <section className="px-5 pb-8">
+        <section ref={newsSectionRef} className="px-5 pb-8">
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -779,7 +804,7 @@ export default function Home() {
                       if (!isRead) updateState(prev => ({ readNews: [...prev.readNews, item.id] }));
                       setLocation(`/news/${item.id}`);
                     }}
-                    className="group relative flex min-h-[196px] w-full flex-col overflow-hidden rounded-[20px] p-5 text-left transition-[filter] active:brightness-110"
+                    className="pointer-events-auto group relative flex min-h-[196px] w-full flex-col overflow-hidden rounded-[20px] p-5 text-left transition-[filter] active:brightness-110"
                     style={{
                       opacity: isRead ? 0.55 : 1,
                       background: 'linear-gradient(135deg, rgba(245,158,11,0.22) 0%, rgba(255,255,255,0.035) 52%, rgba(0,0,0,0.1)), #3E2E1D',
@@ -808,24 +833,25 @@ export default function Home() {
                       animate={{ rotate: -360, opacity: [0.18, 0.42, 0.18] }}
                       transition={{ duration: 16 + i * 2, repeat: Infinity, ease: "linear" }}
                     />
+                    {!isRead && (
+                      <span
+                        aria-label="Непрочитанная новость"
+                        className="absolute right-4 top-4 z-20 h-2.5 w-2.5 rounded-full"
+                        style={{ background: '#EF4444', boxShadow: '0 0 10px rgba(239,68,68,0.95)' }}
+                      />
+                    )}
                     <div className="relative z-10 flex items-start justify-between gap-3">
-                      <h3 className="title-s min-w-0 flex-1 text-primary leading-snug">
+                      <h3 className="title-s min-w-0 flex-1 pr-20 text-primary leading-snug">
                         {item.title}
                       </h3>
                       <span
-                        className="caption flex shrink-0 items-center gap-1.5 pt-0.5"
+                        className="caption absolute right-8 top-0 flex shrink-0 items-center pt-0.5"
                         style={{ color: 'rgba(255,228,181,.72)' }}
                       >
-                        {!isRead && (
-                          <span
-                            className="h-2 w-2 rounded-full"
-                            style={{ background: '#EF4444', boxShadow: '0 0 8px rgba(239,68,68,0.9)' }}
-                          />
-                        )}
                         {item.date}
                       </span>
                     </div>
-                    <p className="body-s relative z-10 mt-3 line-clamp-3 text-secondary leading-relaxed">
+                    <p className="body-s relative z-10 mt-3 line-clamp-3 pr-2 text-secondary leading-relaxed">
                       {item.description}
                     </p>
                   </motion.button>
