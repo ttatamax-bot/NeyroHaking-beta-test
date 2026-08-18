@@ -318,7 +318,7 @@ import { HABIT_GUIDE_TITLE } from "@/content/habit-guide";
     showUnreadDot: boolean;
   }) {
     const reduced = useReducedMotion();
-    const priceLabel = !isUnlocked && cost > 0 ? formatKeys(cost) : null;
+    const priceLabel = !isUnlocked && cost === 400 ? "400 ключей" : null;
 
     return (
       <div className="ml-auto flex w-[38px] shrink-0 flex-col items-end text-right">

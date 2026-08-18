@@ -655,11 +655,8 @@ export default function Techniques() {
     };
   }, []);
 
-  const handleTap = (technique: Technique, isDone: boolean) => {
-    if (userState === 'new') return;
-    if (isOnboarding) return;
+  const handleTap = (technique: Technique) => {
     if (!technique.route) return;
-    if (isDone && !technique.repeatable) return;
     setLocation(technique.route);
   };
 
@@ -679,7 +676,7 @@ export default function Techniques() {
         </span>
       </motion.div>
 
-      <div className="technique-stack-list relative z-10 mx-auto grid w-full grid-cols-2 gap-x-1 gap-y-0">
+      <div className="technique-stack-list relative z-10 mx-auto -mx-2 grid w-[calc(100%+16px)] grid-cols-2 gap-x-0 gap-y-0">
         {TECHNIQUES.map((t, idx) => {
           const isDone        = Boolean(t.dayKey && todayTechniques[t.dayKey]);
           const isHighlighted = hasHighlight && onboardingHighlight.includes(t.id);
@@ -695,13 +692,13 @@ export default function Techniques() {
               <button
                 type="button"
                 disabled={!t.route}
-                onClick={() => handleTap(t, isDone)}
+                 onClick={() => handleTap(t)}
                 onPointerDown={() => t.route && setPressedTechnique(t.id)}
                 onPointerUp={() => setPressedTechnique(null)}
                 onPointerCancel={() => setPressedTechnique(null)}
                 onPointerLeave={() => setPressedTechnique(null)}
                 aria-label={t.title}
-                className="group relative flex min-h-[172px] w-full flex-col items-center justify-center overflow-visible rounded-[24px] px-0 py-1 text-center outline-none focus-visible:ring-1 focus-visible:ring-white/40 disabled:cursor-default"
+                 className="group relative flex min-h-[186px] w-full flex-col items-center justify-center overflow-visible rounded-[24px] px-0 py-1 text-center outline-none focus-visible:ring-1 focus-visible:ring-white/40 disabled:cursor-default"
                 style={{
                   cursor: t.route && !isDone ? "pointer" : "default",
                 }}

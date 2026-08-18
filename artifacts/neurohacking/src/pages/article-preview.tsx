@@ -78,8 +78,8 @@ function ArticleInstrumentPreview({ articleId }: { articleId: string }) {
       className="pointer-events-none absolute inset-0 z-0 overflow-hidden"
       style={{
         background: [
-          `radial-gradient(ellipse 90% 38% at 50% 18%, ${visual.glow}, transparent 76%)`,
-          `linear-gradient(180deg, ${visual.surface} 0%, rgba(9,24,43,0.94) 38%, #0F2035 78%)`,
+          `radial-gradient(ellipse 90% 42% at 50% 18%, ${visual.glow}, transparent 78%)`,
+          `linear-gradient(180deg, ${visual.surface} 0%, ${visual.surface} 100%)`,
         ].join(", "),
       }}
     >
@@ -98,12 +98,12 @@ function ArticleInstrumentPreview({ articleId }: { articleId: string }) {
       />
 
       {[0, 1, 2].map((ringIndex) => {
-        const size = 168 + ringIndex * 58;
+        const size = 190 + ringIndex * 64;
         return (
           <motion.div
             key={`${articleId}-preview-ring-${ringIndex}`}
             aria-hidden="true"
-            className="pointer-events-none absolute left-[68%] top-[25%] rounded-full border"
+            className="pointer-events-none absolute left-[70%] top-[24%] rounded-full border"
             style={{
               width: size,
               height: size,
@@ -151,7 +151,7 @@ export default function ArticlePreview() {
   const canAfford  = keys >= article.cost;
   const statusLabel = isUnlocked
     ? (isRead ? 'Прочитано' : 'Открыто')
-    : `${formatKeys(article.cost)} ключей`;
+    : article.cost === 400 ? '400 ключей' : 'Закрыто';
   const statusClass = isUnlocked
     ? 'bg-[rgba(34,197,94,0.1)] border-[rgba(34,197,94,0.2)] text-success'
     : 'bg-surface-1 border-border text-secondary';
@@ -189,7 +189,9 @@ export default function ArticlePreview() {
       }
       setLocation(`/article/${id}/read`);
     } else {
-      setToastMsg(`Нужно ${formatKeys(article.cost)} ключей. Выполняй техники — зарабатывай ключи.`);
+      setToastMsg(article.cost === 400
+        ? "Нужно 400 ключей. Выполняй техники — зарабатывай ключи."
+        : "Недостаточно ключей. Выполняй техники — зарабатывай ключи.");
       setTimeout(() => setToastMsg(null), 3000);
     }
   };
@@ -206,7 +208,7 @@ export default function ArticlePreview() {
 
       <ArticleInstrumentPreview articleId={id || 'A1'} />
 
-      <div className="relative z-10 flex-1 mt-4 pt-[230px]">
+      <div className="relative z-10 flex-1 mt-4 pt-[170px]">
         <div className="flex items-center gap-2 mb-3">
           <span className={`label px-2 py-1 rounded-[6px] border ${statusClass}`}>
             {statusLabel}
@@ -228,9 +230,11 @@ export default function ArticlePreview() {
         {!isUnlocked && !canAfford && (
           <div className="mt-4 flex items-start gap-3 bg-surface-1 border border-border rounded-[12px] p-4">
             <Lock size={18} className="text-tertiary shrink-0 mt-0.5" />
-            <p className="body-s text-secondary">
-              У тебя {keys} ключей. Нужно ещё {article.cost - keys} — выполняй техники каждый день.
-            </p>
+             <p className="body-s text-secondary">
+               {article.cost === 400
+                 ? `У тебя ${keys} ключей. Нужно ещё ${article.cost - keys} — выполняй техники каждый день.`
+                 : "Для открытия этой статьи нужны ключи. Выполняй техники — зарабатывай ключи."}
+             </p>
           </div>
         )}
         {!isUnlocked && canAfford && (
@@ -254,12 +258,12 @@ export default function ArticlePreview() {
                 : 'bg-surface-1 border border-border text-tertiary'
           }`}
         >
-          {isUnlocked
-            ? 'Читать'
-            : canAfford
-              ? `Открыть за ${formatKeys(article.cost)} ключей`
-              : 'Недостаточно ключей'
-          }
+           {isUnlocked
+             ? 'Читать'
+             : canAfford
+               ? article.cost === 400 ? 'Открыть за 400 ключей' : 'Открыть'
+               : 'Недостаточно ключей'
+           }
         </button>
       </div>
     </ScreenTransition>
