@@ -376,42 +376,46 @@ import { HABIT_GUIDE_TITLE } from "@/content/habit-guide";
             const perspectiveTilt = -(16 + articleIdx * 0.5) * stackRelease;
 
             return (
-              <motion.div
+              <div
                 key={a.id}
                 className="article-stack-card relative w-full"
                 style={{
+                  transform: `translate3d(0, -${stackOffset}px, 0)`,
                   transformOrigin: 'top center',
-                  transformStyle: 'preserve-3d',
-                  willChange: 'transform, opacity, filter',
+                  willChange: 'transform',
                   zIndex: articleIdx + 1,
                 }}
-                initial={{
-                  opacity: 0,
-                  y: 58 - stackOffset,
-                  rotateX: perspectiveTilt + 18,
-                  rotateZ: stackTilt + (articleIdx % 2 === 0 ? -2.5 : 2.5),
-                  scale: 0.94,
-                  filter: "blur(7px)",
-                }}
-                animate={{
-                  opacity: 1,
-                  y: -stackOffset,
-                  rotateX: perspectiveTilt,
-                  rotateZ: stackTilt,
-                  scale: 1,
-                  filter: "blur(0px)",
-                }}
-                transition={{
-                  duration: 1.05 + articleIdx * 0.07,
-                  delay: 0.12 + articleIdx * 0.11,
-                  ease: EASE,
-                }}
               >
-                <button
+                <motion.button
+                  initial={{
+                    opacity: 0,
+                    y: 58,
+                    rotateX: 18,
+                    rotateZ: articleIdx % 2 === 0 ? -2.5 : 2.5,
+                    scale: 0.94,
+                    filter: "blur(7px)",
+                    transformPerspective: 560,
+                  }}
+                  animate={{
+                    opacity: 1,
+                    y: 0,
+                    rotateX: 0,
+                    rotateZ: 0,
+                    scale: 1,
+                    filter: "blur(0px)",
+                    transformPerspective: 560,
+                  }}
+                  transition={{
+                    duration: 1.05 + articleIdx * 0.07,
+                    delay: 0.12 + articleIdx * 0.11,
+                    ease: EASE,
+                  }}
+                  whileTap={isOnboarding ? {} : { filter: "brightness(1.08)" }}
                   onClick={() => !isOnboarding && setLocation(`/article/${a.id}`)}
                   className="group relative flex w-full flex-col overflow-hidden rounded-[20px] p-4 text-left transition-[filter] active:brightness-110"
                   style={{
                     transformOrigin: "top center",
+                    transformStyle: "preserve-3d",
                   background: `linear-gradient(135deg, ${visual.glow}, rgba(255,255,255,0.035) 52%, rgba(0,0,0,0.1)), ${visual.surface}`,
                   border: `1px solid ${visual.color}45`,
                   boxShadow: `0 5px 24px ${visual.glow}, 0 1px 0 rgba(255,237,213,0.09) inset, ${CARD_SHADOW}`,
@@ -566,8 +570,8 @@ import { HABIT_GUIDE_TITLE } from "@/content/habit-guide";
                     </span>
                   )}
                 </div>
-                </button>
-              </motion.div>
+                </motion.button>
+              </div>
             );
           })}
 
