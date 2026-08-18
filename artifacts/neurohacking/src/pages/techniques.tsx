@@ -568,72 +568,57 @@ export default function Techniques() {
         </span>
       </motion.div>
 
-      <div
-        className="relative z-10 mx-auto grid w-[min(100%,360px)] grid-cols-2 gap-x-1 gap-y-0"
-        style={{ perspective: 1100 }}
-      >
+      <div className="relative z-10 mx-auto grid w-[min(100%,280px)] grid-cols-2 gap-x-0 gap-y-1">
         {TECHNIQUES.map((t, idx) => {
           const isDone        = Boolean(t.dayKey && todayTechniques[t.dayKey]);
           const isHighlighted = hasHighlight && onboardingHighlight.includes(t.id);
           const isDimmed      = hasHighlight && !onboardingHighlight.includes(t.id);
-          const stackPose = {
-            x: idx % 2 === 0 ? -3 : 3,
-            y: idx < 2 ? 3 : idx % 2 === 0 ? -2 : 1,
-            rotateX: idx % 2 === 0 ? 3.5 : -3.5,
-            rotateZ: idx % 2 === 0 ? -1.1 : 1.1,
-          };
 
           return (
-            <motion.div
+            <motion.button
               key={t.id}
-              initial={{ opacity: 0, y: 26, rotateX: 10, rotateZ: idx % 2 === 0 ? -4 : 4 }}
+              type="button"
+              disabled={!t.route}
+              initial={{ opacity: 0, y: 24 }}
               animate={isDimmed
-                ? { ...stackPose, opacity: 0.24 }
-                : { ...stackPose, opacity: 1 }
+                ? { opacity: 0.24, y: 0 }
+                : { opacity: 1, y: 0 }
               }
-              transition={{ delay: isOnboarding ? 0 : idx * 0.08, duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-              className="relative flex min-h-[198px] items-center justify-center"
-              style={{ transformStyle: "preserve-3d", zIndex: TECHNIQUES.length - idx }}
+              transition={{ delay: isOnboarding ? 0 : idx * 0.08, duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+              whileTap={isOnboarding || isDone || !t.route ? {} : { scale: 0.97 }}
+              onClick={() => handleTap(t, isDone)}
+              onPointerDown={() => t.route && setPressedTechnique(t.id)}
+              onPointerUp={() => setPressedTechnique(null)}
+              onPointerCancel={() => setPressedTechnique(null)}
+              onPointerLeave={() => setPressedTechnique(null)}
+              aria-label={t.title}
+              className="group relative flex min-h-[158px] flex-col items-center justify-center overflow-visible rounded-[24px] px-1 py-1 text-center outline-none focus-visible:ring-1 focus-visible:ring-white/40 disabled:cursor-default"
+              style={{
+                cursor: t.route && !isDone ? 'pointer' : 'default',
+              }}
             >
-              <motion.button
-                type="button"
-                disabled={!t.route}
-                whileTap={isOnboarding || isDone || !t.route ? {} : { scale: 0.965 }}
-                onClick={() => handleTap(t, isDone)}
-                onPointerDown={() => t.route && setPressedTechnique(t.id)}
-                onPointerUp={() => setPressedTechnique(null)}
-                onPointerCancel={() => setPressedTechnique(null)}
-                onPointerLeave={() => setPressedTechnique(null)}
-                aria-label={t.title}
-                className="group relative flex min-h-[198px] w-full flex-col items-center justify-center overflow-visible rounded-[28px] px-0 py-1 text-center outline-none focus-visible:ring-1 focus-visible:ring-white/40 disabled:cursor-default"
-                style={{
-                  cursor: t.route && !isDone ? 'pointer' : 'default',
-                  transformStyle: "preserve-3d",
-                }}
-              >
-                {isHighlighted && (
-                  <motion.span
-                    aria-hidden="true"
-                    className="pointer-events-none absolute inset-1 rounded-[30px] border border-white/25"
-                    animate={{ opacity: [0.25, 0.8, 0.25], scale: [0.96, 1.03, 0.96] }}
-                    transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
-                  />
-                )}
-                <TechniqueArtwork
-                  kind={t.artwork}
-                  color={t.color}
-                  done={isDone}
-                  highlighted={isHighlighted}
-                  pressed={pressedTechnique === t.id}
+              {isHighlighted && (
+                <motion.span
+                  aria-hidden="true"
+                  className="pointer-events-none absolute inset-2 rounded-[28px] border border-white/25"
+                  animate={{ opacity: [0.25, 0.8, 0.25], scale: [0.96, 1.03, 0.96] }}
+                  transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
                 />
-                <h3
-                  className="max-w-full px-1 text-primary leading-tight"
-                  style={{ fontSize: 12, fontWeight: 300, letterSpacing: '0.06em', textTransform: 'uppercase', opacity: isDone ? 0.58 : 0.88, wordBreak: 'break-word' }}
-                >
-                  {t.title}
-                </h3>
-              </motion.button>
-            </motion.div>
+              )}
+              <TechniqueArtwork
+                kind={t.artwork}
+                color={t.color}
+                done={isDone}
+                highlighted={isHighlighted}
+                pressed={pressedTechnique === t.id}
+              />
+              <h3
+                className="max-w-full px-1 text-primary leading-tight"
+                style={{ fontSize: 12, fontWeight: 300, letterSpacing: '0.06em', textTransform: 'uppercase', opacity: isDone ? 0.58 : 0.88, wordBreak: 'break-word' }}
+              >
+                {t.title}
+              </h3>
+            </motion.button>
           );
         })}
       </div>
