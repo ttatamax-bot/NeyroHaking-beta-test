@@ -282,6 +282,16 @@
     transform-style: preserve-3d;
   }
 
+  .news-stack-list {
+    perspective: 1100px;
+    transform-style: preserve-3d;
+  }
+
+  .news-stack-card {
+    backface-visibility: hidden;
+    transform-style: preserve-3d;
+  }
+
   .technique-atmosphere,
   .technique-atmosphere-rings {
     transform-style: preserve-3d;

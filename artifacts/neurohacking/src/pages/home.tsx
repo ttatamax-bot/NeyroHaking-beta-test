@@ -1,8 +1,8 @@
 import { useAppStore } from "@/lib/store";
 import { useLocation } from "wouter";
-import { motion } from "framer-motion";
-import { useEffect, useState } from "react";
-import { Sparkles, ChevronRight, Target, Map as MapIcon, Eye, LogIn } from "lucide-react";
+import { motion, useReducedMotion } from "framer-motion";
+import { useEffect, useRef, useState, type UIEvent } from "react";
+import { Sparkles, ChevronRight, LogIn } from "lucide-react";
 import { DataLoadingScreen } from "@/components/DataLoadingScreen";
 import { DEV_POTENTIAL_EVENT, getDevPotential } from "@/lib/dev-potential";
 import { hasDeveloperTools } from "@/lib/developer-mode";
@@ -15,6 +15,8 @@ const NEWS_ITEMS = [
 ];
 
 const SCALE_BAR_COUNT = 12;
+const NEWS_STACK_RELEASE = 260;
+const NEWS_EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
 function getTodayLabels() {
   const today = new Date();
@@ -24,6 +26,109 @@ function getTodayLabels() {
       .replace(/\.$/, ''),
     date: new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long' }).format(today),
   };
+}
+
+function NewsSystemMark() {
+  const reduced = useReducedMotion();
+
+  return (
+    <motion.div
+      className="relative flex h-[56px] w-[56px] shrink-0 items-center justify-center"
+      initial={{ opacity: 0, scale: 0.72, y: 10 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      transition={{ duration: 0.75, ease: NEWS_EASE }}
+      aria-hidden="true"
+    >
+      <motion.span
+        className="pointer-events-none absolute inset-[-8px] rounded-full"
+        style={{ background: "radial-gradient(circle, rgba(245,158,11,.22), transparent 70%)" }}
+        animate={reduced ? { opacity: 0.5, scale: 1 } : { opacity: [0.28, 0.72, 0.28], scale: [0.9, 1.08, 0.9] }}
+        transition={reduced ? { duration: 0.3 } : { duration: 3.6, repeat: Infinity, ease: "easeInOut" }}
+      />
+      <motion.span
+        className="pointer-events-none absolute inset-[-5px] rounded-full border"
+        style={{ borderColor: "rgba(255,210,125,.3)" }}
+        animate={reduced ? { opacity: 0.55, rotate: 0 } : { opacity: [0.35, 0.72, 0.35], rotate: [0, 360] }}
+        transition={reduced
+          ? { duration: 0.3 }
+          : {
+              opacity: { duration: 3.4, repeat: Infinity, ease: "easeInOut" },
+              rotate: { duration: 18, repeat: Infinity, ease: "linear" },
+            }}
+      />
+      <motion.svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="38"
+        height="38"
+        fill="currentColor"
+        viewBox="0 0 256 256"
+        className="relative z-10 text-[#FFE4B5]"
+        animate={reduced ? { y: 0, rotate: 0 } : { y: [0, -1.5, 0], rotate: [0, 1.2, 0] }}
+        transition={reduced ? { duration: 0.3 } : { duration: 4.8, repeat: Infinity, ease: "easeInOut" }}
+      >
+        <path d="M208,32H184V24a8,8,0,0,0-16,0v8H88V24a8,8,0,0,0-16,0v8H48A16,16,0,0,0,32,48V208a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V48A16,16,0,0,0,208,32Zm0,176H48V48H72v8a8,8,0,0,0,16,0V48h80v8a8,8,0,0,0,16,0V48h24V208Zm-31.38-94.36-29.84-2.31-11.43-26.5a8,8,0,0,0-14.7,0l-11.43,26.5-29.84,2.31a8,8,0,0,0-4.47,14.14l22.52,18.59-6.86,27.71a8,8,0,0,0,11.82,8.81L128,167.82l25.61,15.07a8,8,0,0,0,11.82-8.81l-6.86-27.71,22.52-18.59a8,8,0,0,0-4.47-14.14Zm-32.11,23.6a8,8,0,0,0-2.68,8.09l3.5,14.12-13.27-7.81a8,8,0,0,0-8.12,0l-13.27,7.81,3.5-14.12a8,8,0,0,0-2.68-8.09l-11.11-9.18,14.89-1.15a8,8,0,0,0,6.73-4.8l6-13.92,6,13.92a8,8,0,0,0,6.73,4.8l14.89,1.15Z" />
+      </motion.svg>
+    </motion.div>
+  );
+}
+
+function NewsCardMotion({
+  children,
+  newsIdx,
+  stackProgress,
+}: {
+  children: React.ReactNode;
+  newsIdx: number;
+  stackProgress: number;
+}) {
+  const hasMounted = useRef(false);
+  const stackRelease = 1 - stackProgress;
+  const stackOffset = newsIdx * 18 * stackRelease;
+  const stackTilt = newsIdx === 0 ? 0 : (newsIdx % 2 === 0 ? 0.55 : -0.55) * stackRelease;
+  const perspectiveTilt = -(12 + newsIdx * 0.8) * stackRelease;
+
+  useEffect(() => {
+    hasMounted.current = true;
+  }, []);
+
+  return (
+    <motion.div
+      className="news-stack-card relative w-full"
+      style={{
+        transformOrigin: "top center",
+        transformStyle: "preserve-3d",
+        willChange: "transform, opacity, filter",
+        zIndex: 3 - newsIdx,
+      }}
+      initial={{
+        opacity: 0,
+        y: 46 - stackOffset,
+        rotateX: perspectiveTilt + 16,
+        rotateZ: stackTilt + (newsIdx % 2 === 0 ? -1.5 : 1.5),
+        scale: 0.95,
+        filter: "blur(6px)",
+        transformPerspective: 680,
+      }}
+      animate={{
+        opacity: 1,
+        y: -stackOffset,
+        rotateX: perspectiveTilt,
+        rotateZ: stackTilt,
+        scale: 1,
+        filter: "blur(0px)",
+        transformPerspective: 680,
+      }}
+      transition={hasMounted.current
+        ? { duration: 0.2, ease: "easeOut" }
+        : {
+            duration: 0.82 + newsIdx * 0.08,
+            delay: 0.12 + newsIdx * 0.08,
+            ease: NEWS_EASE,
+          }}
+    >
+      {children}
+    </motion.div>
+  );
 }
 
 export function PotentialScale({
@@ -442,7 +547,6 @@ export default function Home() {
   const {
     userState,
     potential,
-    goals,
     readNews,
     updateState,
     isSignedIn,
@@ -455,10 +559,11 @@ export default function Home() {
   const [, setLocation] = useLocation();
   const [accountWaitExpired, setAccountWaitExpired] = useState(false);
 
-  const activeGoals = goals.filter(g => g.status === 'active');
   const { weekday, date } = getTodayLabels();
   const developerToolsEnabled = hasDeveloperTools(authEmail, isSignedIn);
   const [devPotential, setDevPotentialState] = useState(() => getDevPotential());
+  const [newsStackProgress, setNewsStackProgress] = useState(0);
+  const newsScrollFrame = useRef<number | null>(null);
 
   const waitingForAccount =
     !import.meta.env.DEV && (!isAuthLoaded || (isSignedIn && !isAccountReady));
@@ -479,6 +584,28 @@ export default function Home() {
     window.addEventListener(DEV_POTENTIAL_EVENT, syncDevPotential);
     return () => window.removeEventListener(DEV_POTENTIAL_EVENT, syncDevPotential);
   }, [developerToolsEnabled]);
+
+  useEffect(() => {
+    return () => {
+      if (newsScrollFrame.current !== null) {
+        cancelAnimationFrame(newsScrollFrame.current);
+      }
+    };
+  }, []);
+
+  const handleHomeScroll = (event: UIEvent<HTMLDivElement>) => {
+    if (newsScrollFrame.current !== null) {
+      cancelAnimationFrame(newsScrollFrame.current);
+    }
+    const nextProgress = Math.min(
+      1,
+      Math.max(0, (event.currentTarget.scrollTop - 360) / NEWS_STACK_RELEASE),
+    );
+    newsScrollFrame.current = requestAnimationFrame(() => {
+      newsScrollFrame.current = null;
+      setNewsStackProgress(nextProgress);
+    });
+  };
 
   const visualPotential = developerToolsEnabled ? devPotential : potential;
 
@@ -599,7 +726,7 @@ export default function Home() {
   }
 
   return (
-    <div className="relative pb-[110px] overflow-y-auto min-h-[100dvh]">
+    <div className="relative pb-[110px] overflow-y-auto min-h-[100dvh]" onScroll={handleHomeScroll}>
       <div className="relative z-10">
 
         <div className="flex items-center justify-between px-6 pt-[38px] pb-1">
@@ -631,118 +758,87 @@ export default function Home() {
           <PotentialScale value={visualPotential} />
         </div>
 
-        {activeGoals.length > 0 && (
-          <motion.section
-            className="px-5 mt-[24px] mb-5 space-y-3"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-          >
-            {activeGoals.map((goal, i) => (
-              <motion.div
-                key={goal.id}
-                initial={false}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4 + i * 0.06 }}
-              >
-                <div
-                  style={{
-                    borderRadius: 18,
-                    background: 'rgba(12, 28, 60, 0.96)',
-                    border: '1px solid rgba(37,99,235,0.4)',
-                    padding: 16,
-                    boxShadow: '0 0 28px rgba(37,99,235,0.18), 0 6px 24px rgba(0,0,0,0.5), 0 1px 0 rgba(96,165,250,0.15) inset',
-                  }}
-                >
-                  <div className="flex items-start gap-3 mb-3">
-                    <div className="w-9 h-9 rounded-[10px] flex items-center justify-center shrink-0 mt-0.5"
-                      style={{ background: 'rgba(37,99,235,0.2)', border: '1px solid rgba(37,99,235,0.4)' }}>
-                      <Target size={16} color="#60A5FA" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="title-s text-primary mb-1">{goal.name}</p>
-                      <p className="body-s text-secondary line-clamp-2">{goal.description}</p>
-                    </div>
-                  </div>
-                  <div className="flex gap-2 mt-1">
-                    <motion.button
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => setLocation('/technique/visualization')}
-                      className="flex-1 h-[40px] rounded-[10px] flex items-center justify-center gap-1.5"
-                      style={{
-                        fontSize: 13, fontWeight: 600,
-                        background: 'linear-gradient(135deg, rgba(245,158,11,0.22) 0%, rgba(245,158,11,0.08) 100%)',
-                        border: '1px solid rgba(245,158,11,0.35)',
-                        backdropFilter: 'blur(12px)',
-                        color: 'rgba(255,255,255,0.9)',
-                      }}
-                    >
-                      <Eye size={14} color="#FDE68A" />
-                      <span style={{ color: 'rgba(255,255,255,0.9)' }}>Визуализировать</span>
-                    </motion.button>
-                    <motion.button
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => setLocation('/technique/planner')}
-                      className="flex-1 h-[40px] rounded-[10px] flex items-center justify-center gap-1.5"
-                      style={{
-                        fontSize: 13, fontWeight: 600,
-                        background: 'linear-gradient(135deg, rgba(245,158,11,0.22) 0%, rgba(245,158,11,0.08) 100%)',
-                        border: '1px solid rgba(245,158,11,0.35)',
-                        backdropFilter: 'blur(12px)',
-                        color: 'rgba(255,255,255,0.9)',
-                      }}
-                    >
-                      <MapIcon size={14} color="#FDE68A" />
-                      <span style={{ color: 'rgba(255,255,255,0.9)' }}>Приблизиться</span>
-                    </motion.button>
-                  </div>
-                </div>
-              </motion.div>
-            ))}
-          </motion.section>
-        )}
+        <div className="mx-5 mt-4 mb-6 h-px" style={{ background: 'rgba(100,160,230,0.1)' }} />
 
-        <div className="mx-5 mt-6 mb-5 h-px" style={{ background: 'rgba(100,160,230,0.1)' }} />
-
-        <section className="px-5">
-          <motion.h2
-            className="title-l text-primary mb-4"
+        <section className="px-5 pb-8">
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.35 }}
+            className="mb-5 flex items-center gap-3"
           >
-            Новости системы
-          </motion.h2>
+            <NewsSystemMark />
+            <h2
+              className="min-w-0 text-left uppercase tracking-wider"
+              style={{ color: 'rgba(245,158,11,.82)', fontSize: 22, fontWeight: 600, letterSpacing: '0.08em' }}
+            >
+              Новости системы
+            </h2>
+          </motion.div>
 
-          <div className="space-y-3">
+          <div className="news-stack-list relative z-10 space-y-3">
             {NEWS_ITEMS.map((item, i) => {
               const isRead = readNews.includes(item.id);
               return (
-                <motion.div
-                  key={item.id}
-                  initial={false}
-                  animate={{ opacity: isRead ? 0.55 : 1 }}
-                  transition={{ duration: 0.25 }}
-                  whileTap={{ scale: 0.985 }}
-                  className="rounded-[16px] p-4 cursor-pointer relative active:brightness-110 transition-all btn-shimmer"
-                  style={{
-                    background: 'linear-gradient(135deg, rgba(245,158,11,0.22) 0%, rgba(245,158,11,0.08) 100%)',
-                    border: '1px solid rgba(245,158,11,0.28)',
-                    boxShadow: '0 6px 28px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,255,255,0.08), 0 1px 0 rgba(255,255,255,0.07) inset',
-                  }}
-                  onClick={() => {
-                    if (!isRead) updateState(prev => ({ readNews: [...prev.readNews, item.id] }));
-                    setLocation(`/news/${item.id}`);
-                  }}
-                >
-                  {!isRead && (
-                    <span className="absolute top-4 right-4 w-2 h-2 rounded-full"
-                      style={{ background: '#EF4444', boxShadow: '0 0 8px rgba(239,68,68,0.9)' }} />
-                  )}
-                  <h3 className="title-s text-primary mb-1.5 pr-4">{item.title}</h3>
-                  <p className="body-s text-secondary mb-2.5 line-clamp-2">{item.description}</p>
-                  <span className="caption" style={{ color: 'var(--text-tertiary)' }}>{item.date}</span>
-                </motion.div>
+                <NewsCardMotion key={item.id} newsIdx={i} stackProgress={newsStackProgress}>
+                  <motion.button
+                    type="button"
+                    whileTap={{ scale: 0.985 }}
+                    onClick={() => {
+                      if (!isRead) updateState(prev => ({ readNews: [...prev.readNews, item.id] }));
+                      setLocation(`/news/${item.id}`);
+                    }}
+                    className="group relative flex w-full flex-col overflow-hidden rounded-[20px] p-4 text-left transition-[filter] active:brightness-110"
+                    style={{
+                      opacity: isRead ? 0.55 : 1,
+                      background: 'linear-gradient(135deg, rgba(245,158,11,0.22) 0%, rgba(255,255,255,0.035) 52%, rgba(0,0,0,0.1)), #3E2E1D',
+                      border: '1px solid rgba(245,158,11,0.34)',
+                      boxShadow: '0 8px 32px rgba(0,0,0,0.68), 0 0 0 1px rgba(255,255,255,0.1), 0 1px 0 rgba(255,237,213,0.09) inset',
+                    }}
+                  >
+                    <motion.div
+                      aria-hidden="true"
+                      className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full border"
+                      style={{
+                        borderColor: 'rgba(255,224,166,.24)',
+                        boxShadow: '0 0 32px rgba(249,115,22,.16)',
+                      }}
+                      animate={{ rotate: 360, opacity: [0.24, 0.48, 0.24] }}
+                      transition={{ rotate: { duration: 22 + i * 3, repeat: Infinity, ease: "linear" }, opacity: { duration: 4.2, repeat: Infinity, ease: "easeInOut" } }}
+                    />
+                    <motion.div
+                      aria-hidden="true"
+                      className="pointer-events-none absolute -right-10 -top-10 h-36 w-36 rounded-full"
+                      style={{
+                        background: 'repeating-conic-gradient(from 12deg, rgba(255,237,170,.42) 0deg 1.4deg, transparent 1.4deg 15deg)',
+                        maskImage: 'radial-gradient(circle, transparent 76%, #000 78%, #000 82%, transparent 84%)',
+                        WebkitMaskImage: 'radial-gradient(circle, transparent 76%, #000 78%, #000 82%, transparent 84%)',
+                      }}
+                      animate={{ rotate: -360, opacity: [0.18, 0.42, 0.18] }}
+                      transition={{ duration: 16 + i * 2, repeat: Infinity, ease: "linear" }}
+                    />
+                    <div className="relative z-10 flex items-start justify-between gap-3">
+                      <h3 className="title-s min-w-0 flex-1 text-primary leading-snug">
+                        {item.title}
+                      </h3>
+                      <span
+                        className="caption flex shrink-0 items-center gap-1.5 pt-0.5"
+                        style={{ color: 'rgba(255,228,181,.72)' }}
+                      >
+                        {!isRead && (
+                          <span
+                            className="h-2 w-2 rounded-full"
+                            style={{ background: '#EF4444', boxShadow: '0 0 8px rgba(239,68,68,0.9)' }}
+                          />
+                        )}
+                        {item.date}
+                      </span>
+                    </div>
+                    <p className="body-s relative z-10 mt-2 line-clamp-2 text-secondary leading-relaxed">
+                      {item.description}
+                    </p>
+                  </motion.button>
+                </NewsCardMotion>
               );
             })}
           </div>
