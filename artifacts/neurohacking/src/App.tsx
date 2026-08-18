@@ -13,7 +13,17 @@ import { TopBar } from "@/components/TopBar";
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { InstallPrompt } from "@/components/InstallPrompt";
-import { Moon } from "lucide-react";
+import {
+  DEV_CLOSED_DAYS_EVENT,
+  DEV_DAY_CLOSE_EVENT,
+  getDevClosedDays,
+  getDevPotential,
+  setDevClosedDays,
+  setDevPotential,
+} from "@/lib/dev-potential";
+import { hasDeveloperTools } from "@/lib/developer-mode";
+import DayCloseCinematic from "@/components/DayCloseCinematic";
+import { dayCloseReward } from "@workspace/economy";
 
 import Home from "@/pages/home";
 import Path from "@/pages/path";
@@ -114,8 +124,8 @@ type TabMessage = {
 };
 
 const PATH_MESSAGES: TabMessage[] = [
-  { text: 'Путь — вся твоя статистика в одном месте.',                         highlight: ['PATH_potential', 'PATH_keys', 'PATH_streak'],                      msgTop: '55%' },
-  { text: 'Потенциал растёт с каждой выполненной техникой.',                   highlight: ['PATH_potential'],                              blurStart: 185, msgTop: '205px' },
+  { text: 'Путь — вся твоя статистика в одном месте.',                         highlight: ['PATH_closedDays', 'PATH_keys', 'PATH_streak'],                      msgTop: '55%' },
+  { text: 'Здесь видно, сколько дней ты закрыл на 100% потенциала.',            highlight: ['PATH_closedDays'],                         blurStart: 185, msgTop: '205px' },
   { text: 'Серия дней показывает сколько дней подряд ты работаешь над собой.', highlight: ['PATH_streak'],                                 blurStart: 185, msgTop: '205px' },
   { text: 'Ключи открывают доступ к материалам из Академии.',                  highlight: ['PATH_keys'],                                   blurStart: 185, msgTop: '205px' },
 ];
@@ -365,14 +375,67 @@ function CoachingBubble() {
 }
 
 function DevResetButton() {
-  if (!import.meta.env.DEV) return null;
+  const [devClosedDays, setDevClosedDaysState] = useState(() => getDevClosedDays());
+  const { isSignedIn, email } = useAuthInfo();
+  const developerToolsEnabled = hasDeveloperTools(email, isSignedIn);
+
+  useEffect(() => {
+    const handleClosedDaysChange = () => setDevClosedDaysState(getDevClosedDays());
+    window.addEventListener(DEV_CLOSED_DAYS_EVENT, handleClosedDaysChange);
+    return () => window.removeEventListener(DEV_CLOSED_DAYS_EVENT, handleClosedDaysChange);
+  }, []);
+
+  if (!developerToolsEnabled) return null;
+
   return (
-    <button
-      onClick={() => { localStorage.clear(); window.location.href = '/'; }}
-      style={{ position: 'fixed', bottom: 72, right: 8, zIndex: 9999, background: 'rgba(220,38,38,0.9)', color: '#fff', borderRadius: 8, padding: '4px 10px', fontSize: 11, fontWeight: 700, letterSpacing: '0.03em', border: '1px solid rgba(255,255,255,0.2)', backdropFilter: 'blur(8px)', boxShadow: '0 2px 8px rgba(0,0,0,0.5)' }}
-    >
-      DEV: сброс
-    </button>
+    <div style={{ position: 'fixed', bottom: 72, right: 8, zIndex: 9999, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+      <div style={{ display: 'flex', gap: 4 }}>
+        <button
+          aria-label="Уменьшить DEV-серию закрытых дней"
+          onClick={() => {
+            const next = getDevClosedDays() - 1;
+            setDevClosedDays(next);
+            setDevClosedDaysState(next);
+          }}
+          style={{ background: 'rgba(180,52,15,0.94)', color: '#fff', borderRadius: 8, padding: '4px 9px', fontSize: 11, fontWeight: 800, border: '1px solid rgba(255,255,255,0.24)', backdropFilter: 'blur(8px)', boxShadow: '0 2px 8px rgba(0,0,0,0.4)' }}
+        >
+          Серия -1
+        </button>
+        <button
+          aria-label="Увеличить DEV-серию закрытых дней"
+          onClick={() => {
+            const next = getDevClosedDays() + 1;
+            setDevClosedDays(next);
+            setDevClosedDaysState(next);
+          }}
+          style={{ background: 'rgba(234,88,12,0.94)', color: '#fff', borderRadius: 8, padding: '4px 9px', fontSize: 11, fontWeight: 800, border: '1px solid rgba(255,255,255,0.24)', backdropFilter: 'blur(8px)', boxShadow: '0 2px 8px rgba(0,0,0,0.4)' }}
+        >
+          Серия +1 · {devClosedDays}
+        </button>
+      </div>
+      <div style={{ display: 'flex', gap: 4 }}>
+        <button
+          aria-label="Уменьшить DEV-потенциал на 10 процентов"
+          onClick={() => setDevPotential(getDevPotential() - 10)}
+          style={{ background: 'rgba(37,99,235,0.9)', color: '#fff', borderRadius: 8, padding: '4px 9px', fontSize: 12, fontWeight: 800, border: '1px solid rgba(255,255,255,0.2)', backdropFilter: 'blur(8px)', boxShadow: '0 2px 8px rgba(0,0,0,0.35)' }}
+        >
+          ↓ 10%
+        </button>
+        <button
+          aria-label="Увеличить DEV-потенциал на 10 процентов"
+          onClick={() => setDevPotential(getDevPotential() + 10)}
+          style={{ background: 'rgba(37,99,235,0.9)', color: '#fff', borderRadius: 8, padding: '4px 9px', fontSize: 12, fontWeight: 800, border: '1px solid rgba(255,255,255,0.2)', backdropFilter: 'blur(8px)', boxShadow: '0 2px 8px rgba(0,0,0,0.35)' }}
+        >
+          ↑ 10%
+        </button>
+      </div>
+      <button
+        onClick={() => { localStorage.clear(); window.location.href = '/'; }}
+        style={{ background: 'rgba(220,38,38,0.9)', color: '#fff', borderRadius: 8, padding: '4px 10px', fontSize: 11, fontWeight: 700, letterSpacing: '0.03em', border: '1px solid rgba(255,255,255,0.2)', backdropFilter: 'blur(8px)', boxShadow: '0 2px 8px rgba(0,0,0,0.5)' }}
+      >
+        DEV: сброс
+      </button>
+    </div>
   );
 }
 
@@ -599,25 +662,67 @@ function AnimatedBgOverlay() {
 }
 
 function DayDoneOverlay() {
-  const { userState } = useAppStore();
-  const [location] = useLocation();
-  if (userState !== 'dayDone') return null;
+  const { userState, activityLog, streak, isAccountReady } = useAppStore();
+  const { isSignedIn, email } = useAuthInfo();
+  const developerToolsEnabled = hasDeveloperTools(email, isSignedIn);
+  const [, setLocation] = useLocation();
+  const previousStateRef = useRef(userState);
+  const wasReadyRef = useRef(isAccountReady);
+  const [devPreviewPayload, setDevPreviewPayload] = useState<{
+    fromPotential: number;
+    gainedPotential: number;
+    keysAwarded: number;
+    streakDay: number;
+  } | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+
+  useEffect(() => {
+    if (
+      wasReadyRef.current &&
+      previousStateRef.current !== 'dayDone' &&
+      userState === 'dayDone'
+    ) {
+      setIsPlaying(true);
+    }
+    previousStateRef.current = userState;
+    wasReadyRef.current = isAccountReady;
+  }, [userState, isAccountReady]);
+
+  useEffect(() => {
+    if (!developerToolsEnabled || !isAccountReady) return undefined;
+    const handleDevDayClose = () => {
+      const streakDay = getDevClosedDays();
+      setDevPreviewPayload({
+        fromPotential: 90,
+        gainedPotential: 10,
+        keysAwarded: dayCloseReward(streakDay),
+        streakDay,
+      });
+      setIsPlaying(true);
+    };
+    window.addEventListener(DEV_DAY_CLOSE_EVENT, handleDevDayClose);
+    return () => window.removeEventListener(DEV_DAY_CLOSE_EVENT, handleDevDayClose);
+  }, [developerToolsEnabled, isAccountReady]);
+
+  if (!isPlaying) return null;
+
+  const latestActivity = activityLog[0];
+  const gainedPotential = devPreviewPayload?.gainedPotential ?? latestActivity?.potentialGained ?? 10;
+  const keysAwarded = devPreviewPayload?.keysAwarded ?? latestActivity?.keysGained ?? 0;
+  const streakDay = devPreviewPayload?.streakDay ?? Math.max(1, streak);
+
   return (
-    <div className="fixed inset-0 z-[50] flex flex-col items-center justify-center text-primary overflow-hidden" style={APP_BG}>
-      <div className="relative z-10 text-center px-8 w-full max-w-[390px]">
-        <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}>
-          <div className="flex justify-center mb-8">
-            <div className="w-20 h-20 rounded-full border border-blue-core bg-surface-1 flex items-center justify-center">
-              <Moon size={36} className="text-blue-light" />
-            </div>
-          </div>
-          <h1 className="display-l text-primary mb-10">
-            День завершён. Продолжай <span className="text-blue">серию</span>.
-          </h1>
-        </motion.div>
-        <p className="caption text-tertiary">Приложение разблокируется после 5:00</p>
-      </div>
-    </div>
+    <DayCloseCinematic
+      fromPotential={devPreviewPayload?.fromPotential ?? Math.max(0, 100 - gainedPotential)}
+      gainedPotential={gainedPotential}
+      keysAwarded={keysAwarded}
+      streakDay={streakDay}
+      onComplete={() => {
+        setIsPlaying(false);
+        setDevPreviewPayload(null);
+        setLocation('/techniques');
+      }}
+    />
   );
 }
 

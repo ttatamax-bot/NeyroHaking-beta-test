@@ -5,6 +5,8 @@ import { useEffect, useState } from "react";
 import { Sparkles, ChevronRight, Target, Map as MapIcon, Eye, LogIn } from "lucide-react";
 import { DataLoadingScreen } from "@/components/DataLoadingScreen";
 import { DEV_POTENTIAL_EVENT, getDevPotential } from "@/lib/dev-potential";
+import { hasDeveloperTools } from "@/lib/developer-mode";
+import { useAuthInfo } from "@/lib/clerk";
 
 const NEWS_ITEMS = [
   { id: '1', title: "Новая техника нейровизуализации", description: "Обновлён алгоритм прохождения техники T2 — визуализация теперь более структурированная и точная.", date: "28.05.2026" },
@@ -449,12 +451,14 @@ export default function Home() {
     accountLoadError,
     retryAccountHydration,
   } = useAppStore();
+  const { email: authEmail } = useAuthInfo();
   const [, setLocation] = useLocation();
   const [accountWaitExpired, setAccountWaitExpired] = useState(false);
 
   const activeGoals = goals.filter(g => g.status === 'active');
   const { weekday, date } = getTodayLabels();
-  const [devPotential, setDevPotentialState] = useState(70);
+  const developerToolsEnabled = hasDeveloperTools(authEmail, isSignedIn);
+  const [devPotential, setDevPotentialState] = useState(() => getDevPotential());
 
   const waitingForAccount =
     !import.meta.env.DEV && (!isAuthLoaded || (isSignedIn && !isAccountReady));
@@ -469,14 +473,14 @@ export default function Home() {
   }, [waitingForAccount]);
 
   useEffect(() => {
-    if (!import.meta.env.DEV || isSignedIn) return;
+    if (!developerToolsEnabled) return;
     const syncDevPotential = () => setDevPotentialState(getDevPotential());
     syncDevPotential();
     window.addEventListener(DEV_POTENTIAL_EVENT, syncDevPotential);
     return () => window.removeEventListener(DEV_POTENTIAL_EVENT, syncDevPotential);
-  }, [isSignedIn]);
+  }, [developerToolsEnabled]);
 
-  const visualPotential = import.meta.env.DEV && !isSignedIn ? devPotential : potential;
+  const visualPotential = developerToolsEnabled ? devPotential : potential;
 
   if (isSignedIn && accountLoadError) {
     return (

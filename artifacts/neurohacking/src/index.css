@@ -200,6 +200,89 @@
     100% { background-position: 200% center; }
   }
 
+  /* Academy mark motion stays independent from SVG path rendering. */
+  @keyframes academy-star-flight {
+    0%, 100% {
+      transform: translate3d(0, 0, 0) rotate(0deg);
+    }
+    50% {
+      transform: translate3d(-15px, 15px, 0) rotate(360deg);
+    }
+  }
+
+  @keyframes academy-star-glow {
+    0%, 100% {
+      filter: drop-shadow(0 0 6px rgba(255,210,125,.48)) brightness(1);
+    }
+    50% {
+      filter: drop-shadow(0 0 18px rgba(249,115,22,.95)) brightness(1.28);
+    }
+  }
+
+  @keyframes academy-book-performance {
+    0%, 100% {
+      transform: translate3d(0, 0, 0) rotate(0deg);
+      filter: drop-shadow(0 0 7px rgba(249,115,22,.28));
+    }
+    20% {
+      transform: translate3d(0, -1px, 0) rotate(-.7deg);
+      filter: drop-shadow(0 0 12px rgba(249,115,22,.42));
+    }
+    46% {
+      transform: translate3d(1px, -2px, 0) rotate(.55deg);
+      filter: drop-shadow(0 0 18px rgba(255,180,94,.58));
+    }
+    72% {
+      transform: translate3d(-1px, -1px, 0) rotate(-.35deg);
+      filter: drop-shadow(0 0 11px rgba(249,115,22,.38));
+    }
+  }
+
+  .academy-star-motion {
+    animation: academy-star-flight 4.2s ease-in-out infinite;
+    backface-visibility: hidden;
+    transform-origin: 82px 20px;
+    will-change: transform;
+  }
+
+  .academy-star-glow {
+    animation: academy-star-glow 1.35s ease-in-out infinite;
+    will-change: filter;
+  }
+
+  .academy-book-motion {
+    animation: academy-book-performance 5.8s ease-in-out infinite;
+    backface-visibility: hidden;
+    transform-origin: center;
+    will-change: transform, filter;
+  }
+
+  .article-stack-list {
+    perspective: 1100px;
+  }
+
+  .article-stack-card {
+    backface-visibility: hidden;
+    transform-style: preserve-3d;
+  }
+
+  /*
+   * Older iOS WebKit versions can temporarily project nested 3D layers at
+   * their painted width while blur/rotateX is animating. Keep the mobile
+   * stack 2D so cards never appear as a narrow column before settling.
+   */
+  @media (max-width: 767px) {
+    .article-stack-list {
+      perspective: none;
+    }
+
+    .article-stack-card {
+      backface-visibility: visible;
+      transform: translate3d(0, var(--article-stack-y, 0px), 0) !important;
+      transform-style: flat;
+    }
+  }
+
   .btn-shimmer {
     position: relative;
     overflow: hidden;

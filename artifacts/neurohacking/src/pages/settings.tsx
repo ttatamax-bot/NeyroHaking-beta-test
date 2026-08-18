@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { useUser, SignOutButton } from "@clerk/react";
 import { useAppStore } from "@/lib/store";
@@ -6,6 +6,12 @@ import { ScreenTransition } from "@/components/ScreenTransition";
 import { BackButton } from "@/components/BackButton";
 import { ChevronRight, Bell, User, Copy, Check, Gift, Loader2 } from "lucide-react";
 import { ApiError, createReferral } from "@/lib/api";
+import {
+  DEVELOPER_MODE_EVENT,
+  getDeveloperMode,
+  isDeveloperAccount,
+  setDeveloperMode,
+} from "@/lib/developer-mode";
 
 function subscribeOneSignal() {
   const win = window as any;
@@ -71,7 +77,20 @@ export default function Settings() {
   const [referralCopied, setReferralCopied] = useState(false);
   const [referralError, setReferralError] = useState<string | null>(null);
   const { isSignedIn, user } = useUser();
-  const isReferralAdmin = user?.primaryEmailAddress?.emailAddress?.toLowerCase() === 'ttatamax@gmail.com';
+  const email = user?.primaryEmailAddress?.emailAddress ?? null;
+  const isReferralAdmin = email?.toLowerCase() === 'ttatamax@gmail.com';
+  const isDevAccount = isDeveloperAccount(email);
+  const [developerMode, setDeveloperModeState] = useState(() => getDeveloperMode(email));
+
+  useEffect(() => {
+    setDeveloperModeState(getDeveloperMode(email));
+  }, [email]);
+
+  useEffect(() => {
+    const syncDeveloperMode = () => setDeveloperModeState(getDeveloperMode(email));
+    window.addEventListener(DEVELOPER_MODE_EVENT, syncDeveloperMode);
+    return () => window.removeEventListener(DEVELOPER_MODE_EVENT, syncDeveloperMode);
+  }, [email]);
 
   const issueReferral = async () => {
     setReferralBusy(true);
@@ -180,6 +199,46 @@ export default function Settings() {
             </button>
           )}
           {referralError && <p className="body-s text-red-300 mt-2">{referralError}</p>}
+        </div>
+      )}
+
+      {isSignedIn && isDevAccount && (
+        <div
+          className="rounded-[16px] p-4 mb-4"
+          style={{
+            background: 'linear-gradient(135deg, rgba(37,99,235,0.18), rgba(37,99,235,0.06))',
+            border: '1px solid rgba(96,165,250,0.35)',
+          }}
+        >
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <div className="body text-primary">Режим разработчика</div>
+              <div className="body-s text-secondary mt-0.5">
+                Показывать dev-кнопки для тестирования
+              </div>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={developerMode}
+              aria-label="Режим разработчика"
+              onClick={() => {
+                const next = !developerMode;
+                setDeveloperMode(email, next);
+                setDeveloperModeState(next);
+              }}
+              className="relative h-8 w-14 shrink-0 rounded-full transition-colors"
+              style={{
+                background: developerMode ? '#2563EB' : 'rgba(100,160,230,0.18)',
+                border: `1px solid ${developerMode ? 'rgba(147,197,253,0.8)' : 'rgba(100,160,230,0.32)'}`,
+              }}
+            >
+              <span
+                className="absolute top-[3px] h-6 w-6 rounded-full bg-white shadow-md transition-transform"
+                style={{ transform: `translateX(${developerMode ? 24 : 3}px)` }}
+              />
+            </button>
+          </div>
         </div>
       )}
 
