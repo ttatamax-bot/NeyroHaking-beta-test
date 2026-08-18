@@ -3,6 +3,7 @@ import { useAppStore } from "@/lib/store";
 import { completeArticleRead, ApiError } from "@/lib/api";
 import { ChevronLeft } from "lucide-react";
 import { motion } from "framer-motion";
+import { HABIT_GUIDE_CONTENT, HABIT_GUIDE_TITLE } from "@/content/habit-guide";
 
 const ARTICLES_DATA: Record<string, { title: string; content: string }> = {
   A1: {
@@ -630,6 +631,10 @@ const ARTICLES_DATA: Record<string, { title: string; content: string }> = {
 • 22:00 – 23:00 — награда снижается
 • 23:00 – 24:00 — награда = 0
 • После 24:00 — приложение блокируется`,
+  },
+  A6: {
+    title: HABIT_GUIDE_TITLE,
+    content: HABIT_GUIDE_CONTENT,
   },
 };
 

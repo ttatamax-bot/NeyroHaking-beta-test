@@ -1,7 +1,9 @@
 import { useLocation } from "wouter";
-  import { useAppStore } from "@/lib/store";
-  import { Lock, Unlock } from "lucide-react";
-  import { motion } from "framer-motion";
+import { useAppStore } from "@/lib/store";
+import { CalendarDays, Brain, Lightbulb, Lock, MoonStar, Repeat2, Target, Unlock, type LucideIcon } from "lucide-react";
+import { motion, useReducedMotion } from "framer-motion";
+import { useEffect, useRef, useState, type UIEvent } from "react";
+import { HABIT_GUIDE_TITLE } from "@/content/habit-guide";
 
   const ARTICLES = [
     {
@@ -9,75 +11,353 @@ import { useLocation } from "wouter";
       title: "Лучшая стратегия нейрохакинга, которая изменит жизнь за короткий срок",
       desc: "Вот как получить максимальную пользу от приложения",
       cost: 0,
+      visual: { Icon: Brain, color: "#F59E0B", glow: "rgba(245,158,11,0.16)", surface: "#3E2E1D" },
     },
     {
       id: 'A2',
       title: "Как ставить цели, чтобы мозг хотел их достичь?",
       desc: "Работа будет вызывать столько же дофамина сколько и соцсети.",
       cost: 5,
+      visual: { Icon: Target, color: "#C084FC", glow: "rgba(192,132,252,0.14)", surface: "#2F293A" },
     },
     {
       id: 'A3',
       title: "Научись управлять своим дофамином с помощью нейровизуализации",
       desc: "Как применять этот мощный инструмент в приложении, чтобы всегда оставаться мотивированным и верить в достижимость цели.",
       cost: 10,
+      visual: { Icon: Lightbulb, color: "#06B6D4", glow: "rgba(6,182,212,0.14)", surface: "#1D3337" },
     },
     {
       id: 'A4',
       title: "Гайд на планирование дел на день. Научись точно предсказывать время на задачу.",
       desc: "Как укладываться в запланированные сроки и не стрессовать от того, что ничего не успеваешь.",
       cost: 20,
+      visual: { Icon: CalendarDays, color: "#3DB770", glow: "rgba(61,183,112,0.14)", surface: "#23342C" },
     },
     {
       id: 'A5',
       title: "Гайд на сон. Как засыпать за 3–5 минут и просыпаться восстановленным.",
       desc: "Эволюционное несоответствие сна: как спали наши предки, почему мы не высыпаемся, какие есть техники для осознанного ввода мозга в режим сна.",
       cost: 400,
+      visual: { Icon: MoonStar, color: "#3B82F6", glow: "rgba(59,130,246,0.15)", surface: "#243047" },
+    },
+    {
+      id: 'A6',
+      title: HABIT_GUIDE_TITLE,
+      desc: "Как перестать заставлять себя действовать 21 день, сделать привычку привлекательной и запустить её по новой системе уже сегодня.",
+      cost: 400,
+      visual: { Icon: Repeat2, color: "#FB7185", glow: "rgba(251,113,133,0.14)", surface: "#3D2931" },
     },
   ];
 
-  const PURPLE = {
-    color: '#C084FC',
-    bg: 'linear-gradient(135deg, rgba(192,132,252,0.22) 0%, rgba(192,132,252,0.08) 100%)',
-    border: 'rgba(192,132,252,0.28)',
-    glow: 'rgba(192,132,252,0.18)',
-    darkBg: 'rgba(192,132,252,0.08)',
-  };
-
+  const ACADEMY_ACCENT = '#F59E0B';
   const CARD_SHADOW = '0 8px 32px rgba(0,0,0,0.68), 0 0 0 1px rgba(255,255,255,0.1)';
 
   const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
+  const ARTICLE_STACK_OFFSET = 76;
+  const ARTICLE_STACK_RELEASE = 300;
+  const POTENTIAL_PARTICLES = [
+    { left: '7%', top: '18%', size: 5, color: '#F97316', delay: 0 },
+    { left: '18%', top: '82%', size: 4, color: '#FFB45E', delay: .7 },
+    { left: '88%', top: '23%', size: 4, color: '#F59E0B', delay: 1.2 },
+    { left: '94%', top: '68%', size: 6, color: '#F97316', delay: .35 },
+    { left: '77%', top: '8%', size: 3, color: '#FFD29A', delay: 1.7 },
+    { left: '30%', top: '7%', size: 3, color: '#F97316', delay: 2.1 },
+  ];
+  const POTENTIAL_RING_STYLES = [
+    { inset: '-15px', duration: 17, direction: 1, opacity: 0.8, spacing: 18 },
+    { inset: '10px', duration: 13, direction: -1, opacity: 0.56, spacing: 24 },
+  ];
+  type ArticleRingLayer = {
+    size: number;
+    left?: number;
+    right?: number;
+    top?: number;
+    bottom?: number;
+    width: number;
+    alpha: string;
+    duration: number;
+    direction?: 1 | -1;
+    dashArray?: string;
+    opacity?: number;
+  };
+  type ArticleRingStyle = {
+    outer: ArticleRingLayer;
+    dash: ArticleRingLayer & { dashArray: string; opacity: number; direction: 1 | -1 };
+    fine: ArticleRingLayer & { dashArray: string; opacity: number; direction: 1 | -1 };
+  };
+  const ARTICLE_RING_STYLES: ArticleRingStyle[] = [
+    {
+      outer: { size: 256, right: -44, top: -86, width: 1.4, alpha: '6A', duration: 19 },
+      dash: { size: 224, right: -30, top: -68, width: 1.8, dashArray: '8 14', alpha: '78', opacity: 0.3, duration: 24, direction: 1 },
+      fine: { size: 150, right: 5, top: -10, width: 1, dashArray: '2 9', alpha: '55', opacity: 0.3, duration: 13, direction: -1 },
+    },
+    {
+      outer: { size: 220, left: -30, top: -60, width: 1, alpha: '72', duration: 14 },
+      dash: { size: 184, left: -14, top: -43, width: 2.4, dashArray: '13 9', alpha: '68', opacity: 0.3, duration: 18, direction: -1 },
+      fine: { size: 124, left: 14, top: -5, width: 0.8, dashArray: '1.5 12', alpha: '48', opacity: 0.3, duration: 11, direction: 1 },
+    },
+    {
+      outer: { size: 280, right: -70, bottom: -92, width: 1.8, alpha: '58', duration: 23 },
+      dash: { size: 244, right: -50, bottom: -75, width: 1.2, dashArray: '4 9', alpha: '72', opacity: 0.3, duration: 16, direction: 1 },
+      fine: { size: 168, right: -15, bottom: -18, width: 1.4, dashArray: '3 16', alpha: '42', opacity: 0.3, duration: 27, direction: -1 },
+    },
+    {
+      outer: { size: 238, left: -62, bottom: -70, width: 1.2, alpha: '6A', duration: 17 },
+      dash: { size: 196, left: -44, bottom: -54, width: 1.6, dashArray: '6 18', alpha: '70', opacity: 0.3, duration: 28, direction: -1 },
+      fine: { size: 138, left: -8, bottom: -8, width: 0.9, dashArray: '2 7', alpha: '4C', opacity: 0.3, duration: 12, direction: 1 },
+    },
+    {
+      outer: { size: 296, left: 50, bottom: -108, width: 1, alpha: '60', duration: 26 },
+      dash: { size: 260, left: 68, bottom: -90, width: 2, dashArray: '10 20', alpha: '64', opacity: 0.3, duration: 31, direction: 1 },
+      fine: { size: 178, left: 100, bottom: -16, width: 1.1, dashArray: '2 13', alpha: '5A', opacity: 0.3, duration: 15, direction: -1 },
+    },
+  ];
 
   function formatKeys(n: number) {
     return n >= 1000 ? `${(n / 1000).toFixed(0)}к` : `${n}`;
   }
 
+  function KnowledgeBaseMark() {
+    const reduced = useReducedMotion();
+
+    return (
+      <motion.div
+        className="relative flex h-[168px] w-[168px] shrink-0 items-center justify-center"
+        initial={{ opacity: 0, scale: 0.72, y: 12 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        transition={{ duration: 0.9, ease: EASE }}
+        aria-hidden="true"
+      >
+        <motion.span
+          className="pointer-events-none absolute inset-[-20px] rounded-full"
+          style={{ background: 'radial-gradient(circle, rgba(245,158,11,.22), rgba(249,115,22,.10) 38%, transparent 72%)' }}
+          animate={reduced ? { opacity: 0.55, scale: 1 } : { opacity: [.35, .78, .35], scale: [.94, 1.06, .94] }}
+          transition={reduced ? { duration: 0.4 } : { duration: 4.2, repeat: Infinity, ease: "easeInOut" }}
+        />
+        <motion.span
+          className="pointer-events-none absolute inset-[-29px] rounded-full border"
+          style={{
+            borderColor: "rgba(255,210,125,.28)",
+            boxShadow: "0 0 18px rgba(249,115,22,.14)",
+          }}
+          animate={reduced ? { opacity: 0.5, rotate: 0 } : { opacity: [.34, .68, .34], rotate: [0, 360] }}
+          transition={reduced
+            ? { duration: 0.4 }
+            : {
+                opacity: { duration: 4.8, repeat: Infinity, ease: "easeInOut" },
+                rotate: { duration: 24, repeat: Infinity, ease: "linear" },
+              }}
+        />
+        <motion.span
+          className="pointer-events-none absolute inset-[-7px] rounded-full border"
+          style={{ borderColor: "rgba(249,115,22,.34)" }}
+          animate={reduced ? { opacity: 0.56, rotate: 0 } : { opacity: [.4, .78, .4], rotate: [360, 0] }}
+          transition={reduced
+            ? { duration: 0.4 }
+            : {
+                opacity: { duration: 3.8, repeat: Infinity, ease: "easeInOut" },
+                rotate: { duration: 16, repeat: Infinity, ease: "linear" },
+              }}
+        />
+        <motion.svg
+          className="pointer-events-none absolute inset-[-31px] z-[1] h-auto w-auto"
+          viewBox="0 0 230 230"
+          fill="none"
+          aria-hidden="true"
+          animate={reduced ? { rotate: 0 } : { rotate: 360 }}
+          transition={reduced ? { duration: 0.4 } : { duration: 22, repeat: Infinity, ease: "linear" }}
+          style={{ filter: "drop-shadow(0 0 3px rgba(255,210,125,.12))" }}
+        >
+          <circle
+            cx="115"
+            cy="115"
+            r="107"
+            stroke="#FFE8B0"
+            strokeWidth="2.6"
+            strokeDasharray="16 13"
+            strokeLinecap="butt"
+            opacity="0.18"
+          />
+        </motion.svg>
+        {POTENTIAL_RING_STYLES.map((ring, index) => (
+          <motion.span
+            key={`academy-potential-ring-${index}`}
+            className="pointer-events-none absolute rounded-full"
+            style={{
+              inset: ring.inset,
+              background: `repeating-conic-gradient(from ${index === 0 ? -34 : 14}deg, rgba(255,237,170,${ring.opacity}) 0deg 0.8deg, transparent 0.8deg ${ring.spacing}deg)`,
+              maskImage: "radial-gradient(circle, transparent 78%, #000 79.5%, #000 82%, transparent 83.5%)",
+              WebkitMaskImage: "radial-gradient(circle, transparent 78%, #000 79.5%, #000 82%, transparent 83.5%)",
+            }}
+            animate={reduced ? { rotate: 0, opacity: ring.opacity } : { rotate: ring.direction * 360, opacity: [ring.opacity * 0.65, ring.opacity, ring.opacity * 0.65] }}
+            transition={reduced
+              ? { duration: 0.4 }
+              : {
+                  rotate: { duration: ring.duration, repeat: Infinity, ease: "linear" },
+                  opacity: { duration: ring.duration * 0.55, repeat: Infinity, ease: "easeInOut" },
+                }}
+          />
+        ))}
+        {POTENTIAL_PARTICLES.map((particle, index) => (
+          <motion.span
+            key={`academy-potential-particle-${index}`}
+            className="pointer-events-none absolute z-[2] rounded-full"
+            style={{
+              left: particle.left,
+              top: particle.top,
+              width: particle.size,
+              height: particle.size,
+              background: particle.color,
+              boxShadow: `0 0 12px ${particle.color}`,
+            }}
+            animate={reduced ? { opacity: 0.6, scale: 1 } : { y: [0, -7, 0], opacity: [.2, .9, .2], scale: [.75, 1.2, .75] }}
+            transition={reduced
+              ? { duration: 0.4 }
+              : { duration: 2.7 + index * .15, delay: particle.delay, repeat: Infinity, ease: "easeInOut" }}
+          />
+        ))}
+        <motion.span
+          className="pointer-events-none absolute inset-[22px] rounded-full"
+          style={{ background: 'radial-gradient(circle, rgba(255,210,125,.28), transparent 70%)' }}
+          animate={reduced ? { opacity: 0.45 } : { opacity: [.2, .62, .2] }}
+          transition={reduced ? { duration: 0.4 } : { duration: 3.6, repeat: Infinity, ease: "easeInOut" }}
+        />
+        <div
+          className="academy-star-motion pointer-events-none absolute z-[12] h-[108px] w-[108px]"
+          style={{ left: 30, top: 30 }}
+          aria-hidden="true"
+        >
+          <svg
+            width="108"
+            height="108"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#FFE4B5"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="academy-star-glow h-full w-full"
+            aria-hidden="true"
+          >
+            <path d="M18.5 2.9375V4.5M18.5 4.5V6.0625M18.5 4.5H17.25M18.5 4.5H19.75M21 4.5L19.9156 4.13852C19.4179 3.97263 19.0274 3.58211 18.8615 3.08443L18.5 2L18.1385 3.08443C17.9726 3.58211 17.5821 3.97263 17.0844 4.13852L16 4.5L17.0844 4.86148C17.5821 5.02737 17.9726 5.41789 18.1385 5.91557L18.5 7L18.8615 5.91557C19.0274 5.41789 19.4179 5.02763 19.9156 4.86148L21 4.5Z" />
+          </svg>
+        </div>
+        <div
+          className="academy-book-motion relative z-10 h-[108px] w-[108px]"
+        >
+          <svg
+            width="108"
+            height="108"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="h-full w-full text-[#FFE4B5]"
+            aria-hidden="true"
+          >
+            <path d="M8 2V18" />
+            <path d="M20 22H6C4.89543 22 4 21.1046 4 20M4 20C4 18.8954 4.89543 18 6 18H20V10M4 20V8C4 5.17157 4 3.75736 4.87868 2.87868C5.75736 2 7.17157 2 10 2H13" />
+            <path d="M19.5 18C19.5 18 18.5 18.7628 18.5 20C18.5 21.2372 19.5 22 19.5 22" />
+          </svg>
+        </div>
+      </motion.div>
+    );
+  }
+
+  function ArticleIcon({
+    Icon,
+    color,
+    glow,
+    unread,
+  }: {
+    Icon: LucideIcon;
+    color: string;
+    glow: string;
+    unread: boolean;
+  }) {
+    const reduced = useReducedMotion();
+
+    return (
+      <motion.div
+        className="relative flex h-[42px] w-[42px] shrink-0 items-center justify-center"
+        style={{ filter: `drop-shadow(0 0 8px ${glow})` }}
+        animate={reduced ? { y: 0 } : { y: [0, -1, 0], rotate: [0, 0.8, 0] }}
+        transition={reduced ? { duration: 0.3 } : { duration: 4.6, repeat: Infinity, ease: "easeInOut" }}
+      >
+        <motion.span
+          className="pointer-events-none absolute inset-[-6px] rounded-full blur-lg"
+          style={{ background: `radial-gradient(circle, ${glow}, transparent 72%)` }}
+          animate={reduced ? { opacity: 0.34, scale: 1 } : { opacity: [.1, .34, .1], scale: [.82, 1.1, .82] }}
+          transition={reduced ? { duration: 0.3 } : { duration: 2.8, repeat: Infinity, ease: "easeInOut" }}
+        />
+        <Icon size={24} strokeWidth={1.55} color={color} className="relative z-10" aria-hidden="true" />
+        {unread && (
+          <motion.span
+            className="absolute -right-1 -top-1 z-20 h-2 w-2 rounded-full bg-rose-400"
+            animate={reduced ? { opacity: 1 } : { opacity: [0.55, 1, 0.55], scale: [0.86, 1.15, 0.86] }}
+            transition={reduced ? { duration: 0.3 } : { duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
+          />
+        )}
+      </motion.div>
+    );
+  }
+
   export default function Academy() {
     const { unlockedArticles, keys, userState, onboardingHighlight, readArticles } = useAppStore();
     const [, setLocation] = useLocation();
+    const reducedMotion = useReducedMotion();
+    const [stackProgress, setStackProgress] = useState(0);
+    const scrollFrame = useRef<number | null>(null);
 
     const isOnboarding = userState === 'onboarding';
     const hasHL       = isOnboarding && onboardingHighlight.length > 0;
-    const hlArticles  = hasHL && onboardingHighlight.includes('ACAD_articles');
     const dimArticles = hasHL && !onboardingHighlight.includes('ACAD_articles');
 
+    useEffect(() => {
+      return () => {
+        if (scrollFrame.current !== null) {
+          cancelAnimationFrame(scrollFrame.current);
+        }
+      };
+    }, []);
+
+    const handleScroll = (event: UIEvent<HTMLDivElement>) => {
+      const nextProgress = Math.min(1, Math.max(0, event.currentTarget.scrollTop / ARTICLE_STACK_RELEASE));
+      if (scrollFrame.current !== null) {
+        cancelAnimationFrame(scrollFrame.current);
+      }
+      scrollFrame.current = requestAnimationFrame(() => {
+        scrollFrame.current = null;
+        setStackProgress(nextProgress);
+      });
+    };
+
     return (
-      <div className="flex flex-col h-[calc(100dvh-60px)] pt-2 overflow-hidden">
+      <div
+        className="h-[calc(100dvh-60px)] overflow-y-auto overscroll-contain px-4 pb-20"
+        onScroll={handleScroll}
+      >
         <motion.div
           animate={{ opacity: dimArticles ? 0.2 : 1 }}
           transition={{ duration: 0.25 }}
-          className="px-4 pb-2 shrink-0 relative z-10"
+          className="relative z-10 pb-6 pt-12"
         >
-          <h2 className="text-tertiary uppercase tracking-wider"
-            style={{ fontSize: 16, fontWeight: 600, letterSpacing: '0.08em' }}>
-            База знаний
-          </h2>
+          <div className="flex items-center gap-2">
+            <KnowledgeBaseMark />
+            <h2 className="min-w-0 text-left uppercase tracking-wider"
+              style={{ color: 'rgba(245,158,11,.82)', fontSize: 22, fontWeight: 600, letterSpacing: '0.08em' }}>
+              База знаний
+            </h2>
+          </div>
         </motion.div>
 
         <motion.div
           animate={{ opacity: dimArticles ? 0.2 : 1 }}
           transition={{ duration: 0.25 }}
-          className="flex-1 overflow-y-auto px-4 pb-20 space-y-2 relative z-10"
+          className="article-stack-list relative z-10 space-y-3"
         >
           {ARTICLES.map((a, articleIdx) => {
             const isUnlocked = unlockedArticles.includes(a.id) || a.id === 'A1';
@@ -86,56 +366,160 @@ import { useLocation } from "wouter";
             const isFree      = a.cost === 0;
             const showUnreadDot = isUnlocked && !isRead;
 
+            const visual = a.visual;
+            const ringStyle = ARTICLE_RING_STYLES[articleIdx % ARTICLE_RING_STYLES.length];
+            const stackRelease = 1 - stackProgress;
+            const stackOffset = articleIdx * ARTICLE_STACK_OFFSET * stackRelease;
+            const stackTilt = articleIdx === 0
+              ? 0
+              : (articleIdx % 2 === 0 ? 0.35 : -0.45) * stackRelease;
+            const perspectiveTilt = -(16 + articleIdx * 0.5) * stackRelease;
+
             return (
-              <motion.button
+              <div
                 key={a.id}
-                initial={{ opacity: 0, y: 40 }}
-                animate={{ opacity: 1, y: 0, scale: hlArticles ? 1.01 : 1 }}
-                transition={{ duration: 1.5, delay: 0.1 + articleIdx * 0.07, ease: EASE }}
-                whileTap={isOnboarding ? {} : { scale: 0.985 }}
-                onClick={() => !isOnboarding && setLocation(`/article/${a.id}`)}
-                className="w-full rounded-[20px] p-4 text-left active:brightness-110 transition-all overflow-hidden relative flex items-start gap-3"
+                className="article-stack-card relative w-full"
                 style={{
-                  background: isUnlocked
-                    ? PURPLE.bg.replace(/0\.22/g, '0.28').replace(/0\.08/g, '0.14')
-                    : PURPLE.bg,
-                  border: `1px solid ${isUnlocked ? PURPLE.border.replace('0.28','0.45') : PURPLE.border}`,
-                  boxShadow: isUnlocked
-                    ? `0 4px 20px ${PURPLE.glow}, 0 1px 0 rgba(255,255,255,0.06) inset, ${CARD_SHADOW}`
-                    : `${CARD_SHADOW}`,
-                  opacity: isUnlocked ? 1 : 0.65,
+                  transform: `perspective(560px) translate3d(0, -${stackOffset}px, 0) rotateX(${perspectiveTilt}deg) rotateZ(${stackTilt}deg)`,
+                  transformOrigin: 'top center',
+                  willChange: 'transform',
+                  zIndex: articleIdx + 1,
                 }}
               >
-                <div className="flex-1 min-w-0 relative">
-                  <div className="flex items-start gap-2 mb-1">
-                    <h3 className="title-s text-primary leading-snug"
-                      style={{ opacity: isUnlocked ? 1 : 0.6 }}>
-                      {a.title}
-                    </h3>
-                    {isRead && (
-                      <span className="label px-2 py-0.5 rounded-[6px] shrink-0 mt-0.5"
-                        style={{
-                          background: 'rgba(34,197,94,0.1)',
-                          border: '1px solid rgba(34,197,94,0.2)',
-                          color: '#22C55E',
-                          fontSize: 10,
-                          fontWeight: 600,
-                        }}>
-                        Прочитано
-                      </span>
-                    )}
-                  </div>
-                  <p className="body-s text-secondary leading-tight line-clamp-2"
-                    style={{ opacity: isUnlocked ? 0.8 : 0.45 }}>
-                    {a.desc}
-                  </p>
-                </div>
-                <div className="shrink-0 flex flex-col items-center justify-start pt-0.5 min-w-[36px] text-right relative">
+                <motion.button
+                  initial={{
+                    opacity: 0,
+                    y: 58,
+                    rotateX: 18,
+                    rotateZ: articleIdx % 2 === 0 ? -2.5 : 2.5,
+                    scale: 0.94,
+                    filter: "blur(7px)",
+                  }}
+                  animate={{
+                    opacity: 1,
+                    y: 0,
+                    rotateX: 0,
+                    rotateZ: 0,
+                    scale: 1,
+                    filter: "blur(0px)",
+                  }}
+                  transition={{
+                    duration: 1.05 + articleIdx * 0.07,
+                    delay: 0.12 + articleIdx * 0.11,
+                    ease: EASE,
+                  }}
+                  whileTap={isOnboarding ? {} : { filter: "brightness(1.08)" }}
+                  onClick={() => !isOnboarding && setLocation(`/article/${a.id}`)}
+                  className="group relative flex w-full flex-col overflow-hidden rounded-[20px] p-4 text-left transition-[filter] active:brightness-110"
+                  style={{
+                    transformOrigin: "top center",
+                    transformStyle: "preserve-3d",
+                  background: `linear-gradient(135deg, ${visual.glow}, rgba(255,255,255,0.035) 52%, rgba(0,0,0,0.1)), ${visual.surface}`,
+                  border: `1px solid ${visual.color}45`,
+                  boxShadow: `0 5px 24px ${visual.glow}, 0 1px 0 rgba(255,237,213,0.09) inset, ${CARD_SHADOW}`,
+                  }}
+                >
+                <motion.div
+                  aria-hidden="true"
+                  className="pointer-events-none absolute z-[1] rounded-full border"
+                  style={{
+                    width: ringStyle.outer.size,
+                    height: ringStyle.outer.size,
+                    left: ringStyle.outer.left,
+                    right: ringStyle.outer.right,
+                    top: ringStyle.outer.top,
+                    bottom: ringStyle.outer.bottom,
+                    borderWidth: ringStyle.outer.width,
+                    borderColor: `${visual.color}${ringStyle.outer.alpha}`,
+                    boxShadow: `0 0 32px ${visual.color}40`,
+                  }}
+                  animate={reducedMotion
+                    ? { rotate: 0, opacity: 0.55 }
+                    : { rotate: 360, opacity: [0.45, 0.72, 0.45] }}
+                  transition={reducedMotion
+                    ? { duration: 0.3 }
+                    : {
+                        rotate: { duration: ringStyle.outer.duration, repeat: Infinity, ease: "linear" },
+                        opacity: { duration: 4.4 + articleIdx * 0.35, repeat: Infinity, ease: "easeInOut", delay: articleIdx * 0.18 },
+                      }}
+                />
+                <motion.svg
+                  aria-hidden="true"
+                  className="pointer-events-none absolute z-[1]"
+                  width={ringStyle.dash.size}
+                  height={ringStyle.dash.size}
+                  viewBox={`0 0 ${ringStyle.dash.size} ${ringStyle.dash.size}`}
+                  fill="none"
+                  style={{
+                    left: ringStyle.dash.left,
+                    right: ringStyle.dash.right,
+                    top: ringStyle.dash.top,
+                    bottom: ringStyle.dash.bottom,
+                    filter: `drop-shadow(0 0 12px ${visual.color}66)`,
+                  }}
+                  animate={reducedMotion
+                    ? { rotate: 0, opacity: 0.3 }
+                    : { rotate: ringStyle.dash.direction * 360, opacity: [0.28, 0.48, 0.28] }}
+                  transition={reducedMotion
+                    ? { duration: 0.3 }
+                    : {
+                        rotate: { duration: ringStyle.dash.duration, repeat: Infinity, ease: "linear" },
+                        opacity: { duration: 3.5 + articleIdx * 0.28, repeat: Infinity, ease: "easeInOut", delay: articleIdx * 0.24 },
+                      }}
+                >
+                  <circle
+                    cx={ringStyle.dash.size / 2}
+                    cy={ringStyle.dash.size / 2}
+                    r={(ringStyle.dash.size / 2) - 4}
+                    stroke={visual.color}
+                    strokeWidth={ringStyle.dash.width}
+                    strokeDasharray={ringStyle.dash.dashArray}
+                    strokeLinecap="butt"
+                    opacity={ringStyle.dash.opacity}
+                  />
+                </motion.svg>
+                <motion.svg
+                  aria-hidden="true"
+                  className="pointer-events-none absolute z-[1]"
+                  width={ringStyle.fine.size}
+                  height={ringStyle.fine.size}
+                  viewBox={`0 0 ${ringStyle.fine.size} ${ringStyle.fine.size}`}
+                  fill="none"
+                  style={{
+                    left: ringStyle.fine.left,
+                    right: ringStyle.fine.right,
+                    top: ringStyle.fine.top,
+                    bottom: ringStyle.fine.bottom,
+                  }}
+                  animate={reducedMotion
+                    ? { rotate: 0, opacity: 0.3 }
+                    : { rotate: ringStyle.fine.direction * 360, opacity: [0.26, 0.42, 0.26] }}
+                  transition={reducedMotion
+                    ? { duration: 0.3 }
+                    : {
+                        rotate: { duration: ringStyle.fine.duration, repeat: Infinity, ease: "linear" },
+                        opacity: { duration: 2.8 + articleIdx * 0.22, repeat: Infinity, ease: "easeInOut", delay: articleIdx * 0.3 },
+                      }}
+                >
+                  <circle
+                    cx={ringStyle.fine.size / 2}
+                    cy={ringStyle.fine.size / 2}
+                    r={(ringStyle.fine.size / 2) - 3}
+                    stroke={visual.color}
+                    strokeWidth={ringStyle.fine.width}
+                    strokeDasharray={ringStyle.fine.dashArray}
+                    strokeLinecap="butt"
+                    opacity={ringStyle.fine.opacity}
+                  />
+                </motion.svg>
+                <div className="relative z-10 flex items-start justify-between gap-3">
+                  <ArticleIcon Icon={visual.Icon} color={visual.color} glow={visual.glow} unread={showUnreadDot} />
+                  <div className="flex min-w-[34px] shrink-0 flex-col items-end text-right">
                   {isUnlocked ? (
                     <div className="relative">
-                      <div className="w-7 h-7 rounded-full flex items-center justify-center"
-                        style={{ background: PURPLE.darkBg, border: `1px solid ${PURPLE.border}` }}>
-                        <Unlock size={13} color={PURPLE.color} />
+                       <div className="flex h-7 w-7 items-center justify-center rounded-full border"
+                         style={{ background: visual.glow, borderColor: `${visual.color}45` }}>
+                         <Unlock size={13} color={visual.color} />
                       </div>
                       {showUnreadDot && (
                         <span
@@ -145,14 +529,14 @@ import { useLocation } from "wouter";
                       )}
                     </div>
                   ) : (
-                    <div className="w-7 h-7 rounded-full flex items-center justify-center"
-                      style={{ background: PURPLE.darkBg, border: `1px solid ${PURPLE.border}` }}>
-                      <Lock size={13} color={canAfford ? PURPLE.color : 'var(--text-tertiary)'} />
+                     <div className="flex h-7 w-7 items-center justify-center rounded-full border"
+                       style={{ background: 'rgba(148,163,184,0.08)', borderColor: 'rgba(148,163,184,0.25)' }}>
+                       <Lock size={13} color={canAfford ? visual.color : 'var(--text-tertiary)'} />
                     </div>
                   )}
                   {!isUnlocked && !isFree && (
-                    <span className="label mt-1" style={{ color: canAfford ? PURPLE.color : 'var(--text-tertiary)' }}>
-                      {formatKeys(a.cost)}
+                     <span className="label mt-1" style={{ color: canAfford ? ACADEMY_ACCENT : 'var(--text-tertiary)' }}>
+                       {formatKeys(a.cost)}
                     </span>
                   )}
                   {isFree && !isUnlocked && (
@@ -160,8 +544,32 @@ import { useLocation } from "wouter";
                       free
                     </span>
                   )}
+                  </div>
+                </div>
+                <div className="relative z-10 mt-3 min-w-0">
+                  <h3 className="title-s w-full text-primary leading-snug"
+                    style={{ opacity: 0.96 }}>
+                    {a.title}
+                  </h3>
+                  <p className="body-s mt-1 text-secondary leading-tight line-clamp-2"
+                    style={{ opacity: 0.74 }}>
+                    {a.desc}
+                  </p>
+                  {isRead && (
+                    <span className="label mt-2 inline-flex rounded-[6px] px-2 py-0.5"
+                      style={{
+                        background: 'rgba(34,197,94,0.1)',
+                        border: '1px solid rgba(34,197,94,0.2)',
+                        color: '#22C55E',
+                        fontSize: 10,
+                        fontWeight: 600,
+                      }}>
+                      Прочитано
+                    </span>
+                  )}
                 </div>
               </motion.button>
+              </div>
             );
           })}
 

@@ -44,6 +44,7 @@ const ARTICLE_COSTS: Record<string, number> = {
   A3: 10,
   A4: 20,
   A5: 400,
+  A6: 400,
 };
 
 const MEMORY_MODES = ["reverse", "matrix", "symbols"] as const;
@@ -378,7 +379,7 @@ router.post("/me/articles/:articleId/read", async (req, res) => {
   const clerkId = requireUser(req, res);
   if (!clerkId) return;
   const articleId = String(req.params.articleId);
-  if (!/^A[1-5]$/.test(articleId)) {
+  if (!/^A[1-6]$/.test(articleId)) {
     res.status(400).json({ error: "Unknown article" });
     return;
   }

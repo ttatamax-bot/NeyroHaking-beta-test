@@ -85,6 +85,7 @@ const legacyArticles: Record<string, { title: string; cost: number }> = {
   A3: { title: "Научись управлять своим дофамином с помощью нейровизуализации", cost: 10 },
   A4: { title: "Гайд на планирование дел на день. Научись точно предсказывать время на задачу.", cost: 20 },
   A5: { title: "Гайд на сон. Как засыпать за 3–5 минут и просыпаться восстановленным.", cost: 400 },
+  A6: { title: "Гайд по внедрению любой привычки за 3 дня. Как сделать полезные действия источником дофамина.", cost: 400 },
 };
 
 export function stripNonAuthoritativeState(state: JsonObject): JsonObject {
