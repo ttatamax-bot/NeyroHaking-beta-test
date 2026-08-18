@@ -70,6 +70,9 @@ function hasArticleAccess(
 const MEMORY_MODES = ["reverse", "matrix", "symbols"] as const;
 type MemoryMode = typeof MEMORY_MODES[number];
 const MEMORY_COST = 400;
+const CONCENTRATION_MODES = ["signals", "tracking", "search"] as const;
+type ConcentrationMode = typeof CONCENTRATION_MODES[number];
+const CONCENTRATION_COST = 400;
 
 function memoryState(value: unknown): {
   purchasedModes: MemoryMode[];
@@ -87,6 +90,33 @@ function memoryState(value: unknown): {
   const rawBest = objectBody(raw.bestLevels) ? raw.bestLevels : {};
   const bestLevels: Partial<Record<MemoryMode, number>> = {};
   for (const mode of MEMORY_MODES) {
+    const best = Number(rawBest[mode]);
+    if (Number.isInteger(best) && best >= 1) bestLevels[mode] = best;
+  }
+  return {
+    purchasedModes: [...new Set(purchasedModes)],
+    bestLevels,
+    rewardDay: typeof raw.rewardDay === "string" ? raw.rewardDay : null,
+    onboardingSeen: [...new Set(onboardingSeen)],
+  };
+}
+
+function concentrationState(value: unknown): {
+  purchasedModes: ConcentrationMode[];
+  bestLevels: Partial<Record<ConcentrationMode, number>>;
+  rewardDay: string | null;
+  onboardingSeen: ConcentrationMode[];
+} {
+  const raw = objectBody(value) ? value : {};
+  const purchasedModes = Array.isArray(raw.purchasedModes)
+    ? raw.purchasedModes.filter((mode): mode is ConcentrationMode => CONCENTRATION_MODES.includes(mode as ConcentrationMode))
+    : [];
+  const onboardingSeen = Array.isArray(raw.onboardingSeen)
+    ? raw.onboardingSeen.filter((mode): mode is ConcentrationMode => CONCENTRATION_MODES.includes(mode as ConcentrationMode))
+    : [];
+  const rawBest = objectBody(raw.bestLevels) ? raw.bestLevels : {};
+  const bestLevels: Partial<Record<ConcentrationMode, number>> = {};
+  for (const mode of CONCENTRATION_MODES) {
     const best = Number(rawBest[mode]);
     if (Number.isInteger(best) && best >= 1) bestLevels[mode] = best;
   }
@@ -391,6 +421,85 @@ router.post("/me/memory/purchase", async (req, res) => {
     keys: result.profile.totalKeys,
     state: result.state,
     memory: result.memory,
+    profile: result.profile,
+  });
+});
+
+router.post("/me/concentration/purchase", async (req, res) => {
+  const clerkId = requireUser(req, res);
+  if (!clerkId) return;
+  const body = objectBody(req.body) ? req.body : {};
+  const queryMode = typeof req.query?.mode === "string" ? req.query.mode : undefined;
+  const parsed = z.object({
+    mode: z.enum(CONCENTRATION_MODES),
+  }).safeParse({ mode: body.mode ?? queryMode });
+  if (!parsed.success) {
+    res.status(400).json({ error: "Invalid concentration mode" });
+    return;
+  }
+
+  const user = await getUser(clerkId);
+  const mode = parsed.data.mode;
+  const result = await db.transaction(async (tx) => {
+    await tx.execute(sql`select pg_advisory_xact_lock(${user.id})`);
+    const profile = await tx.query.userProfilesTable.findFirst({
+      where: eq(userProfilesTable.userId, user.id),
+    }) ?? (await tx.insert(userProfilesTable).values({ userId: user.id }).returning())[0];
+    const row = await tx.query.userStatesTable.findFirst({
+      where: eq(userStatesTable.userId, user.id),
+    });
+    const currentState = objectBody(row?.state) ? row.state : {};
+    const currentConcentration = concentrationState(currentState.concentration);
+    if (currentConcentration.purchasedModes.includes(mode)) {
+      return {
+        profile,
+        state: currentState,
+        concentration: currentConcentration,
+        alreadyPurchased: true,
+      };
+    }
+    if (profile.totalKeys < CONCENTRATION_COST) return null;
+
+    const nextKeys = profile.totalKeys - CONCENTRATION_COST;
+    await tx.insert(keyTransactionsTable).values({
+      userId: user.id,
+      amount: -CONCENTRATION_COST,
+      reason: `concentration:${mode}`,
+    });
+    const [nextProfile] = await tx.update(userProfilesTable)
+      .set({ totalKeys: nextKeys, updatedAt: new Date() })
+      .where(eq(userProfilesTable.userId, user.id))
+      .returning();
+    const nextConcentration = {
+      ...currentConcentration,
+      purchasedModes: [...currentConcentration.purchasedModes, mode],
+    };
+    const nextState = { ...currentState, concentration: nextConcentration };
+    await tx.insert(userStatesTable).values({
+      userId: user.id,
+      state: nextState,
+    }).onConflictDoUpdate({
+      target: userStatesTable.userId,
+      set: { state: nextState, updatedAt: new Date() },
+    });
+    return {
+      profile: nextProfile,
+      state: nextState,
+      concentration: nextConcentration,
+      alreadyPurchased: false,
+    };
+  });
+
+  if (!result) {
+    res.status(409).json({ error: "Not enough keys" });
+    return;
+  }
+  res.json({
+    mode,
+    alreadyPurchased: result.alreadyPurchased,
+    keys: result.profile.totalKeys,
+    state: result.state,
+    concentration: result.concentration,
     profile: result.profile,
   });
 });

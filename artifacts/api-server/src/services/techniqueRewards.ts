@@ -18,7 +18,7 @@ import {
   type TechniqueId as EconomyTechniqueId,
 } from "../../../../lib/economy/src/index.js";
 
-export type TechniqueId = "T1" | "T2" | "T3" | "T4" | "T5" | "T6" | "T7";
+export type TechniqueId = "T1" | "T2" | "T3" | "T4" | "T5" | "T6" | "T7" | "T8";
 export type TechniqueMetadata = Record<string, unknown>;
 
 export interface CompletionResult {
@@ -34,15 +34,20 @@ export interface CompletionResult {
   alreadyCompleted?: boolean;
 }
 
-const techniqueIds: TechniqueId[] = ["T1", "T2", "T3", "T4", "T5", "T6", "T7"];
+const techniqueIds: TechniqueId[] = ["T1", "T2", "T3", "T4", "T5", "T6", "T7", "T8"];
 
 /** T1 (Planner) and T6 (Sleep) can be completed only once per app-day. */
 const singleCompletionTechniques = new Set<TechniqueId>(["T1", "T6"]);
 
 type MemoryMode = "reverse" | "matrix" | "symbols";
+type ConcentrationMode = "signals" | "tracking" | "search";
 
 function isMemoryMode(value: unknown): value is MemoryMode {
   return value === "reverse" || value === "matrix" || value === "symbols";
+}
+
+function isConcentrationMode(value: unknown): value is ConcentrationMode {
+  return value === "signals" || value === "tracking" || value === "search";
 }
 
 function objectBody(value: unknown): value is Record<string, unknown> {
@@ -141,6 +146,9 @@ export async function recordTechniqueCompletion(
     let memoryMode: MemoryMode | null = null;
     let memoryLevel = 0;
     let memoryRewardAwarded = false;
+    let concentrationMode: ConcentrationMode | null = null;
+    let concentrationLevel = 0;
+    let concentrationRewardAwarded = false;
     if (techniqueId === "T7") {
       memoryMode = isMemoryMode(metadata.mode) ? metadata.mode : null;
       memoryLevel = Number.isInteger(metadata.level) ? Number(metadata.level) : 0;
@@ -164,9 +172,32 @@ export async function recordTechniqueCompletion(
       }
       memoryRewardAwarded = memoryLevel >= 5 && memory.rewardDay !== day;
     }
+    if (techniqueId === "T8") {
+      concentrationMode = isConcentrationMode(metadata.mode) ? metadata.mode : null;
+      concentrationLevel = Number.isInteger(metadata.level) ? Number(metadata.level) : 0;
+      if (!concentrationMode || concentrationLevel < 1 || concentrationLevel > 1000000) {
+        const error = new Error("Invalid concentration completion");
+        Object.assign(error, { code: "invalid_concentration_completion" });
+        throw error;
+      }
+      const stateRow = await tx.query.userStatesTable.findFirst({
+        where: eq(userStatesTable.userId, userId),
+      });
+      currentState = objectBody(stateRow?.state) ? stateRow.state : {};
+      const concentration = objectBody(currentState.concentration) ? currentState.concentration : {};
+      const purchasedModes = Array.isArray(concentration.purchasedModes)
+        ? concentration.purchasedModes.filter(isConcentrationMode)
+        : [];
+      if (!purchasedModes.includes(concentrationMode)) {
+        const error = new Error("Concentration mode is not purchased");
+        Object.assign(error, { code: "concentration_mode_not_purchased" });
+        throw error;
+      }
+      concentrationRewardAwarded = concentrationLevel >= 5 && concentration.rewardDay !== day;
+    }
 
     // ── 3. Calculate potential this technique earns ──────────────────────────
-    const rawPotential = techniqueId === "T7" && !memoryRewardAwarded
+    const rawPotential = (techniqueId === "T7" && !memoryRewardAwarded) || (techniqueId === "T8" && !concentrationRewardAwarded)
       ? 0
       : potentialForTechnique(techniqueId as EconomyTechniqueId, metadata);
     const potential = normalizeDayPotential(rawPotential);
@@ -288,6 +319,29 @@ export async function recordTechniqueCompletion(
         ...(memoryRewardAwarded ? { rewardDay: day } : {}),
       };
       const nextState = { ...currentState, memory: nextMemory };
+      await tx.insert(userStatesTable).values({
+        userId,
+        state: nextState,
+      }).onConflictDoUpdate({
+        target: userStatesTable.userId,
+        set: { state: nextState, updatedAt: new Date() },
+      });
+    }
+    if (techniqueId === "T8" && concentrationMode) {
+      const concentration = objectBody(currentState.concentration) ? currentState.concentration : {};
+      const bestLevels = objectBody(concentration.bestLevels) ? concentration.bestLevels : {};
+      const nextConcentration = {
+        ...concentration,
+        purchasedModes: Array.isArray(concentration.purchasedModes)
+          ? concentration.purchasedModes.filter(isConcentrationMode)
+          : [concentrationMode],
+        bestLevels: {
+          ...bestLevels,
+          [concentrationMode]: Math.max(Number(bestLevels[concentrationMode]) || 1, concentrationLevel),
+        },
+        ...(concentrationRewardAwarded ? { rewardDay: day } : {}),
+      };
+      const nextState = { ...currentState, concentration: nextConcentration };
       await tx.insert(userStatesTable).values({
         userId,
         state: nextState,

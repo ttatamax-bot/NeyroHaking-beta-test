@@ -6,6 +6,7 @@ import {
   migrateLegacyState,
   completeTechnique as apiCompleteTechnique,
   purchaseMemoryMode as apiPurchaseMemoryMode,
+  purchaseConcentrationMode as apiPurchaseConcentrationMode,
   setApiAuthTokenProvider,
   ApiError,
   type CompleteTechniqueResult,
@@ -52,7 +53,7 @@ export interface DayRecord {
 export interface ActivityEntry {
   id: string;
   date: string;
-   type: 'planner' | 'visualization' | 'meditation' | 'walk' | 'hobby' | 'sleep' | 'memory' | 'article';
+    type: 'planner' | 'visualization' | 'meditation' | 'walk' | 'hobby' | 'sleep' | 'memory' | 'concentration' | 'article';
   keysGained: number;
   potentialGained: number;
   details: {
@@ -68,8 +69,11 @@ export interface ActivityEntry {
     articleTitle?: string;
     hobbyChallenge?: string;
     challengeResult?: 'done' | 'partial' | 'none';
-     mode?: 'reverse' | 'matrix' | 'symbols';
+      mode?: 'reverse' | 'matrix' | 'symbols' | 'signals' | 'tracking' | 'search';
      level?: number;
+      bestReactionMs?: number;
+      averageReactionMs?: number;
+      stabilityPercent?: number;
   };
 }
 
@@ -109,12 +113,20 @@ export interface PlannerTask {
 }
 
 export type MemoryMode = 'reverse' | 'matrix' | 'symbols';
+export type ConcentrationMode = 'signals' | 'tracking' | 'search';
 
 export interface MemoryState {
   purchasedModes: MemoryMode[];
   bestLevels: Partial<Record<MemoryMode, number>>;
   rewardDay: string | null;
   onboardingSeen: MemoryMode[];
+}
+
+export interface ConcentrationState {
+  purchasedModes: ConcentrationMode[];
+  bestLevels: Partial<Record<ConcentrationMode, number>>;
+  rewardDay: string | null;
+  onboardingSeen: ConcentrationMode[];
 }
 
 export interface AppState {
@@ -163,6 +175,8 @@ export interface AppState {
   walkWarningShown: boolean;
   memoryOnboardingSeen: MemoryMode[];
   memory: MemoryState;
+  concentrationHubOnboardingSeen: boolean;
+  concentration: ConcentrationState;
   profile?: ServerProfile | null;
 }
 
@@ -217,6 +231,13 @@ export const defaultState: AppState = {
     rewardDay: null,
     onboardingSeen: [],
   },
+  concentrationHubOnboardingSeen: false,
+  concentration: {
+    purchasedModes: [],
+    bestLevels: {},
+    rewardDay: null,
+    onboardingSeen: [],
+  },
   profile: null,
 };
 
@@ -258,6 +279,7 @@ export const TECHNIQUE_SOURCES: Record<string, string> = {
   T5: 'Техника: Хобби',
   T6: 'Техника: Сон',
   T7: 'Техника: Память',
+  T8: 'Техника: Концентрация',
 };
 
 // The app day starts at 05:00 local time. Sleeping before 23:00 locks the app
@@ -422,7 +444,9 @@ function completionActivityType(techniqueId: string): ActivityEntry['type'] {
              ? 'hobby'
              : techniqueId === 'T6'
                ? 'sleep'
-               : 'memory';
+                : techniqueId === 'T7'
+                  ? 'memory'
+                  : 'concentration';
 }
 
 export function applyServerCompletions(prev: AppState, completions: ServerCompletion[]): AppState {
@@ -623,6 +647,21 @@ export function applyServerCompletion(
     }
   }
 
+  if (techniqueId === 'T8') {
+    const mode = metadata.mode;
+    const level = Number(metadata.level);
+    if (mode === 'signals' || mode === 'tracking' || mode === 'search') {
+      updates.concentration = {
+        ...prev.concentration,
+        bestLevels: {
+          ...prev.concentration.bestLevels,
+          [mode]: Math.max(prev.concentration.bestLevels[mode] ?? 1, Number.isFinite(level) ? level : 1),
+        },
+        ...(result.potential > 0 ? { rewardDay: getServerAppDayKey(now) } : {}),
+      };
+    }
+  }
+
   if (result.dayClosed) {
     updates.userState = 'dayDone';
     updates.history = [
@@ -813,7 +852,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         'keys', 'potential', 'streak', 'lastCompletedDate', 'todayTechniques',
         'todayTechniquesDate', 'keysHistory', 'potentialHistory', 'streakHistory',
         'activityLog', 'history', 'unlockedArticles', 'purchaseHistory',
-        'firstGoalBonusGiven', 'memory',
+        'firstGoalBonusGiven', 'memory', 'concentration',
       ] as const) {
         delete safeUpdates[key];
       }
@@ -834,8 +873,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         Number.isFinite(level) &&
         level >= 5 &&
         previewState.memory.rewardDay !== getServerAppDayKey();
+      const isConcentrationReward =
+        techniqueId === 'T8' &&
+        Number.isFinite(level) &&
+        level >= 5 &&
+        previewState.concentration.rewardDay !== getServerAppDayKey();
       const previewPotential = techniqueId === 'T7'
         ? (isMemoryReward ? 10 : 0)
+        : techniqueId === 'T8'
+          ? (isConcentrationReward ? 10 : 0)
         : potentialForTechnique(techniqueId as TechniqueId);
       const previewResult: CompleteTechniqueResult = {
         keys: 0,
@@ -927,6 +973,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }));
   }, []);
 
+  const purchaseConcentrationMode = useCallback(async (mode: ConcentrationMode) => {
+    const result = await apiPurchaseConcentrationMode(mode);
+    setState(prev => ({
+      ...mergeSavedServerState(prev, result.state, result.profile),
+      concentration: {
+        ...prev.concentration,
+        ...result.concentration,
+        onboardingSeen: prev.concentration.onboardingSeen,
+      },
+    }));
+  }, []);
+
   const previewGuestReady = import.meta.env.DEV && !isSignedIn;
 
   return (
@@ -942,6 +1000,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       refreshProfile,
       applyTrustedServerResult,
       purchaseMemoryMode,
+      purchaseConcentrationMode,
     }}>
       {children}
     </AppContext.Provider>

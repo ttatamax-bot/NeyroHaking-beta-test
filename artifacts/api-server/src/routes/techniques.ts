@@ -38,6 +38,13 @@ const metadataSchemas: Record<TechniqueId, z.ZodTypeAny> = {
     mode: z.enum(["reverse", "matrix", "symbols"]),
     level: z.number().int().min(1).max(1000000),
   }),
+  T8: z.object({
+    mode: z.enum(["signals", "tracking", "search"]),
+    level: z.number().int().min(1).max(1000000),
+    bestReactionMs: z.number().int().min(0).max(60000).optional(),
+    averageReactionMs: z.number().int().min(0).max(60000).optional(),
+    stabilityPercent: z.number().min(0).max(100).optional(),
+  }),
 };
 
 router.post("/techniques/complete", async (req, res) => {

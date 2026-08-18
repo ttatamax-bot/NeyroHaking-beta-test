@@ -2,7 +2,7 @@ import { useAppStore, ActivityEntry } from "@/lib/store";
 import { ScreenTransition } from "@/components/ScreenTransition";
 import { BackButton } from "@/components/BackButton";
 import { motion } from "framer-motion";
-import { Key, Zap, BookOpen, Brain, Footprints, Moon, Palette, ListTodo } from "lucide-react";
+import { Key, Zap, BookOpen, Brain, Crosshair, Footprints, Moon, Palette, ListTodo } from "lucide-react";
 
 const TYPE_LABELS: Record<ActivityEntry['type'], string> = {
   planner: 'Планер',
@@ -12,6 +12,7 @@ const TYPE_LABELS: Record<ActivityEntry['type'], string> = {
   hobby: 'Хобби',
   sleep: 'Сон',
   memory: 'Память',
+  concentration: 'Концентрация',
   article: 'Статья',
 };
 
@@ -23,6 +24,7 @@ const TYPE_ICONS: Record<ActivityEntry['type'], React.ReactNode> = {
   hobby: <Palette size={16} />,
   sleep: <Moon size={16} />,
   memory: <Brain size={16} />,
+  concentration: <Crosshair size={16} />,
   article: <BookOpen size={16} />,
 };
 
@@ -34,6 +36,7 @@ const TYPE_COLORS: Record<ActivityEntry['type'], string> = {
   hobby: 'rgba(245,158,11,0.2)',
   sleep: 'rgba(99,102,241,0.2)',
   memory: 'rgba(249,115,22,0.2)',
+  concentration: 'rgba(249,115,22,0.2)',
   article: 'rgba(236,72,153,0.2)',
 };
 
@@ -54,6 +57,8 @@ function getEntryDetail(entry: ActivityEntry): string {
       return d.sleepTime ? `Отбой в ${d.sleepTime}` : '';
     case 'memory':
       return d.mode && d.level ? `${d.mode} · уровень ${d.level}` : 'Тренировка памяти';
+    case 'concentration':
+      return d.mode && d.level ? `${d.mode} · уровень ${d.level}` : 'Тренировка концентрации';
     case 'article':
       return d.articleTitle ?? '';
     default:

@@ -13,8 +13,12 @@ const FLASH_DURATION_MS = 9800;
 const POTENTIAL_LOCK_PROGRESS = 0.995;
 const BLUR_START_MS = 8760;
 const SERIES_START_MS = 10200;
+const BONUS_CARD_START_MS = SERIES_START_MS - 1000;
 const FLY_START_MS = 11640;
+const ZERO_REWARD_CARD_FLY_START_MS = FLY_START_MS;
 const FADE_START_MS = 14520;
+const FINAL_FADE_DURATION_S = 0.82;
+const FINAL_FADE_BLUR_PX = 8;
 
 const PARTICLES = [
   { x: "8%", y: "24%", size: 3, delay: 0, drift: -22 },
@@ -118,6 +122,14 @@ export default function DayCloseCinematic({
   const onCompleteRef = useRef(onComplete);
   const [displayPotential, setDisplayPotential] = useState(0);
   const [phase, setPhase] = useState<"build" | "surge" | "reward" | "blur" | "series" | "fly" | "fade">("build");
+  const [bonusCardStarted, setBonusCardStarted] = useState(false);
+  const [zeroRewardCardFlyStarted, setZeroRewardCardFlyStarted] = useState(false);
+  const rewardCount = Math.max(100, Number.isFinite(keysAwarded) ? Math.round(keysAwarded) : 100);
+  const baseReward = 100;
+  const bonusReward = Math.max(0, rewardCount - baseReward);
+  const hasSeriesBonus = bonusReward > 0;
+  const isZeroSeriesScenario = !hasSeriesBonus;
+  const finalFadeDurationS = hasSeriesBonus ? FINAL_FADE_DURATION_S : 0.24;
   onCompleteRef.current = onComplete;
 
   useEffect(() => {
@@ -173,11 +185,18 @@ export default function DayCloseCinematic({
     const nextPhase =
       elapsedMs >= FADE_START_MS ? "fade" :
       elapsedMs >= FLY_START_MS ? "fly" :
-      elapsedMs >= SERIES_START_MS ? "series" :
-      elapsedMs >= BLUR_START_MS ? "blur" :
+      hasSeriesBonus && elapsedMs >= SERIES_START_MS ? "series" :
+      hasSeriesBonus && elapsedMs >= BLUR_START_MS ? "blur" :
       reachedPotential ? "reward" :
       nextTime >= 0.17 ? "surge" :
       "build";
+    const nextBonusCardStarted = hasSeriesBonus && elapsedMs >= BONUS_CARD_START_MS;
+    const nextZeroRewardCardFlyStarted =
+      isZeroSeriesScenario && elapsedMs >= ZERO_REWARD_CARD_FLY_START_MS;
+    setBonusCardStarted((current) => current === nextBonusCardStarted ? current : nextBonusCardStarted);
+    setZeroRewardCardFlyStarted((current) =>
+      current === nextZeroRewardCardFlyStarted ? current : nextZeroRewardCardFlyStarted,
+    );
     setPhase((current) => current === nextPhase ? current : nextPhase);
   });
 
@@ -193,11 +212,9 @@ export default function DayCloseCinematic({
   });
   const potentialNumberLabel = useTransform(potential, (value) => `${Number.isFinite(value) ? Math.round(clamp(value)) : 0}`);
 
-  const rewardCount = Math.max(100, Number.isFinite(keysAwarded) ? Math.round(keysAwarded) : 100);
-  const baseReward = 100;
-  const bonusReward = Math.max(0, rewardCount - baseReward);
   const safeStreakDay = Math.max(1, Number.isFinite(streakDay) ? Math.round(streakDay) : 1);
   const safeOrigin = Math.round(clamp(fromPotential));
+  const shouldFlyZeroRewardCard = isZeroSeriesScenario && zeroRewardCardFlyStarted;
 
   return (
     <motion.div
@@ -214,14 +231,23 @@ export default function DayCloseCinematic({
         : {
             opacity: phase === "fade" ? 0 : 1,
             x: phase === "surge" ? [0, -2, 2, -1, 0] : 0,
-            filter: phase === "surge" ? "blur(0.18px)" : "blur(0px)",
+            filter: phase === "fade" && hasSeriesBonus
+              ? `blur(${FINAL_FADE_BLUR_PX}px)`
+              : phase === "surge"
+                ? "blur(0.18px)"
+                : "blur(0px)",
           }}
       transition={reducedMotion
-        ? { duration: phase === "fade" ? 0.24 : 0, ease: "easeIn" }
+        ? { duration: phase === "fade" ? finalFadeDurationS : 0, ease: hasSeriesBonus ? "easeInOut" : "easeIn" }
         : {
-            opacity: { duration: phase === "fade" ? 0.24 : 0, ease: "easeIn" },
+            opacity: { duration: phase === "fade" ? finalFadeDurationS : 0, ease: hasSeriesBonus ? "easeInOut" : "easeIn" },
             x: { duration: 0.8, ease: [0.16, 1, 0.3, 1] },
-            filter: { duration: 0.18, ease: "easeOut" },
+            filter: {
+              duration: phase === "fade"
+                ? (hasSeriesBonus ? FINAL_FADE_DURATION_S : 0.18)
+                : 0.18,
+              ease: phase === "fade" && hasSeriesBonus ? "easeInOut" : "easeOut",
+            },
           }}
     >
       <style>{`
@@ -601,6 +627,9 @@ export default function DayCloseCinematic({
            filter: blur(9px);
            will-change: transform, opacity;
          }
+          .close-reward-zero-series {
+            z-index: 13;
+          }
          .close-bonus-card {
            position: absolute;
            left: 50%;
@@ -994,10 +1023,17 @@ export default function DayCloseCinematic({
        <motion.div
          className="close-backdrop-blur"
          initial={{ opacity: 0, backdropFilter: "blur(0px)" }}
-          animate={phase === "blur" || phase === "series" || phase === "fade"
+           animate={hasSeriesBonus && (phase === "blur" || phase === "series" || phase === "fade")
            ? { opacity: 1, backdropFilter: "blur(10px) saturate(1.08)" }
            : { opacity: 0, backdropFilter: "blur(0px)" }}
-         transition={{ duration: phase === "blur" ? 0.35 : 0.25, ease: "easeInOut" }}
+          transition={{
+            duration: phase === "fade" && hasSeriesBonus
+              ? FINAL_FADE_DURATION_S
+              : hasSeriesBonus && phase === "blur"
+                ? 0.35
+                : 0.25,
+            ease: "easeInOut",
+          }}
           style={{ background: "rgba(5, 11, 24, .08)" }}
          aria-hidden="true"
        />
@@ -1011,7 +1047,9 @@ export default function DayCloseCinematic({
               : phase === "blur" || phase === "series"
                ? { opacity: 0.96, scale: 1.45 }
                : phase === "fly"
-                 ? { opacity: [0.96, 0], scale: [1.45, 2.2] }
+                 ? isZeroSeriesScenario
+                   ? { opacity: [0.72, 0], scale: [1, 2.2] }
+                   : { opacity: [0.96, 0], scale: [1.45, 2.2] }
                  : { opacity: 0, scale: 0.7 }
          }
          transition={
@@ -1039,20 +1077,22 @@ export default function DayCloseCinematic({
         </motion.div>
 
        <motion.div
-         className="close-reward"
+         className={`close-reward ${isZeroSeriesScenario ? "close-reward-zero-series" : ""}`}
          data-testid="reward-day-close-keys"
          initial={{ opacity: 0, scale: 1, x: 0, y: 0 }}
          animate={
-           phase === "reward"
+            phase === "fade" && shouldFlyZeroRewardCard
+              ? { opacity: 0, scale: .36, x: 340, y: -135, rotate: 18 }
+            : phase === "reward" && !shouldFlyZeroRewardCard
               ? { opacity: 1, scale: [1, 1.03, 1], x: 0, y: 0 }
              : phase === "blur"
                 ? { opacity: 1, scale: 1.04, x: 0, y: 0 }
                  : phase === "series" && bonusReward > 0
                    ? { opacity: [.92, .55, 0], scale: [1.04, .98, .9], x: 0, y: 0 }
-                   : phase === "fly" && bonusReward === 0
+                  : shouldFlyZeroRewardCard
                      ? {
-                          opacity: [1, 0],
-                          scale: [1.04, .36],
+                           opacity: 1,
+                          scale: [1, .36],
                           x: [0, 340],
                           y: [0, -135],
                           rotate: [0, 18],
@@ -1062,12 +1102,14 @@ export default function DayCloseCinematic({
                        : { opacity: 0, scale: 1, x: 0, y: 0 }
          }
          transition={
-           phase === "reward"
+            phase === "fade" && shouldFlyZeroRewardCard
+               ? { duration: .2, ease: "easeOut" }
+            : phase === "reward" && !shouldFlyZeroRewardCard
               ? { duration: 1.1, ease: "easeOut" }
              : phase === "blur"
                ? { duration: .5, ease: "easeInOut" }
-                : phase === "fly" && bonusReward === 0
-                   ? { duration: 2.75, ease: "easeInOut" }
+                  : shouldFlyZeroRewardCard
+                    ? { duration: 2.75, ease: "easeInOut" }
                 : phase === "series" && bonusReward > 0
                  ? { duration: 1.15, ease: "easeIn" }
                  : { duration: .3, ease: "easeOut" }
@@ -1085,7 +1127,7 @@ export default function DayCloseCinematic({
           className="close-bonus-card"
          initial={{ opacity: 0, scale: .76, x: 0, y: -260, rotate: -6 }}
          animate={
-           phase === "series"
+           bonusCardStarted && (phase === "blur" || phase === "series")
              ? {
                  opacity: [0, 1, 1],
                  scale: [.76, 1.12, 1.06],
@@ -1095,7 +1137,7 @@ export default function DayCloseCinematic({
                }
              : phase === "fly"
                ? {
-                     opacity: [1, 0],
+                      opacity: 1,
                      scale: [1.06, .36],
                      x: [0, 340],
                      y: [0, -135],
@@ -1104,7 +1146,7 @@ export default function DayCloseCinematic({
                : { opacity: 0, scale: .76, x: 0, y: -260, rotate: -6 }
          }
          transition={
-           phase === "series"
+           bonusCardStarted && (phase === "blur" || phase === "series")
              ? { duration: 1.55, times: [0, .62, 1], ease: [0.16, 1, 0.3, 1] }
              : phase === "fly"
                  ? { duration: 2.75, ease: "easeInOut" }

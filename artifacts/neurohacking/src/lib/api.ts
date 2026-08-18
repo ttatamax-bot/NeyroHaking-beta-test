@@ -176,6 +176,25 @@ export async function purchaseMemoryMode(mode: MemoryMode): Promise<MemoryPurcha
   return apiPost<MemoryPurchaseResult>(`/me/memory/purchase?mode=${encodeURIComponent(mode)}`, { mode });
 }
 
+export type ConcentrationMode = 'signals' | 'tracking' | 'search';
+
+export interface ConcentrationPurchaseResult {
+  mode: ConcentrationMode;
+  alreadyPurchased: boolean;
+  keys: number;
+  concentration: {
+    purchasedModes: ConcentrationMode[];
+    bestLevels: Partial<Record<ConcentrationMode, number>>;
+    rewardDay: string | null;
+  };
+  state: Record<string, unknown>;
+  profile: ServerProfile;
+}
+
+export async function purchaseConcentrationMode(mode: ConcentrationMode): Promise<ConcentrationPurchaseResult> {
+  return apiPost<ConcentrationPurchaseResult>(`/me/concentration/purchase?mode=${encodeURIComponent(mode)}`, { mode });
+}
+
 export async function completeArticleRead(articleId: string): Promise<{
   articleId: string;
   alreadyRead: boolean;

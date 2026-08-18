@@ -15,9 +15,18 @@ const NEWS_ITEMS = [
 ];
 
 const SCALE_BAR_COUNT = 12;
-const NEWS_STACK_OFFSET = 76;
+const NEWS_STACK_OFFSET = 82;
+const NEWS_STACK_START = 364;
 const NEWS_STACK_RELEASE = 300;
 const NEWS_EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
+const NEWS_CARD_INTRO_DELAY = 0.48;
+const NEWS_CARD_STAGGER = 0.07;
+const NEWS_ICON_PARTICLES = [
+  { left: "12%", top: "22%", size: 4, color: "#F97316", delay: 0 },
+  { left: "82%", top: "18%", size: 3, color: "#FFD29A", delay: 0.7 },
+  { left: "88%", top: "76%", size: 4, color: "#FFB45E", delay: 1.2 },
+  { left: "18%", top: "82%", size: 3, color: "#FFE4B5", delay: 1.7 },
+];
 
 function getTodayLabels() {
   const today = new Date();
@@ -31,52 +40,305 @@ function getTodayLabels() {
 
 function NewsSystemMark() {
   const reduced = useReducedMotion();
+  const ringTickAngles = Array.from({ length: 24 }, (_, index) => index * 15);
 
   return (
     <motion.div
-      className="relative flex h-[142px] w-[142px] shrink-0 items-center justify-center"
-      initial={{ opacity: 0, scale: 0.72, y: 16 }}
+      className="relative flex h-[144px] w-[144px] shrink-0 items-center justify-center"
+      initial={{ opacity: 0, scale: 0.72, y: 10 }}
       animate={{ opacity: 1, scale: 1, y: 0 }}
       transition={{ duration: 0.9, ease: NEWS_EASE }}
       aria-hidden="true"
     >
       <motion.span
+        className="pointer-events-none absolute inset-[-34px] z-0 rounded-full"
+        style={{
+          background: "radial-gradient(circle, rgba(255,211,133,.28) 0%, rgba(249,115,22,.16) 34%, rgba(249,115,22,.06) 56%, transparent 74%)",
+        }}
+        initial={{ opacity: 0, scale: 0.62, filter: "blur(28px)" }}
+        animate={reduced
+          ? { opacity: 0.28, scale: 1, filter: "blur(16px)" }
+          : {
+              opacity: [0, 0.82, 0.28],
+              scale: [0.62, 1.12, 1],
+              filter: ["blur(28px)", "blur(9px)", "blur(2px)"],
+            }}
+        transition={reduced
+          ? { duration: 0.4 }
+          : { duration: 1.45, ease: NEWS_EASE, times: [0, 0.58, 1] }}
+      />
+      <motion.span
+        className="pointer-events-none absolute inset-[8px] z-[2] rounded-full"
+        style={{
+          background: "radial-gradient(circle, rgba(255,240,208,.2), rgba(249,115,22,.08) 44%, transparent 72%)",
+          mixBlendMode: "screen",
+        }}
+        initial={{ opacity: 0, scale: 0.72, filter: "blur(20px)" }}
+        animate={reduced
+          ? { opacity: 0.22, scale: 1, filter: "blur(10px)" }
+          : { opacity: [0, 0.64, 0.16], scale: [0.72, 1.08, 1], filter: ["blur(20px)", "blur(6px)", "blur(1px)"] }}
+        transition={reduced
+          ? { duration: 0.4 }
+          : { duration: 1.2, delay: 0.12, ease: NEWS_EASE, times: [0, 0.64, 1] }}
+      />
+      <motion.span
         className="pointer-events-none absolute inset-[-20px] rounded-full"
-        style={{ background: "radial-gradient(circle, rgba(245,158,11,.22), transparent 70%)" }}
-        animate={reduced ? { opacity: 0.5, scale: 1 } : { opacity: [0.25, 0.66, 0.25], scale: [0.92, 1.06, 0.92] }}
-        transition={reduced ? { duration: 0.3 } : { duration: 4.2, repeat: Infinity, ease: "easeInOut" }}
+        style={{ background: "radial-gradient(circle, rgba(245,158,11,.22), rgba(249,115,22,.10) 38%, transparent 72%)" }}
+        animate={reduced ? { opacity: 0.55, scale: 1 } : { opacity: [.35, .78, .35], scale: [.94, 1.06, .94] }}
+        transition={reduced ? { duration: 0.4 } : { duration: 4.2, repeat: Infinity, ease: "easeInOut" }}
+      />
+      <motion.span
+        className="pointer-events-none absolute inset-[-18px] rounded-full border"
+        style={{ borderColor: "rgba(255,210,125,.16)", boxShadow: "0 0 14px rgba(249,115,22,.08)" }}
+        animate={reduced ? { opacity: 0.22, rotate: 0 } : { opacity: [.12, .26, .12], rotate: [0, 360] }}
+        transition={reduced
+          ? { duration: 0.4 }
+          : {
+              opacity: { duration: 4.8, repeat: Infinity, ease: "easeInOut" },
+              rotate: { duration: 24, repeat: Infinity, ease: "linear" },
+            }}
+      />
+      <motion.span
+        className="pointer-events-none absolute inset-[2px] rounded-full border"
+        style={{ borderColor: "rgba(249,115,22,.2)" }}
+        animate={reduced ? { opacity: 0.26, rotate: 0 } : { opacity: [.16, .34, .16], rotate: [360, 0] }}
+        transition={reduced
+          ? { duration: 0.4 }
+          : {
+              opacity: { duration: 3.8, repeat: Infinity, ease: "easeInOut" },
+              rotate: { duration: 16, repeat: Infinity, ease: "linear" },
+            }}
       />
       <motion.svg
+        className="pointer-events-none absolute inset-[-31px] z-[1] h-auto w-auto"
+        viewBox="0 0 230 230"
+        fill="none"
+        aria-hidden="true"
+        animate={reduced ? { rotate: 0 } : { rotate: 360 }}
+        transition={reduced ? { duration: 0.4 } : { duration: 22, repeat: Infinity, ease: "linear" }}
+        style={{ filter: "drop-shadow(0 0 3px rgba(255,210,125,.12))" }}
+      >
+        <defs>
+          <clipPath id="news-line-top-clip" clipPathUnits="userSpaceOnUse">
+            <motion.rect
+              x="136"
+              y="100"
+              height="24"
+              animate={reduced ? { width: 64 } : { width: [0, 64, 64, 0] }}
+              transition={reduced ? { duration: 0.4 } : { duration: 3.8, repeat: Infinity, ease: "easeInOut" }}
+            />
+          </clipPath>
+          <clipPath id="news-line-bottom-clip" clipPathUnits="userSpaceOnUse">
+            <motion.rect
+              x="136"
+              y="132"
+              height="24"
+              animate={reduced ? { width: 64 } : { width: [0, 64, 64, 0] }}
+              transition={reduced ? { duration: 0.4 } : { duration: 3.8, delay: 0.42, repeat: Infinity, ease: "easeInOut" }}
+            />
+          </clipPath>
+        </defs>
+        <g opacity="0.1" stroke="#FFE8B0" strokeWidth="2.6" strokeLinecap="butt">
+          {ringTickAngles.map((angle) => (
+            <line key={`news-ring-tick-${angle}`} x1="115" y1="7" x2="115" y2="20" transform={`rotate(${angle} 115 115)`} />
+          ))}
+        </g>
+      </motion.svg>
+      <motion.span
+        className="pointer-events-none absolute inset-[-8px] rounded-full"
+        style={{
+          background: "repeating-conic-gradient(from -34deg, rgba(255,237,170,.38) 0deg .8deg, transparent .8deg 18deg)",
+          maskImage: "radial-gradient(circle, transparent 78%, #000 79.5%, #000 82%, transparent 83.5%)",
+          WebkitMaskImage: "radial-gradient(circle, transparent 78%, #000 79.5%, #000 82%, transparent 83.5%)",
+        }}
+        animate={reduced ? { rotate: 0, opacity: .28 } : { rotate: 360, opacity: [.22, .38, .22] }}
+        transition={reduced
+          ? { duration: 0.4 }
+          : {
+              rotate: { duration: 17, repeat: Infinity, ease: "linear" },
+              opacity: { duration: 9, repeat: Infinity, ease: "easeInOut" },
+            }}
+      />
+      <motion.span
+        className="pointer-events-none absolute inset-[16px] rounded-full"
+        style={{
+          background: "repeating-conic-gradient(from 14deg, rgba(255,237,170,.26) 0deg .8deg, transparent .8deg 24deg)",
+          maskImage: "radial-gradient(circle, transparent 78%, #000 79.5%, #000 82%, transparent 83.5%)",
+          WebkitMaskImage: "radial-gradient(circle, transparent 78%, #000 79.5%, #000 82%, transparent 83.5%)",
+        }}
+        animate={reduced ? { rotate: 0, opacity: .18 } : { rotate: -360, opacity: [.12, .26, .12] }}
+        transition={reduced
+          ? { duration: 0.4 }
+          : {
+              rotate: { duration: 13, repeat: Infinity, ease: "linear" },
+              opacity: { duration: 7, repeat: Infinity, ease: "easeInOut" },
+            }}
+      />
+      <motion.div
+        className="pointer-events-none absolute inset-0 z-[10] origin-center scale-[0.75]"
+        initial={{ opacity: 0, y: 8, filter: "blur(16px)" }}
+        animate={reduced
+          ? { opacity: 1, y: 0, filter: "blur(0px)" }
+          : { opacity: 1, y: 0, filter: "blur(0px)" }}
+        transition={reduced
+          ? { duration: 0.4 }
+          : { duration: 1.1, delay: 0.18, ease: NEWS_EASE }}
+      >
+      <motion.div
+        className="pointer-events-none absolute inset-0 z-[10]"
+        initial={{ opacity: 0, scale: 0.88, filter: "blur(18px)" }}
+        animate={reduced
+          ? { opacity: 1, scale: 1, filter: "blur(0px)" }
+          : { opacity: 1, scale: 1, filter: "blur(0px)" }}
+        transition={reduced
+          ? { duration: 0.4 }
+          : { duration: 1, delay: 0.26, ease: NEWS_EASE }}
+      >
+      <motion.svg
         xmlns="http://www.w3.org/2000/svg"
-        width="116"
-        height="116"
+        width="96"
+        height="96"
         fill="currentColor"
         viewBox="0 0 256 256"
-        className="relative z-10 text-[#FFE4B5]"
-        style={{ filter: "drop-shadow(0 0 14px rgba(249,115,22,.38))" }}
-        animate={reduced ? { y: 0, rotate: 0 } : { y: [0, -3, 0], rotate: [0, 1.2, 0] }}
-        transition={reduced ? { duration: 0.3 } : { duration: 4.8, repeat: Infinity, ease: "easeInOut" }}
+        className="absolute bottom-0 left-[3px] z-10 text-[#FFE4B5]"
+        animate={reduced
+          ? { y: 0, rotate: 0, scale: 1 }
+          : { y: [0, -3, 1, -2, 0], rotate: [0, 1.8, -1.4, 1, 0], scale: [1, 1.045, .99, 1.02, 1] }}
+        transition={reduced
+          ? { duration: 0.3 }
+          : {
+              y: { duration: 5.2, repeat: Infinity, ease: "easeInOut" },
+              rotate: { duration: 5.2, repeat: Infinity, ease: "easeInOut" },
+              scale: { duration: 5.2, repeat: Infinity, ease: "easeInOut" },
+            }}
       >
-        <path d="M208,32H184V24a8,8,0,0,0-16,0v8H88V24a8,8,0,0,0-16,0v8H48A16,16,0,0,0,32,48V208a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V48A16,16,0,0,0,208,32Zm0,176H48V48H72v8a8,8,0,0,0,16,0V48h80v8a8,8,0,0,0,16,0V48h24V208Zm-31.38-94.36-29.84-2.31-11.43-26.5a8,8,0,0,0-14.7,0l-11.43,26.5-29.84,2.31a8,8,0,0,0-4.47,14.14l22.52,18.59-6.86,27.71a8,8,0,0,0,11.82,8.81L128,167.82l25.61,15.07a8,8,0,0,0,11.82-8.81l-6.86-27.71,22.52-18.59a8,8,0,0,0-4.47-14.14Zm-32.11,23.6a8,8,0,0,0-2.68,8.09l3.5,14.12-13.27-7.81a8,8,0,0,0-8.12,0l-13.27,7.81,3.5-14.12a8,8,0,0,0-2.68-8.09l-11.11-9.18,14.89-1.15a8,8,0,0,0,6.73-4.8l6-13.92,6,13.92a8,8,0,0,0,6.73,4.8l14.89,1.15Z" />
+        <defs>
+          <clipPath id="news-paper-corner-cut" clipPathUnits="userSpaceOnUse">
+            <path d="M0,0H150V40Q150,56 134,56V84Q134,100 150,100H256V256H0Z" />
+          </clipPath>
+        </defs>
+        <g clipPath="url(#news-paper-corner-cut)">
+          <path d="M216,40H40A16,16,0,0,0,24,56V216a8,8,0,0,0,11.58,7.15L64,208.94l28.42,14.21a8,8,0,0,0,7.16,0L128,208.94l28.42,14.21a8,8,0,0,0,7.16,0L192,208.94l28.42,14.21A8,8,0,0,0,232,216V56A16,16,0,0,0,216,40Zm0,163.06-20.42-10.22a8,8,0,0,0-7.16,0L160,207.06l-28.42-14.22a8,8,0,0,0-7.16,0L96,207.06,67.58,192.84a8,8,0,0,0-7.16,0L40,203.06V56H216Z" />
+          <path d="M64,168h48a8,8,0,0,0,8-8V96a8,8,0,0,0-8-8H64a8,8,0,0,0-8,8v64A8,8,0,0,0,64,168Zm8-64h32v48H72Z" />
+          <g clipPath="url(#news-line-top-clip)">
+            <path d="M136,112a8,8,0,0,1,8-8h48a8,8,0,0,1,0,16H144A8,8,0,0,1,136,112Z" />
+          </g>
+          <g clipPath="url(#news-line-bottom-clip)">
+            <path d="M136,144a8,8,0,0,1,8-8h48a8,8,0,0,1,0,16H144A8,8,0,0,1,136,144Z" />
+          </g>
+        </g>
       </motion.svg>
+      </motion.div>
+      <motion.span
+        className="pointer-events-none absolute right-[31px] top-[51px] z-[12] h-[18px] w-[42px] rounded-full"
+        style={{
+          background: "radial-gradient(ellipse, rgba(255,240,208,.38), rgba(249,115,22,.16) 52%, transparent 76%)",
+          filter: "blur(3px)",
+          mixBlendMode: "screen",
+        }}
+        animate={reduced ? { opacity: 0.24, scaleX: 1 } : { opacity: [0.12, .55, .12], scaleX: [.8, 1.18, .8] }}
+        transition={reduced ? { duration: 0.4 } : { duration: 4.6, delay: 0.18, repeat: Infinity, ease: "easeInOut" }}
+      />
+      <motion.div
+        className="absolute right-[13px] top-[18px] z-20 origin-top"
+        style={{ transformOrigin: "50% 8%", filter: "drop-shadow(0 0 0.55px #FFF0D0)" }}
+        animate={reduced
+          ? { rotate: 0, x: 0, y: 0 }
+          : { rotate: [0, -27, 23, -18, 11, -6, 0], x: [0, -3, 3, -2, 2, -1, 0], y: [0, 3, -3, 2, -1, 1, 0], scale: [1, 1.06, .97, 1.04, .985, 1.015, 1] }}
+        transition={reduced ? { duration: 0.3 } : { duration: 4.6, repeat: Infinity, ease: "easeInOut" }}
+      >
+        <svg
+          width="62"
+          height="62"
+          viewBox="0 0 24 24"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+          className="text-[#FFF0D0]"
+        >
+          <path d="M18 8.4C18 6.70261 17.3679 5.07475 16.2426 3.87452C15.1174 2.67428 13.5913 2 12 2C10.4087 2 8.88258 2.67428 7.75736 3.87452C6.63214 5.07475 6 6.70261 6 8.4C6 15.8667 3 18 3 18H21C21 18 18 15.8667 18 8.4Z" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </motion.div>
+      <motion.svg
+        className="absolute right-[13px] top-[18px] z-[21] h-[62px] w-[62px] origin-top"
+        viewBox="0 0 24 24"
+        fill="none"
+        aria-hidden="true"
+        style={{ transformOrigin: "50% 8%", filter: "drop-shadow(0 0 0.55px #FFF0D0)" }}
+        animate={reduced
+          ? { rotate: 0, x: 0, y: 0, scale: 1 }
+          : { rotate: [0, -27, 23, -18, 11, -6, 0], x: [0, -3, 3, -2, 2, -1, 0], y: [0, 3, -3, 2, -1, 1, 0], scale: [1, 1.18, .94, 1.1, .97, 1.02, 1] }}
+        transition={reduced
+          ? { duration: 0.4 }
+          : { duration: 4.6, delay: 0.3, repeat: Infinity, ease: "easeInOut" }}
+      >
+        <path d="M13.73 21C13.5542 21.3039 13.302 21.5558 12.9984 21.7309C12.6948 21.906 12.3501 21.9984 12 21.9984C11.6499 21.9984 11.3052 21.906 11.0016 21.7309C10.698 21.5558 10.4458 21.3039 10.27 21" stroke="#FFF0D0" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" />
+      </motion.svg>
+      </motion.div>
+      {NEWS_ICON_PARTICLES.map((particle, index) => (
+        <motion.span
+          key={`news-icon-particle-${index}`}
+          className="pointer-events-none absolute z-[22] rounded-full"
+          style={{
+            left: particle.left,
+            top: particle.top,
+            width: particle.size,
+            height: particle.size,
+            background: particle.color,
+            boxShadow: `0 0 12px ${particle.color}`,
+          }}
+          initial={reduced
+            ? { opacity: 0.6, scale: 1 }
+            : { opacity: 0, scale: 0.2, filter: "blur(8px)" }}
+          animate={reduced
+            ? { opacity: 0.6, scale: 1 }
+            : { y: [0, -7, 0], opacity: [.2, .9, .2], scale: [.75, 1.2, .75] }}
+          transition={reduced
+            ? { duration: 0.4 }
+            : { duration: 2.2 + index * 0.25, delay: particle.delay, repeat: Infinity, ease: "easeInOut" }}
+        />
+      ))}
+      <motion.span
+        className="pointer-events-none absolute right-[9px] top-[17px] z-[23] h-2 w-2 rounded-full bg-[#F97316]"
+        initial={reduced
+          ? { opacity: 0.75, scale: 1 }
+          : { opacity: 0, scale: 0.2, filter: "blur(8px)" }}
+        animate={reduced ? { opacity: 0.75, scale: 1 } : { opacity: [0.5, 1, 0.5], scale: [0.8, 1.25, 0.8] }}
+        transition={reduced ? { duration: 0.3 } : { duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
+      />
     </motion.div>
   );
 }
 
 function NewsCardMotion({
+  newsIdx,
+  children,
+}: {
+  newsIdx: number;
+  children: React.ReactNode;
+}) {
+  return (
+    <div
+      className="news-stack-card relative w-full"
+      style={{ zIndex: newsIdx + 1 }}
+    >
+      {children}
+    </div>
+  );
+}
+
+function NewsCardVisualMotion({
   children,
   newsIdx,
-  stackOffset,
-  perspectiveTilt,
-  stackTilt,
+  stackProgress,
 }: {
   children: React.ReactNode;
   newsIdx: number;
-  stackOffset: number;
-  perspectiveTilt: number;
-  stackTilt: number;
+  stackProgress: number;
 }) {
   const hasMounted = useRef(false);
+  const stackRelease = 1 - stackProgress;
+  const stackOffset = newsIdx * NEWS_STACK_OFFSET * stackRelease;
+  const perspectiveTilt = -(16 + newsIdx * 0.5) * stackRelease;
 
   useEffect(() => {
     hasMounted.current = true;
@@ -84,36 +346,36 @@ function NewsCardMotion({
 
   return (
     <motion.div
-      className="news-stack-card relative w-full"
+      className="pointer-events-none relative flex min-h-[196px] w-full flex-col overflow-hidden rounded-[20px] p-4 text-left"
       style={{
-        transformOrigin: 'top center',
-        transformStyle: 'preserve-3d',
-        willChange: 'transform, opacity, filter',
-        zIndex: newsIdx + 1,
+        transformOrigin: "top center",
+        transformStyle: "preserve-3d",
+        background: 'linear-gradient(135deg, rgba(245,158,11,0.22) 0%, rgba(255,255,255,0.035) 52%, rgba(0,0,0,0.1)), #3E2E1D',
+        border: '1px solid rgba(245,158,11,0.34)',
+        boxShadow: '0 8px 32px rgba(0,0,0,0.68), 0 0 0 1px rgba(255,255,255,0.1), 0 1px 0 rgba(255,237,213,0.09) inset',
+        willChange: "transform, opacity, filter",
       }}
       initial={{
         opacity: 0,
-        y: 58 - stackOffset,
-        rotateX: perspectiveTilt + 18,
-        rotateZ: stackTilt + (newsIdx % 2 === 0 ? -2.5 : 2.5),
+        y: 46 - stackOffset,
+        rotateX: perspectiveTilt + 16,
         scale: 0.94,
-        filter: "blur(7px)",
-        transformPerspective: 560,
+        filter: "blur(6px)",
+        transformPerspective: 680,
       }}
       animate={{
         opacity: 1,
         y: -stackOffset,
         rotateX: perspectiveTilt,
-        rotateZ: stackTilt,
         scale: 1,
         filter: "blur(0px)",
-        transformPerspective: 560,
+        transformPerspective: 680,
       }}
       transition={hasMounted.current
-        ? { duration: 0.18, ease: "easeOut" }
+        ? { duration: 0.2, ease: "easeOut" }
         : {
-            duration: 1.05 + newsIdx * 0.07,
-            delay: 0.12 + newsIdx * 0.11,
+            duration: 0.9 + newsIdx * 0.06,
+            delay: NEWS_CARD_INTRO_DELAY + newsIdx * NEWS_CARD_STAGGER,
             ease: NEWS_EASE,
           }}
     >
@@ -585,10 +847,13 @@ export default function Home() {
   }, []);
 
   const handleHomeScroll = (event: UIEvent<HTMLDivElement>) => {
-    const nextProgress = Math.min(1, Math.max(0, event.currentTarget.scrollTop / NEWS_STACK_RELEASE));
     if (newsScrollFrame.current !== null) {
       cancelAnimationFrame(newsScrollFrame.current);
     }
+    const nextProgress = Math.min(
+      1,
+      Math.max(0, (event.currentTarget.scrollTop - NEWS_STACK_START) / NEWS_STACK_RELEASE),
+    );
     newsScrollFrame.current = requestAnimationFrame(() => {
       newsScrollFrame.current = null;
       setNewsStackProgress(nextProgress);
@@ -714,7 +979,7 @@ export default function Home() {
   }
 
   return (
-    <div className="relative pb-[110px] overflow-y-auto min-h-[100dvh]" onScroll={handleHomeScroll}>
+    <div className="relative h-[calc(100dvh-60px)] overflow-x-hidden overflow-y-auto overscroll-contain pb-[110px]" onScroll={handleHomeScroll}>
       <div className="relative z-10">
 
         <div className="flex items-center justify-between px-6 pt-[38px] pb-1">
@@ -748,97 +1013,81 @@ export default function Home() {
 
         <div className="mx-5 mt-4 mb-6 h-px" style={{ background: 'rgba(100,160,230,0.1)' }} />
 
-        <section className="px-5 pb-8">
+        <section className="px-5 pb-8 pt-[44px]">
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.35 }}
-            className="mb-7 flex flex-col items-center gap-1 text-center"
+            initial={{ opacity: 0, y: 12, filter: "blur(16px)" }}
+            animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+            transition={{ delay: 0.56, duration: 1.05, ease: NEWS_EASE }}
+            className="mb-5 flex items-center gap-5 pl-8"
           >
             <NewsSystemMark />
             <h2
-              className="min-w-0 text-center uppercase tracking-wider"
-              style={{ color: 'rgba(245,158,11,.82)', fontSize: 22, fontWeight: 600, letterSpacing: '0.08em' }}
+              className="ml-2 min-w-0 text-left uppercase"
+            style={{ color: 'rgba(245,158,11,.82)', fontSize: 15, fontWeight: 600, letterSpacing: '0.14em', lineHeight: 1.2 }}
             >
-              Новости системы
+              <span className="block">Новости</span>
+              <span className="block">системы</span>
             </h2>
           </motion.div>
 
-          <div className="news-stack-list relative z-10 space-y-3">
+          <div className="news-stack-list relative z-10 space-y-3 overflow-x-hidden">
             {NEWS_ITEMS.map((item, i) => {
               const isRead = readNews.includes(item.id);
-              const stackRelease = 1 - newsStackProgress;
-              const stackOffset = i * NEWS_STACK_OFFSET * stackRelease;
-              const stackTilt = i === 0
-                ? 0
-                : (i % 2 === 0 ? 0.35 : -0.45) * stackRelease;
-              const perspectiveTilt = -(16 + i * 0.5) * stackRelease;
               return (
-                <NewsCardMotion
-                  key={item.id}
-                  newsIdx={i}
-                  stackOffset={stackOffset}
-                  perspectiveTilt={perspectiveTilt}
-                  stackTilt={stackTilt}
-                >
-                  <motion.button
+                <NewsCardMotion key={item.id} newsIdx={i}>
+                  <button
                     type="button"
-                    whileTap={{ scale: 0.985 }}
                     onClick={() => {
                       if (!isRead) updateState(prev => ({ readNews: [...prev.readNews, item.id] }));
                       setLocation(`/news/${item.id}`);
                     }}
-                    className="pointer-events-auto group relative flex min-h-[196px] w-full flex-col overflow-hidden rounded-[20px] p-5 text-left transition-[filter] active:brightness-110"
-                    style={{
-                      opacity: isRead ? 0.55 : 1,
-                      background: 'linear-gradient(135deg, rgba(245,158,11,0.22) 0%, rgba(255,255,255,0.035) 52%, rgba(0,0,0,0.1)), #3E2E1D',
-                      border: '1px solid rgba(245,158,11,0.34)',
-                      boxShadow: '0 8px 32px rgba(0,0,0,0.68), 0 0 0 1px rgba(255,255,255,0.1), 0 1px 0 rgba(255,237,213,0.09) inset',
-                    }}
+                    className="group relative min-h-[196px] w-full overflow-visible rounded-[20px] p-0 text-left transition-[filter] active:brightness-110"
                   >
-                    <motion.div
-                      aria-hidden="true"
-                      className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full border"
-                      style={{
-                        borderColor: 'rgba(255,224,166,.24)',
-                        boxShadow: '0 0 32px rgba(249,115,22,.16)',
-                      }}
-                      animate={{ rotate: 360, opacity: [0.24, 0.48, 0.24] }}
-                      transition={{ rotate: { duration: 22 + i * 3, repeat: Infinity, ease: "linear" }, opacity: { duration: 4.2, repeat: Infinity, ease: "easeInOut" } }}
-                    />
-                    <motion.div
-                      aria-hidden="true"
-                      className="pointer-events-none absolute -right-10 -top-10 h-36 w-36 rounded-full"
-                      style={{
-                        background: 'repeating-conic-gradient(from 12deg, rgba(255,237,170,.42) 0deg 1.4deg, transparent 1.4deg 15deg)',
-                        maskImage: 'radial-gradient(circle, transparent 76%, #000 78%, #000 82%, transparent 84%)',
-                        WebkitMaskImage: 'radial-gradient(circle, transparent 76%, #000 78%, #000 82%, transparent 84%)',
-                      }}
-                      animate={{ rotate: -360, opacity: [0.18, 0.42, 0.18] }}
-                      transition={{ duration: 16 + i * 2, repeat: Infinity, ease: "linear" }}
-                    />
-                    {!isRead && (
-                      <span
-                        aria-label="Непрочитанная новость"
-                        className="absolute right-4 top-4 z-20 h-2.5 w-2.5 rounded-full"
-                        style={{ background: '#EF4444', boxShadow: '0 0 10px rgba(239,68,68,0.95)' }}
+                    <NewsCardVisualMotion newsIdx={i} stackProgress={newsStackProgress}>
+                      <motion.div
+                        aria-hidden="true"
+                        className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full border"
+                        style={{
+                          borderColor: 'rgba(255,224,166,.24)',
+                          boxShadow: '0 0 32px rgba(249,115,22,.16)',
+                        }}
+                        animate={{ rotate: 360, opacity: [0.24, 0.48, 0.24] }}
+                        transition={{ rotate: { duration: 22 + i * 3, repeat: Infinity, ease: "linear" }, opacity: { duration: 4.2, repeat: Infinity, ease: "easeInOut" } }}
                       />
-                    )}
-                    <div className="relative z-10 flex items-start justify-between gap-3">
-                      <h3 className="title-s min-w-0 flex-1 pr-20 text-primary leading-snug">
-                        {item.title}
-                      </h3>
+                      <motion.div
+                        aria-hidden="true"
+                        className="pointer-events-none absolute -right-10 -top-10 h-36 w-36 rounded-full"
+                        style={{
+                          background: 'repeating-conic-gradient(from 12deg, rgba(255,237,170,.42) 0deg 1.4deg, transparent 1.4deg 15deg)',
+                          maskImage: 'radial-gradient(circle, transparent 76%, #000 78%, #000 82%, transparent 84%)',
+                          WebkitMaskImage: 'radial-gradient(circle, transparent 76%, #000 78%, #000 82%, transparent 84%)',
+                        }}
+                        animate={{ rotate: -360, opacity: [0.18, 0.42, 0.18] }}
+                        transition={{ duration: 16 + i * 2, repeat: Infinity, ease: "linear" }}
+                      />
+                      <div className="relative z-10 flex items-start justify-between gap-3 pr-20">
+                        <h3 className="title-s min-w-0 flex-1 text-primary leading-snug">
+                          {item.title}
+                        </h3>
+                      </div>
                       <span
-                        className="caption absolute right-8 top-0 flex shrink-0 items-center pt-0.5"
+                        className="caption absolute right-10 top-4 z-10"
                         style={{ color: 'rgba(255,228,181,.72)' }}
                       >
                         {item.date}
                       </span>
-                    </div>
-                    <p className="body-s relative z-10 mt-3 line-clamp-3 pr-2 text-secondary leading-relaxed">
-                      {item.description}
-                    </p>
-                  </motion.button>
+                      {!isRead && (
+                        <span
+                          aria-label="Непрочитано"
+                          className="absolute right-3 top-3 z-20 h-2.5 w-2.5 rounded-full"
+                          style={{ background: '#EF4444', boxShadow: '0 0 8px rgba(239,68,68,0.9)' }}
+                        />
+                      )}
+                      <p className="relative z-10 mt-2 line-clamp-3 text-secondary body-s leading-relaxed">
+                        {item.description}
+                      </p>
+                    </NewsCardVisualMotion>
+                  </button>
                 </NewsCardMotion>
               );
             })}

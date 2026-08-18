@@ -32,7 +32,7 @@ export function MemoryHubPage() {
     updateState,
   } = useAppStore();
 
-  if (isSignedIn && !isAccountReady) {
+  if (!import.meta.env.DEV && isSignedIn && !isAccountReady) {
     return <DataLoadingScreen label="Загружаем данные памяти…" />;
   }
 
@@ -84,7 +84,7 @@ export function MemoryModePage() {
   };
   const previewKeys = previewMode && !isSignedIn ? (keys > 0 ? keys : 5000) : isSignedIn ? keys : undefined;
 
-  if (isSignedIn && !isAccountReady) {
+  if (!import.meta.env.DEV && isSignedIn && !isAccountReady) {
     return <DataLoadingScreen label="Загружаем данные памяти…" />;
   }
 

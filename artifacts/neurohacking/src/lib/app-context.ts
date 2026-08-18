@@ -1,6 +1,6 @@
 import { createContext } from "react";
 import type { CompleteTechniqueResult, ServerProfile } from "./api";
-import type { AppState, MemoryMode } from "./store";
+import type { AppState, ConcentrationMode, MemoryMode } from "./store";
 
 export interface AppContextType extends AppState {
   isSignedIn: boolean;
@@ -13,6 +13,7 @@ export interface AppContextType extends AppState {
   refreshProfile: () => Promise<void>;
   applyTrustedServerResult: (state: Record<string, unknown> | null | undefined, profile: ServerProfile) => void;
   purchaseMemoryMode: (mode: MemoryMode) => Promise<void>;
+  purchaseConcentrationMode: (mode: ConcentrationMode) => Promise<void>;
 }
 
 export const AppContext = createContext<AppContextType | null>(null);

@@ -1,8 +1,9 @@
 import { useLocation } from "wouter";
 import { useAppStore } from "@/lib/store";
-import { Brain, Key, Flame, Check, ClipboardList, Eye, Wind, Footprints, Palette, Moon, Target, History, ChevronRight, BarChart2 } from "lucide-react";
+import { CalendarCheck, Key, Flame, Target, History, ChevronRight, BarChart2 } from "lucide-react";
 import { motion } from "framer-motion";
 
+/*
 const TECHNIQUES = [
   { id: 'T1', title: 'Планер',          desc: 'Задачи к целям',    icon: ClipboardList, color: '#F59E0B', bg: 'rgba(245,158,11,0.12)',  border: 'rgba(245,158,11,0.25)',  route: '/technique/planner'       },
   { id: 'T2', title: 'Нейровизуал.',    desc: 'Визуализируй цели', icon: Eye,           color: '#C084FC', bg: 'rgba(192,132,252,0.12)',  border: 'rgba(192,132,252,0.25)',  route: '/technique/visualization'  },
@@ -11,6 +12,7 @@ const TECHNIQUES = [
   { id: 'T5', title: 'Хобби',           desc: 'Любимое занятие',   icon: Palette,       color: '#F43F5E', bg: 'rgba(244,63,94,0.12)',   border: 'rgba(244,63,94,0.25)',   route: '/technique/hobby'          },
   { id: 'T6', title: 'Сон',             desc: 'Завершай день',     icon: Moon,          color: '#3B82F6', bg: 'rgba(59,130,246,0.12)',  border: 'rgba(59,130,246,0.25)',  route: '/technique/sleep'          },
 ];
+*/
 
 const NAV_CARD_STYLE = {
   background: 'linear-gradient(135deg, rgba(245,158,11,0.14) 0%, rgba(245,158,11,0.05) 100%)',
@@ -19,12 +21,6 @@ const NAV_CARD_STYLE = {
 };
 
 const STAT_CARD_STYLE = {
-  background: 'linear-gradient(135deg, rgba(245,158,11,0.14) 0%, rgba(245,158,11,0.05) 100%)',
-  border: '1px solid rgba(245,158,11,0.30)',
-  boxShadow: '0 4px 24px rgba(0,0,0,0.4), 0 1px 0 rgba(255,255,255,0.06) inset',
-};
-
-const CHECKLIST_STYLE = {
   background: 'linear-gradient(135deg, rgba(245,158,11,0.14) 0%, rgba(245,158,11,0.05) 100%)',
   border: '1px solid rgba(245,158,11,0.30)',
   boxShadow: '0 4px 24px rgba(0,0,0,0.4), 0 1px 0 rgba(255,255,255,0.06) inset',
@@ -45,7 +41,7 @@ const ICON_COLORS = {
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
 export default function Path() {
-  const { potential, keys, streak, todayTechniques, goals, history, activityLog, userState, onboardingHighlight } = useAppStore();
+  const { closedDays, keys, streak, goals, history, activityLog, userState, onboardingHighlight } = useAppStore();
   const [, setLocation] = useLocation();
 
   const isOnboarding = userState === 'onboarding';
@@ -63,12 +59,10 @@ export default function Path() {
       : 'Нет';
 
   const statCards = [
-    { id: 'PATH_potential', icon: Brain, value: `${Math.round(Math.min(100, potential))}%`, label: 'Потенциал', route: '/potential-stats', iconColor: ICON_COLORS.stat[0], labelColor: WHITE },
+    { id: 'PATH_closedDays', icon: CalendarCheck, value: `${closedDays}`, label: 'Дней на 100%', route: '/my-progress', iconColor: ICON_COLORS.stat[0], labelColor: WHITE },
     { id: 'PATH_keys',      icon: Key,   value: `${keys}`,                   label: 'Ключи',     route: '/keys-stats',      iconColor: ICON_COLORS.stat[1], labelColor: WHITE },
     { id: 'PATH_streak',    icon: Flame, value: `${streak}`,                 label: 'Дней подряд',route: '/streak',         iconColor: ICON_COLORS.stat[2], labelColor: WHITE },
   ];
-
-  const doneCount = TECHNIQUES.filter(t => todayTechniques[t.id as keyof typeof todayTechniques]).length;
 
   return (
     <div className="pt-[40px] px-4 pb-24 space-y-3">
@@ -116,76 +110,6 @@ export default function Path() {
           );
         })}
       </div>
-
-      {/* Checklist — slide from right */}
-      <motion.div
-        initial={{ x: 60, opacity: 0 }}
-        animate={{ x: 0, opacity: hasHL ? 0.2 : 1 }}
-        transition={{ duration: 1.5, ease: EASE, delay: 0.15 }}
-        style={{
-          ...CHECKLIST_STYLE,
-          borderRadius: 20,
-          overflow: 'hidden',
-        }}
-      >
-        <div className="px-4 pt-4 pb-3 flex items-center justify-between"
-          style={{ borderBottom: '1px solid rgba(245,158,11,0.12)' }}>
-          <p className="caption uppercase tracking-wider" style={{ color: WHITE }}>Сегодня</p>
-          <div className="flex items-center gap-2">
-            <div className="flex gap-1">
-              {TECHNIQUES.map((t) => (
-                <div key={t.id} className="w-1.5 h-1.5 rounded-full transition-all" style={{
-                  background: todayTechniques[t.id as keyof typeof todayTechniques]
-                    ? GOLD
-                    : 'rgba(245,158,11,0.2)',
-                }} />
-              ))}
-            </div>
-            <span className="num" style={{ fontSize: 13, color: doneCount === 6 ? GOLD : GOLD_D }}>
-              {doneCount}/6
-            </span>
-          </div>
-        </div>
-
-        <div className="px-3 pt-2 pb-3 grid grid-cols-3 gap-2">
-          {TECHNIQUES.map((t) => {
-            const isDone = todayTechniques[t.id as keyof typeof todayTechniques];
-            const Icon = t.icon;
-            return (
-              <motion.button
-                key={t.id}
-                whileTap={isOnboarding ? {} : { scale: 0.88 }}
-                onClick={() => !isOnboarding && setLocation(t.route)}
-                className="flex flex-col items-center gap-1 py-2 active:brightness-110"
-              >
-                <div className="w-[18px] h-[18px] rounded-[5px] flex items-center justify-center mb-0.5"
-                  style={{
-                    background: isDone ? 'rgba(245,158,11,0.2)' : 'rgba(245,158,11,0.06)',
-                    border: `1.5px solid ${isDone ? 'rgba(245,158,11,0.6)' : 'rgba(245,158,11,0.2)'}`,
-                  }}>
-                  {isDone && <Check size={10} color={GOLD} strokeWidth={3} />}
-                </div>
-                <div className="w-[52px] h-[52px] rounded-[16px] flex items-center justify-center"
-                  style={{
-                    background: isDone ? t.bg.replace('0.12', '0.22') : t.bg,
-                    border: `2px solid ${isDone ? t.border.replace('0.25', '0.5') : t.border}`,
-                    boxShadow: isDone ? `0 0 18px ${t.bg.replace('0.12', '0.46')}, 0 4px 12px rgba(0,0,0,0.35)` : `0 4px 12px rgba(0,0,0,0.35)`,
-                  }}>
-                  <Icon size={22} color={t.color} style={{ opacity: isDone ? 1 : 0.7 }} />
-                </div>
-              </motion.button>
-            );
-          })}
-        </div>
-
-        {doneCount === 6 && (
-          <div className="px-4 py-3 flex items-center gap-2"
-            style={{ borderTop: '1px solid rgba(245,158,11,0.2)', background: 'rgba(245,158,11,0.08)' }}>
-            <Check size={14} color={GOLD} />
-            <span className="body-s" style={{ color: GOLD, fontSize: 13 }}>День завершён — Продолжай накапливать потенциал.</span>
-          </div>
-        )}
-      </motion.div>
 
       {/* Мой прогресс — slide from left */}
       <motion.div

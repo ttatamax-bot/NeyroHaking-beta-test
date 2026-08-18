@@ -65,8 +65,7 @@ import { isArticleRequirementSatisfied } from "@/content/article-access";
     { left: '30%', top: '7%', size: 3, color: '#F97316', delay: 2.1 },
   ];
   const POTENTIAL_RING_STYLES = [
-    { inset: '-15px', duration: 17, direction: 1, opacity: 0.8, spacing: 18 },
-    { inset: '10px', duration: 13, direction: -1, opacity: 0.56, spacing: 24 },
+    { inset: '16px', duration: 13, direction: -1, opacity: 0.48, spacing: 24 },
   ];
   type ArticleRingLayer = {
     size: number;
@@ -120,6 +119,7 @@ import { isArticleRequirementSatisfied } from "@/content/article-access";
 
   function KnowledgeBaseMark() {
     const reduced = useReducedMotion();
+    const ringTickAngles = Array.from({ length: 24 }, (_, index) => index * 15);
 
     return (
       <motion.div
@@ -131,28 +131,30 @@ import { isArticleRequirementSatisfied } from "@/content/article-access";
       >
         <motion.span
           className="pointer-events-none absolute inset-[-20px] rounded-full"
-          style={{ background: 'radial-gradient(circle, rgba(245,158,11,.22), rgba(249,115,22,.10) 38%, transparent 72%)' }}
-          animate={reduced ? { opacity: 0.55, scale: 1 } : { opacity: [.35, .78, .35], scale: [.94, 1.06, .94] }}
+          style={{ background: 'radial-gradient(circle, rgba(245,158,11,.34), rgba(249,115,22,.18) 38%, transparent 72%)' }}
+          animate={reduced ? { opacity: 0.72, scale: 1 } : { opacity: [.52, .98, .52], scale: [.94, 1.08, .94] }}
           transition={reduced ? { duration: 0.4 } : { duration: 4.2, repeat: Infinity, ease: "easeInOut" }}
         />
         <motion.span
-          className="pointer-events-none absolute inset-[-29px] rounded-full border"
+          className="pointer-events-none absolute inset-[-3px] z-[3] rounded-full"
           style={{
-            borderColor: "rgba(255,210,125,.28)",
-            boxShadow: "0 0 18px rgba(249,115,22,.14)",
+            background: "conic-gradient(from -34deg, rgba(255,237,170,.72) 0deg 166deg, transparent 166deg 360deg)",
+            maskImage: "radial-gradient(circle, transparent 76%, #000 77.5%, #000 79%, transparent 80.5%)",
+            WebkitMaskImage: "radial-gradient(circle, transparent 76%, #000 77.5%, #000 79%, transparent 80.5%)",
+            filter: "drop-shadow(0 0 4px rgba(255,215,145,.24))",
           }}
-          animate={reduced ? { opacity: 0.5, rotate: 0 } : { opacity: [.34, .68, .34], rotate: [0, 360] }}
+          animate={reduced ? { rotate: 0, opacity: 0.38 } : { rotate: -360, opacity: [.24, .42, .24] }}
           transition={reduced
             ? { duration: 0.4 }
             : {
-                opacity: { duration: 4.8, repeat: Infinity, ease: "easeInOut" },
-                rotate: { duration: 24, repeat: Infinity, ease: "linear" },
+                rotate: { duration: 17, repeat: Infinity, ease: "linear" },
+                opacity: { duration: 3.8, repeat: Infinity, ease: "easeInOut" },
               }}
         />
         <motion.span
-          className="pointer-events-none absolute inset-[-7px] rounded-full border"
-          style={{ borderColor: "rgba(249,115,22,.34)" }}
-          animate={reduced ? { opacity: 0.56, rotate: 0 } : { opacity: [.4, .78, .4], rotate: [360, 0] }}
+          className="pointer-events-none absolute inset-[2px] rounded-full border"
+          style={{ borderColor: "rgba(249,115,22,.42)" }}
+          animate={reduced ? { opacity: 0.48, rotate: 0 } : { opacity: [.32, .72, .32], rotate: [360, 0] }}
           transition={reduced
             ? { duration: 0.4 }
             : {
@@ -167,18 +169,13 @@ import { isArticleRequirementSatisfied } from "@/content/article-access";
           aria-hidden="true"
           animate={reduced ? { rotate: 0 } : { rotate: 360 }}
           transition={reduced ? { duration: 0.4 } : { duration: 22, repeat: Infinity, ease: "linear" }}
-          style={{ filter: "drop-shadow(0 0 3px rgba(255,210,125,.12))" }}
+          style={{ filter: "drop-shadow(0 0 5px rgba(255,210,125,.24))" }}
         >
-          <circle
-            cx="115"
-            cy="115"
-            r="107"
-            stroke="#FFE8B0"
-            strokeWidth="2.6"
-            strokeDasharray="16 13"
-            strokeLinecap="butt"
-            opacity="0.18"
-          />
+          <g opacity="0.24" stroke="#FFE8B0" strokeWidth="2.6" strokeLinecap="butt">
+            {ringTickAngles.map((angle) => (
+              <line key={`knowledge-ring-tick-${angle}`} x1="115" y1="7" x2="115" y2="20" transform={`rotate(${angle} 115 115)`} />
+            ))}
+          </g>
         </motion.svg>
         {POTENTIAL_RING_STYLES.map((ring, index) => (
           <motion.span
@@ -233,7 +230,7 @@ import { isArticleRequirementSatisfied } from "@/content/article-access";
             height="108"
             viewBox="0 0 24 24"
             fill="none"
-            stroke="#FFE4B5"
+            stroke="#F97316"
             strokeWidth="1.5"
             strokeLinecap="round"
             strokeLinejoin="round"

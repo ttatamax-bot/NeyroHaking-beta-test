@@ -86,7 +86,7 @@ export default function ReferralPage() {
     }
   };
 
-  if (loading || !isAuthLoaded) {
+  if (loading || (!import.meta.env.DEV && !isAuthLoaded)) {
     return (
       <div className="min-h-[100dvh] flex items-center justify-center">
         <Loader2 className="animate-spin text-orange-300" size={24} />

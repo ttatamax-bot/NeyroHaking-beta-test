@@ -45,6 +45,7 @@ import Walk from "@/pages/walk";
 import Hobby from "@/pages/hobby";
 import Sleep from "@/pages/sleep";
 import { MemoryHubPage, MemoryModePage } from "@/pages/memory";
+import { ConcentrationHubPage, ConcentrationModePage } from "@/pages/concentration";
 import NewsArticle from "@/pages/news";
 import PrivacyPolicy from "@/pages/privacy-policy";
 import MyProgress from "@/pages/my-progress";
@@ -670,7 +671,6 @@ function DayDoneOverlay() {
   const { userState, activityLog, streak, isAccountReady } = useAppStore();
   const { isSignedIn, email } = useAuthInfo();
   const developerToolsEnabled = hasDeveloperTools(email, isSignedIn);
-  const [, setLocation] = useLocation();
   const previousStateRef = useRef(userState);
   const wasReadyRef = useRef(isAccountReady);
   const [devPreviewPayload, setDevPreviewPayload] = useState<{
@@ -725,7 +725,6 @@ function DayDoneOverlay() {
       onComplete={() => {
         setIsPlaying(false);
         setDevPreviewPayload(null);
-        setLocation('/techniques');
       }}
     />
   );
@@ -735,7 +734,7 @@ function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-[100dvh] w-full max-w-none mx-auto text-primary relative overflow-hidden flex flex-col" style={APP_BG}>
       <TopBar />
-      <div className="flex-1 overflow-y-auto relative z-10">{children}</div>
+      <div className="relative z-10 flex-1 overflow-x-hidden overflow-y-auto">{children}</div>
       <OnboardingTutorial />
       <CoachingBubble />
       <NavBar />
@@ -795,6 +794,8 @@ function Router() {
         <Route path="/technique/sleep" component={Sleep} />
          <Route path="/technique/memory" component={MemoryHubPage} />
          <Route path="/technique/memory/:mode" component={MemoryModePage} />
+         <Route path="/technique/concentration" component={ConcentrationHubPage} />
+         <Route path="/technique/concentration/:mode" component={ConcentrationModePage} />
         <Route path="/privacy-policy" component={PrivacyPolicy} />
         <Route path="/my-progress" component={MyProgress} />
         <Route path="/referral/:code" component={ReferralPage} />

@@ -52,7 +52,7 @@ const TECHNIQUES: Technique[] = [
     repeatable: true,
   },
   {
-    id: 'T8', title: 'Концентрация', artwork: 'concentration', route: null,
+    id: 'T8', title: 'Концентрация', artwork: 'concentration', route: '/technique/concentration',
     color: '#A78BFA',
     repeatable: false,
   },
