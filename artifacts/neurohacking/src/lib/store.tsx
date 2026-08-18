@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react';
+import { useContext, useEffect, useRef, useState, useCallback } from 'react';
 import { useAuth, useUser } from '@clerk/react';
 import {
   getServerState,
@@ -12,6 +12,7 @@ import {
   type ServerCompletion,
   type ServerProfile,
 } from './api';
+import { AppContext } from './app-context';
 import {
   DAY_POTENTIAL_TARGET,
   clampDayPotential,
@@ -248,21 +249,6 @@ function hasMeaningfulSyncState(state: Partial<AppState> | Record<string, unknow
 }
 
 type UpdateFn = Partial<AppState> | ((prev: AppState) => Partial<AppState>);
-
-interface AppContextType extends AppState {
-  isSignedIn: boolean;
-  isAuthLoaded: boolean;
-  isAccountReady: boolean;
-  accountLoadError: string | null;
-  retryAccountHydration: () => void;
-  updateState: (updates: UpdateFn) => void;
-  completeTechnique: (techniqueId: string, metadata: Record<string, unknown>) => Promise<CompleteTechniqueResult>;
-  refreshProfile: () => Promise<void>;
-  applyTrustedServerResult: (state: Record<string, unknown> | null | undefined, profile: ServerProfile) => void;
-  purchaseMemoryMode: (mode: MemoryMode) => Promise<void>;
-}
-
-const AppContext = createContext<AppContextType | null>(null);
 
 export const TECHNIQUE_SOURCES: Record<string, string> = {
   T1: 'Техника: Планер',
@@ -738,13 +724,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setAccountLoadError(null);
     hydrationRequestRef.current = userId;
     const guestSnapshot = stateRef.current;
-    let retryTimer: number | null = null;
-    const retryHydration = () => {
-      if (retryTimer !== null) window.clearTimeout(retryTimer);
-      retryTimer = window.setTimeout(() => {
-        setHydrationRetryTick((tick) => tick + 1);
-      }, 3000);
-    };
     getServerState()
       .then(({ state: serverState, profile, completedTechniques }) => {
         if (hydrationRequestRef.current !== userId) return;
@@ -797,7 +776,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           .catch(() => {
             setAccountLoadError('Не удалось синхронизировать прогресс. Проверь соединение и повтори попытку.');
             hydrationRequestRef.current = null;
-            retryHydration();
           });
       })
       .catch((error) => {
@@ -810,11 +788,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             : 'Не удалось загрузить прогресс. Проверь соединение и повтори попытку.',
         );
         hydrationRequestRef.current = null;
-        retryHydration();
       });
-    return () => {
-      if (retryTimer !== null) window.clearTimeout(retryTimer);
-    };
   }, [isLoaded, isSignedIn, userId, hydrationRetryTick, retryAccountHydration]);
 
   useEffect(() => {
@@ -953,12 +927,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }));
   }, []);
 
+  const previewGuestReady = import.meta.env.DEV && !isSignedIn;
+
   return (
     <AppContext.Provider value={{
       ...state,
       isSignedIn: Boolean(isSignedIn),
-      isAuthLoaded: isLoaded,
-      isAccountReady: isLoaded && (!isSignedIn || hydratedUserRef.current === userId),
+      isAuthLoaded: isLoaded || previewGuestReady,
+      isAccountReady: previewGuestReady || (isLoaded && (!isSignedIn || hydratedUserRef.current === userId)),
       accountLoadError,
       retryAccountHydration,
       updateState,
