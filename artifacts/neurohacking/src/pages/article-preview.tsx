@@ -70,7 +70,7 @@ const ARTICLE_VISUALS: Record<string, {
   }[];
 }> = {
   A1: {
-    Icon: Brain, color: "#F59E0B", glow: "rgba(245,158,11,0.2)", surface: "#3D2B18",
+    Icon: Brain, color: "#F59E0B", glow: "rgba(245,158,11,0.16)", surface: "#3E2E1D",
     rings: [
       { left: "15%", top: "19%", size: 176, dash: "112 18 6 14", duration: 24, opacity: 0.46, direction: 1 },
       { left: "88%", top: "43%", size: 250, dash: "38 10 96 22", duration: 31, opacity: 0.34, direction: -1 },
@@ -78,7 +78,7 @@ const ARTICLE_VISUALS: Record<string, {
     ],
   },
   A2: {
-    Icon: Target, color: "#A78BFA", glow: "rgba(167,139,250,0.18)", surface: "#302541",
+    Icon: Target, color: "#C084FC", glow: "rgba(192,132,252,0.14)", surface: "#2F293A",
     rings: [
       { left: "84%", top: "18%", size: 154, dash: "26 12 74 18", duration: 21, opacity: 0.44, direction: -1 },
       { left: "16%", top: "45%", size: 278, dash: "126 16 5 18", duration: 34, opacity: 0.34, direction: 1 },
@@ -86,7 +86,7 @@ const ARTICLE_VISUALS: Record<string, {
     ],
   },
   A3: {
-    Icon: Lightbulb, color: "#22D3EE", glow: "rgba(34,211,238,0.18)", surface: "#173340",
+    Icon: Lightbulb, color: "#06B6D4", glow: "rgba(6,182,212,0.14)", surface: "#1D3337",
     rings: [
       { left: "18%", top: "22%", size: 214, dash: "64 14 18 10", duration: 28, opacity: 0.4, direction: 1 },
       { left: "91%", top: "54%", size: 166, dash: "18 8 96 24", duration: 22, opacity: 0.34, direction: -1 },
@@ -94,7 +94,7 @@ const ARTICLE_VISUALS: Record<string, {
     ],
   },
   A4: {
-    Icon: CalendarDays, color: "#60A5FA", glow: "rgba(96,165,250,0.18)", surface: "#1C304D",
+    Icon: CalendarDays, color: "#3DB770", glow: "rgba(61,183,112,0.14)", surface: "#23342C",
     rings: [
       { left: "86%", top: "20%", size: 226, dash: "34 16 78 12", duration: 30, opacity: 0.38, direction: -1 },
       { left: "12%", top: "51%", size: 148, dash: "18 12", duration: 20, opacity: 0.34, direction: 1 },
@@ -102,7 +102,7 @@ const ARTICLE_VISUALS: Record<string, {
     ],
   },
   A5: {
-    Icon: MoonStar, color: "#C4B5FD", glow: "rgba(196,181,253,0.18)", surface: "#29244A",
+    Icon: MoonStar, color: "#3B82F6", glow: "rgba(59,130,246,0.15)", surface: "#243047",
     rings: [
       { left: "14%", top: "17%", size: 188, dash: "88 12 5 18", duration: 26, opacity: 0.4, direction: 1 },
       { left: "88%", top: "47%", size: 286, dash: "22 20 122 16", duration: 37, opacity: 0.3, direction: -1 },

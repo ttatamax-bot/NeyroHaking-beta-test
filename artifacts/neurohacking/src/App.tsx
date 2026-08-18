@@ -727,8 +727,11 @@ function DayDoneOverlay() {
 }
 
 function AppLayout({ children }: { children: React.ReactNode }) {
+  const [location] = useLocation();
+  const isArticlePreview = location.startsWith('/article/') && !location.includes('/read');
+
   return (
-    <div className="min-h-[100dvh] w-full max-w-[390px] mx-auto text-primary relative overflow-hidden flex flex-col" style={APP_BG}>
+    <div className={`min-h-[100dvh] w-full ${isArticlePreview ? 'max-w-none' : 'max-w-[390px]'} mx-auto text-primary relative overflow-hidden flex flex-col`} style={APP_BG}>
       <TopBar />
       <div className="flex-1 overflow-y-auto relative z-10">{children}</div>
       <OnboardingTutorial />

@@ -624,7 +624,6 @@ export default function Techniques() {
   const [stackProgress, setStackProgress] = useState(0);
   const techniquesRef = useRef<HTMLDivElement | null>(null);
   const scrollFrame = useRef<number | null>(null);
-  const lastTechniqueActivation = useRef(0);
 
   const isOnboarding = userState === 'onboarding';
   const hasHighlight = isOnboarding && onboardingHighlight.length > 0;
@@ -656,19 +655,6 @@ export default function Techniques() {
     };
   }, []);
 
-  const handleTap = (technique: Technique) => {
-    if (!technique.route) return;
-    setLocation(technique.route);
-  };
-
-  const activateTechnique = (technique: Technique) => {
-    if (!technique.route) return;
-    const now = Date.now();
-    if (now - lastTechniqueActivation.current < 450) return;
-    lastTechniqueActivation.current = now;
-    handleTap(technique);
-  };
-
   return (
     <div ref={techniquesRef} className="relative isolate min-h-full pt-[56px] px-4 pb-24">
       <MainLikeInstrumentAtmosphere />
@@ -698,34 +684,24 @@ export default function Techniques() {
               stackProgress={stackProgress}
               isDimmed={isDimmed}
             >
-              <button
-                type="button"
-                disabled={!t.route}
-                 onPointerDown={() => t.route && setPressedTechnique(t.id)}
-                 onPointerUp={() => {
-                   setPressedTechnique(null);
-                   activateTechnique(t);
-                 }}
-                 onTouchEnd={(event) => {
-                   event.preventDefault();
-                   activateTechnique(t);
-                 }}
-                 onClick={() => activateTechnique(t)}
+              <a
+                href={t.route ?? undefined}
+                aria-label={t.title}
+                aria-disabled={!t.route}
+                onClick={(event) => {
+                  if (!t.route) event.preventDefault();
+                }}
+                onPointerDown={() => t.route && setPressedTechnique(t.id)}
+                onPointerUp={() => setPressedTechnique(null)}
                 onPointerCancel={() => setPressedTechnique(null)}
                 onPointerLeave={() => setPressedTechnique(null)}
-                 onKeyDown={(event) => {
-                   if ((event.key === "Enter" || event.key === " ") && t.route) {
-                     event.preventDefault();
-                     handleTap(t);
-                   }
-                 }}
-                aria-label={t.title}
-                 className="group relative flex min-h-[172px] w-full flex-col items-center justify-center overflow-visible rounded-[24px] px-0 py-1 text-center outline-none focus-visible:ring-1 focus-visible:ring-white/40 disabled:cursor-default"
+                className="group relative flex min-h-[172px] w-full flex-col items-center justify-center overflow-visible rounded-[24px] px-0 py-1 text-center outline-none focus-visible:ring-1 focus-visible:ring-white/40"
                 style={{
-                  cursor: t.route && !isDone ? "pointer" : "default",
-                   touchAction: "manipulation",
-                   WebkitTapHighlightColor: "transparent",
-                   zIndex: 1,
+                  cursor: t.route ? "pointer" : "default",
+                  touchAction: "manipulation",
+                  WebkitTapHighlightColor: "transparent",
+                  zIndex: 1,
+                  pointerEvents: t.route ? "auto" : "none",
                 }}
               >
                 {isHighlighted && (
@@ -749,7 +725,7 @@ export default function Techniques() {
                 >
                   {t.title}
                 </h3>
-              </button>
+              </a>
             </TechniqueCardMotion>
           );
         })}
