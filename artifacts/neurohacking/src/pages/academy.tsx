@@ -319,7 +319,7 @@ import { isArticleRequirementSatisfied } from "@/content/article-access";
     const priceLabel = !isUnlocked && cost === 400 ? "400 ключей" : null;
 
     return (
-      <div className="ml-auto flex w-[38px] shrink-0 flex-col items-end text-right">
+      <div className="ml-auto flex min-w-[88px] shrink-0 flex-col items-end text-right">
         <motion.div
           className="relative flex h-8 w-8 items-center justify-center"
           style={{
@@ -347,7 +347,7 @@ import { isArticleRequirementSatisfied } from "@/content/article-access";
         </motion.div>
         {priceLabel && (
           <span
-            className="label mt-0.5 block leading-tight"
+            className="label mt-0.5 block whitespace-nowrap leading-tight"
             style={{
               color: canAfford ? ACADEMY_ACCENT : "var(--text-tertiary)",
               fontSize: cost === 400 ? 14 : 10,
@@ -612,17 +612,15 @@ import { isArticleRequirementSatisfied } from "@/content/article-access";
                     opacity={ringStyle.fine.opacity}
                   />
                 </motion.svg>
-                <div className="relative z-10 min-h-[42px]">
+                 <div className="relative z-10 flex min-h-[42px] items-start justify-between gap-3">
                   <ArticleIcon Icon={visual.Icon} color={visual.color} glow={visual.glow} unread={showUnreadDot} />
-                   <div className="absolute right-0 top-0">
-                     <ArticleAccessMark
-                       isUnlocked={isUnlocked}
-                       cost={a.cost}
-                       canAfford={canAfford}
-                       color={visual.color}
-                       showUnreadDot={showUnreadDot}
-                     />
-                   </div>
+                   <ArticleAccessMark
+                     isUnlocked={isUnlocked}
+                     cost={a.cost}
+                     canAfford={canAfford}
+                     color={visual.color}
+                     showUnreadDot={showUnreadDot}
+                   />
                 </div>
                 <div className="relative z-10 mt-1 min-w-0">
                   <h3 className="title-s w-full text-primary leading-snug"
