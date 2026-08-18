@@ -767,8 +767,14 @@ export default function ArticleRead() {
         className="fixed top-0 left-0 right-0 z-50 flex justify-center"
         style={{ background: 'rgba(15,32,53,0.96)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(255,255,255,0.05)' }}
       >
-        <div className="w-full max-w-[390px] h-[48px] flex items-center px-4">
-          <button onClick={() => setLocation('/academy')} className="p-1 text-primary mr-3 active:opacity-60">
+        <div
+          className="w-full max-w-none flex items-center px-3"
+          style={{
+            minHeight: 'calc(48px + env(safe-area-inset-top))',
+            paddingTop: 'env(safe-area-inset-top)',
+          }}
+        >
+          <button onClick={() => setLocation('/academy')} className="flex h-12 w-12 items-center justify-center text-primary active:opacity-60" aria-label="Назад в академию">
             <ChevronLeft size={26} />
           </button>
           <span className="body-s text-primary truncate flex-1">{article.title}</span>
@@ -795,7 +801,7 @@ export default function ArticleRead() {
         className="fixed bottom-0 left-0 right-0 flex justify-center"
         style={{ background: 'rgba(15,32,53,0.97)', backdropFilter: 'blur(20px)', borderTop: '1px solid rgba(255,255,255,0.05)' }}
       >
-        <div className="w-full max-w-[390px] px-4 py-4">
+        <div className="w-full max-w-none px-4 py-4">
           <button
             onClick={handleFinish}
             className="btn-grad btn-shimmer w-full h-[52px] rounded-[14px] text-white title-s active:opacity-90"

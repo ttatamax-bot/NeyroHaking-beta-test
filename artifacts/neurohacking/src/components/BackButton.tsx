@@ -13,7 +13,8 @@ export function BackButton({ fallback = '/academy' }: { fallback?: string }) {
   return (
     <button
       onClick={handleClick}
-      className="absolute top-4 left-4 z-50 p-2 text-primary hover:text-blue-light active:scale-95 transition-all"
+      className="absolute left-3 top-[calc(env(safe-area-inset-top)+48px)] z-50 flex h-12 w-12 items-center justify-center rounded-full p-0 text-primary transition-all hover:text-blue-light active:scale-95"
+      aria-label="Назад"
     >
       <ChevronLeft size={28} />
     </button>

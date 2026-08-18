@@ -224,9 +224,10 @@ export default function ArticlePreview() {
   const article = ARTICLES_DATA[id || ''];
   if (!article) return <div className="p-4 pt-16 text-primary">Статья не найдена</div>;
 
-  const isFree = article.cost === 0;
   const hasRequirement = isArticleRequirementSatisfied(id || '', { activityLog, goals });
-  const isUnlocked = isFree || unlockedArticles.includes(id!) || hasRequirement;
+  const isUnlocked = id === 'A1'
+    || hasRequirement
+    || (article.cost > 0 && unlockedArticles.includes(id!));
   const isRead     = readArticles.includes(id || '');
   const canAfford  = article.cost > 0 && keys >= article.cost;
   const visual = ARTICLE_VISUALS[id || 'A1'] ?? ARTICLE_VISUALS.A1;
@@ -289,7 +290,7 @@ export default function ArticlePreview() {
 
       <ArticleInstrumentPreview articleId={id || 'A1'} />
 
-      <div className="relative z-10 flex-1 mt-4 pt-[170px]">
+       <div className="relative z-10 flex-1 mt-4 pt-[132px]">
         <div className="flex items-center gap-2 mb-3">
            <span className="label rounded-[6px] border px-2 py-1" style={statusStyle}>
             {statusLabel}

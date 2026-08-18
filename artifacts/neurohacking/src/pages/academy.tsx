@@ -487,9 +487,9 @@ import { isArticleRequirementSatisfied } from "@/content/article-access";
           className="article-stack-list relative z-10 space-y-3"
         >
           {ARTICLES.map((a, articleIdx) => {
-            const isUnlocked = unlockedArticles.includes(a.id)
-              || a.id === 'A1'
-              || isArticleRequirementSatisfied(a.id, { activityLog, goals });
+            const isUnlocked = a.id === 'A1'
+              || isArticleRequirementSatisfied(a.id, { activityLog, goals })
+              || (a.cost > 0 && unlockedArticles.includes(a.id));
             const isRead      = readArticles.includes(a.id);
             const canAfford   = a.cost > 0 && keys >= a.cost;
             const showUnreadDot = isUnlocked && !isRead;
@@ -615,17 +615,19 @@ import { isArticleRequirementSatisfied } from "@/content/article-access";
                     opacity={ringStyle.fine.opacity}
                   />
                 </motion.svg>
-                <div className="relative z-10 flex items-start justify-between gap-3">
+                <div className="relative z-10 min-h-[42px]">
                   <ArticleIcon Icon={visual.Icon} color={visual.color} glow={visual.glow} unread={showUnreadDot} />
-                  <ArticleAccessMark
-                    isUnlocked={isUnlocked}
-                    cost={a.cost}
-                    canAfford={canAfford}
-                    color={visual.color}
-                    showUnreadDot={showUnreadDot}
-                  />
+                   <div className="absolute right-0 top-0">
+                     <ArticleAccessMark
+                       isUnlocked={isUnlocked}
+                       cost={a.cost}
+                       canAfford={canAfford}
+                       color={visual.color}
+                       showUnreadDot={showUnreadDot}
+                     />
+                   </div>
                 </div>
-                <div className="relative z-10 mt-3 min-w-0">
+                <div className="relative z-10 mt-1 min-w-0">
                   <h3 className="title-s w-full text-primary leading-snug"
                     style={{ opacity: 0.96 }}>
                     {a.title}

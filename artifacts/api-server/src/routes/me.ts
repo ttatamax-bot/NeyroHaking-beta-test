@@ -44,6 +44,29 @@ const ARTICLE_COSTS: Record<string, number> = {
   A6: 400,
 };
 
+function hasArticleAccess(
+  articleId: string,
+  state: Record<string, unknown>,
+  completedTechniqueIds: string[],
+): boolean {
+  if (articleId === "A1") return true;
+
+  const activityLog = Array.isArray(state.activityLog) ? state.activityLog : [];
+  const hasActivityType = (type: string) => activityLog.some((entry) => (
+    objectBody(entry) && entry.type === type
+  ));
+  const hasTechnique = (techniqueId: string) => completedTechniqueIds.includes(techniqueId);
+
+  if (articleId === "A2") return hasTechnique("T3") || hasActivityType("meditation");
+  if (articleId === "A3") return Array.isArray(state.goals) && state.goals.length > 0;
+  if (articleId === "A4") return hasTechnique("T2") || hasActivityType("visualization");
+
+  const unlockedArticles = Array.isArray(state.unlockedArticles)
+    ? state.unlockedArticles
+    : [];
+  return unlockedArticles.includes(articleId);
+}
+
 const MEMORY_MODES = ["reverse", "matrix", "symbols"] as const;
 type MemoryMode = typeof MEMORY_MODES[number];
 const MEMORY_COST = 400;
@@ -390,9 +413,17 @@ router.post("/me/articles/:articleId/read", async (req, res) => {
       where: eq(userStatesTable.userId, user.id),
     });
     const currentState = objectBody(row?.state) ? row.state : {};
-    const unlocked = Array.isArray(currentState.unlockedArticles)
-      ? currentState.unlockedArticles : ["A1"];
-    if (!unlocked.includes(articleId)) return { forbidden: true } as const;
+    const completedRows = await tx.select({
+      techniqueId: completedTechniquesTable.techniqueId,
+    }).from(completedTechniquesTable)
+      .where(eq(completedTechniquesTable.userId, user.id));
+    if (!hasArticleAccess(
+      articleId,
+      currentState,
+      completedRows.map((completion) => completion.techniqueId),
+    )) {
+      return { forbidden: true } as const;
+    }
     const already = await tx.query.potentialTransactionsTable.findFirst({
       where: and(
         eq(potentialTransactionsTable.userId, user.id),
