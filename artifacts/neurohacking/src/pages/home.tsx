@@ -15,7 +15,8 @@ const NEWS_ITEMS = [
 ];
 
 const SCALE_BAR_COUNT = 12;
-const NEWS_STACK_RELEASE = 260;
+const NEWS_STACK_OFFSET = 76;
+const NEWS_STACK_RELEASE = 300;
 const NEWS_EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
 function getTodayLabels() {
@@ -33,37 +34,27 @@ function NewsSystemMark() {
 
   return (
     <motion.div
-      className="relative flex h-[56px] w-[56px] shrink-0 items-center justify-center"
-      initial={{ opacity: 0, scale: 0.72, y: 10 }}
+      className="relative flex h-[142px] w-[142px] shrink-0 items-center justify-center"
+      initial={{ opacity: 0, scale: 0.72, y: 16 }}
       animate={{ opacity: 1, scale: 1, y: 0 }}
-      transition={{ duration: 0.75, ease: NEWS_EASE }}
+      transition={{ duration: 0.9, ease: NEWS_EASE }}
       aria-hidden="true"
     >
       <motion.span
-        className="pointer-events-none absolute inset-[-8px] rounded-full"
+        className="pointer-events-none absolute inset-[-20px] rounded-full"
         style={{ background: "radial-gradient(circle, rgba(245,158,11,.22), transparent 70%)" }}
-        animate={reduced ? { opacity: 0.5, scale: 1 } : { opacity: [0.28, 0.72, 0.28], scale: [0.9, 1.08, 0.9] }}
-        transition={reduced ? { duration: 0.3 } : { duration: 3.6, repeat: Infinity, ease: "easeInOut" }}
-      />
-      <motion.span
-        className="pointer-events-none absolute inset-[-5px] rounded-full border"
-        style={{ borderColor: "rgba(255,210,125,.3)" }}
-        animate={reduced ? { opacity: 0.55, rotate: 0 } : { opacity: [0.35, 0.72, 0.35], rotate: [0, 360] }}
-        transition={reduced
-          ? { duration: 0.3 }
-          : {
-              opacity: { duration: 3.4, repeat: Infinity, ease: "easeInOut" },
-              rotate: { duration: 18, repeat: Infinity, ease: "linear" },
-            }}
+        animate={reduced ? { opacity: 0.5, scale: 1 } : { opacity: [0.25, 0.66, 0.25], scale: [0.92, 1.06, 0.92] }}
+        transition={reduced ? { duration: 0.3 } : { duration: 4.2, repeat: Infinity, ease: "easeInOut" }}
       />
       <motion.svg
         xmlns="http://www.w3.org/2000/svg"
-        width="38"
-        height="38"
+        width="116"
+        height="116"
         fill="currentColor"
         viewBox="0 0 256 256"
         className="relative z-10 text-[#FFE4B5]"
-        animate={reduced ? { y: 0, rotate: 0 } : { y: [0, -1.5, 0], rotate: [0, 1.2, 0] }}
+        style={{ filter: "drop-shadow(0 0 14px rgba(249,115,22,.38))" }}
+        animate={reduced ? { y: 0, rotate: 0 } : { y: [0, -3, 0], rotate: [0, 1.2, 0] }}
         transition={reduced ? { duration: 0.3 } : { duration: 4.8, repeat: Infinity, ease: "easeInOut" }}
       >
         <path d="M208,32H184V24a8,8,0,0,0-16,0v8H88V24a8,8,0,0,0-16,0v8H48A16,16,0,0,0,32,48V208a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V48A16,16,0,0,0,208,32Zm0,176H48V48H72v8a8,8,0,0,0,16,0V48h80v8a8,8,0,0,0,16,0V48h24V208Zm-31.38-94.36-29.84-2.31-11.43-26.5a8,8,0,0,0-14.7,0l-11.43,26.5-29.84,2.31a8,8,0,0,0-4.47,14.14l22.52,18.59-6.86,27.71a8,8,0,0,0,11.82,8.81L128,167.82l25.61,15.07a8,8,0,0,0,11.82-8.81l-6.86-27.71,22.52-18.59a8,8,0,0,0-4.47-14.14Zm-32.11,23.6a8,8,0,0,0-2.68,8.09l3.5,14.12-13.27-7.81a8,8,0,0,0-8.12,0l-13.27,7.81,3.5-14.12a8,8,0,0,0-2.68-8.09l-11.11-9.18,14.89-1.15a8,8,0,0,0,6.73-4.8l6-13.92,6,13.92a8,8,0,0,0,6.73,4.8l14.89,1.15Z" />
@@ -83,7 +74,7 @@ function NewsCardMotion({
 }) {
   const hasMounted = useRef(false);
   const stackRelease = 1 - stackProgress;
-  const stackOffset = newsIdx * 18 * stackRelease;
+  const stackOffset = newsIdx * NEWS_STACK_OFFSET * stackRelease;
   const stackTilt = newsIdx === 0 ? 0 : (newsIdx % 2 === 0 ? 0.55 : -0.55) * stackRelease;
   const perspectiveTilt = -(12 + newsIdx * 0.8) * stackRelease;
 
@@ -765,11 +756,11 @@ export default function Home() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.35 }}
-            className="mb-5 flex items-center gap-3"
+            className="mb-7 flex flex-col items-center gap-1 text-center"
           >
             <NewsSystemMark />
             <h2
-              className="min-w-0 text-left uppercase tracking-wider"
+              className="min-w-0 text-center uppercase tracking-wider"
               style={{ color: 'rgba(245,158,11,.82)', fontSize: 22, fontWeight: 600, letterSpacing: '0.08em' }}
             >
               Новости системы
@@ -788,7 +779,7 @@ export default function Home() {
                       if (!isRead) updateState(prev => ({ readNews: [...prev.readNews, item.id] }));
                       setLocation(`/news/${item.id}`);
                     }}
-                    className="group relative flex w-full flex-col overflow-hidden rounded-[20px] p-4 text-left transition-[filter] active:brightness-110"
+                    className="group relative flex min-h-[196px] w-full flex-col overflow-hidden rounded-[20px] p-5 text-left transition-[filter] active:brightness-110"
                     style={{
                       opacity: isRead ? 0.55 : 1,
                       background: 'linear-gradient(135deg, rgba(245,158,11,0.22) 0%, rgba(255,255,255,0.035) 52%, rgba(0,0,0,0.1)), #3E2E1D',
@@ -834,7 +825,7 @@ export default function Home() {
                         {item.date}
                       </span>
                     </div>
-                    <p className="body-s relative z-10 mt-2 line-clamp-2 text-secondary leading-relaxed">
+                    <p className="body-s relative z-10 mt-3 line-clamp-3 text-secondary leading-relaxed">
                       {item.description}
                     </p>
                   </motion.button>
