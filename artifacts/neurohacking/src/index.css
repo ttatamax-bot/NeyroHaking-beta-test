@@ -266,23 +266,6 @@
     transform-style: preserve-3d;
   }
 
-  /*
-   * Older iOS WebKit versions can temporarily project nested 3D layers at
-   * their painted width while blur/rotateX is animating. Keep the mobile
-   * stack 2D so cards never appear as a narrow column before settling.
-   */
-  @media (max-width: 767px) {
-    .article-stack-list {
-      perspective: none;
-    }
-
-    .article-stack-card {
-      backface-visibility: visible;
-      transform: translate3d(0, var(--article-stack-y, 0px), 0) !important;
-      transform-style: flat;
-    }
-  }
-
   .btn-shimmer {
     position: relative;
     overflow: hidden;

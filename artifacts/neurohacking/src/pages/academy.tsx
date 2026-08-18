@@ -376,32 +376,38 @@ import { HABIT_GUIDE_TITLE } from "@/content/habit-guide";
             const perspectiveTilt = -(16 + articleIdx * 0.5) * stackRelease;
 
             return (
-              <div
+              <motion.div
                 key={a.id}
                 className="article-stack-card relative w-full"
                 style={{
-                  transform: `perspective(560px) translate3d(0, -${stackOffset}px, 0) rotateX(${perspectiveTilt}deg) rotateZ(${stackTilt}deg)`,
-                  ['--article-stack-y' as string]: `-${stackOffset}px`,
                   transformOrigin: 'top center',
-                  willChange: 'transform',
+                  transformStyle: 'preserve-3d',
+                  willChange: 'transform, opacity, filter',
                   zIndex: articleIdx + 1,
                 }}
+                initial={{
+                  opacity: 0,
+                  y: 58 - stackOffset,
+                  rotateX: perspectiveTilt + 18,
+                  rotateZ: stackTilt + (articleIdx % 2 === 0 ? -2.5 : 2.5),
+                  scale: 0.94,
+                  filter: "blur(7px)",
+                }}
+                animate={{
+                  opacity: 1,
+                  y: -stackOffset,
+                  rotateX: perspectiveTilt,
+                  rotateZ: stackTilt,
+                  scale: 1,
+                  filter: "blur(0px)",
+                }}
+                transition={{
+                  duration: 1.05 + articleIdx * 0.07,
+                  delay: 0.12 + articleIdx * 0.11,
+                  ease: EASE,
+                }}
               >
-                <motion.button
-                  initial={{
-                    opacity: 0,
-                    y: 58,
-                  }}
-                  animate={{
-                    opacity: 1,
-                    y: 0,
-                  }}
-                  transition={{
-                    duration: 1.05 + articleIdx * 0.07,
-                    delay: 0.12 + articleIdx * 0.11,
-                    ease: EASE,
-                  }}
-                  whileTap={isOnboarding ? {} : { filter: "brightness(1.08)" }}
+                <button
                   onClick={() => !isOnboarding && setLocation(`/article/${a.id}`)}
                   className="group relative flex w-full flex-col overflow-hidden rounded-[20px] p-4 text-left transition-[filter] active:brightness-110"
                   style={{
@@ -560,8 +566,8 @@ import { HABIT_GUIDE_TITLE } from "@/content/habit-guide";
                     </span>
                   )}
                 </div>
-              </motion.button>
-              </div>
+                </button>
+              </motion.div>
             );
           })}
 
