@@ -306,69 +306,60 @@ import { HABIT_GUIDE_TITLE } from "@/content/habit-guide";
 
   function ArticleAccessMark({
     isUnlocked,
-    isFree,
-    requiresTask,
     cost,
     canAfford,
     color,
     showUnreadDot,
   }: {
     isUnlocked: boolean;
-    isFree: boolean;
-    requiresTask: boolean;
     cost: number;
     canAfford: boolean;
     color: string;
     showUnreadDot: boolean;
   }) {
     const reduced = useReducedMotion();
-    const label = isFree
-      ? "Бесплатно"
-      : requiresTask
-        ? "Выполни задание"
-        : cost === 400
-          ? "400 ключей"
-          : `${formatKeys(cost)} ключей`;
+    const priceLabel = !isUnlocked && cost > 0 ? formatKeys(cost) : null;
 
     return (
-      <div className="ml-auto flex w-[108px] shrink-0 flex-col items-center text-center">
+      <div className="ml-auto flex w-[38px] shrink-0 flex-col items-end text-right">
         <motion.div
-          className="relative flex h-10 w-10 items-center justify-center"
+          className="relative flex h-8 w-8 items-center justify-center"
           style={{
             color: isUnlocked ? color : canAfford ? ACADEMY_ACCENT : "var(--text-tertiary)",
             filter: isUnlocked
-              ? `drop-shadow(0 0 7px ${color}) drop-shadow(0 0 16px ${color}88)`
+              ? `drop-shadow(0 0 6px ${color}) drop-shadow(0 0 11px ${color}66)`
               : "none",
           }}
           animate={reduced
-            ? { scale: isUnlocked ? 1.18 : 1, opacity: isUnlocked ? 1 : 0.82 }
+            ? { scale: isUnlocked ? 1.02 : 1, opacity: isUnlocked ? 1 : 0.82 }
             : isUnlocked
-              ? { scale: [1, 1.18, 1], y: [0, -1.5, 0], rotate: [0, -4, 0], opacity: [0.78, 1, 0.78] }
+              ? { scale: [1, 1.04, 1], y: [0, -1, 0], rotate: [0, -2, 0], opacity: [0.82, 1, 0.82] }
               : { scale: [1, 0.96, 1], y: [0, 1, 0], opacity: [0.68, 0.88, 0.68] }}
           transition={reduced
             ? { duration: 0.3 }
             : { duration: isUnlocked ? 2.6 : 3.8, repeat: Infinity, ease: "easeInOut" }}
         >
-          {isUnlocked ? <Unlock size={25} strokeWidth={1.65} /> : <Lock size={21} strokeWidth={1.65} />}
+          {isUnlocked ? <Unlock size={21} strokeWidth={1.65} /> : <Lock size={19} strokeWidth={1.65} />}
           {showUnreadDot && (
             <span
-              className="absolute -right-1 -top-1 h-[9px] w-[9px] rounded-full"
+              className="absolute -right-0.5 -top-0.5 h-[7px] w-[7px] rounded-full"
               style={{ background: "#EF4444", boxShadow: "0 0 6px rgba(239,68,68,0.9)" }}
             />
           )}
         </motion.div>
-        <span
-          className="label mt-1 block max-w-full leading-tight"
-          style={{
-            color: isFree ? "var(--text-secondary)" : requiresTask ? ACADEMY_ACCENT : canAfford ? ACADEMY_ACCENT : "var(--text-tertiary)",
-            fontSize: cost === 400 ? 15 : requiresTask ? 10 : 11,
-            fontWeight: cost === 400 ? 700 : 500,
-            letterSpacing: cost === 400 ? "0.01em" : "0.02em",
-            whiteSpace: cost === 400 ? "nowrap" : "normal",
-          }}
-        >
-          {label}
-        </span>
+        {priceLabel && (
+          <span
+            className="label mt-0.5 block leading-tight"
+            style={{
+              color: canAfford ? ACADEMY_ACCENT : "var(--text-tertiary)",
+              fontSize: cost === 400 ? 14 : 10,
+              fontWeight: cost === 400 ? 700 : 500,
+              letterSpacing: "0.01em",
+            }}
+          >
+            {priceLabel}
+          </span>
+        )}
       </div>
     );
   }
@@ -490,7 +481,6 @@ import { HABIT_GUIDE_TITLE } from "@/content/habit-guide";
             const isUnlocked = unlockedArticles.includes(a.id) || a.id === 'A1';
             const isRead      = readArticles.includes(a.id);
             const canAfford   = keys >= a.cost;
-            const isFree      = a.cost === 0;
             const showUnreadDot = isUnlocked && !isRead;
 
             const visual = a.visual;
@@ -618,8 +608,6 @@ import { HABIT_GUIDE_TITLE } from "@/content/habit-guide";
                   <ArticleIcon Icon={visual.Icon} color={visual.color} glow={visual.glow} unread={showUnreadDot} />
                   <ArticleAccessMark
                     isUnlocked={isUnlocked}
-                    isFree={isFree}
-                    requiresTask={articleIdx >= 1 && articleIdx <= 3}
                     cost={a.cost}
                     canAfford={canAfford}
                     color={visual.color}
