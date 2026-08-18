@@ -1,6 +1,6 @@
 import { useAppStore } from "@/lib/store";
 import { useLocation } from "wouter";
-import { motion, useInView, useReducedMotion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { useEffect, useRef, useState, type UIEvent } from "react";
 import { Sparkles, ChevronRight, LogIn } from "lucide-react";
 import { DataLoadingScreen } from "@/components/DataLoadingScreen";
@@ -66,57 +66,56 @@ function NewsSystemMark() {
 function NewsCardMotion({
   children,
   newsIdx,
-  stackProgress,
+  stackOffset,
+  perspectiveTilt,
+  stackTilt,
 }: {
   children: React.ReactNode;
   newsIdx: number;
-  stackProgress: number;
+  stackOffset: number;
+  perspectiveTilt: number;
+  stackTilt: number;
 }) {
-  const cardRef = useRef<HTMLDivElement>(null);
-  const isInView = useInView(cardRef, {
-    once: true,
-    amount: 0.2,
-    margin: "0px 0px -8% 0px",
-  });
-  const stackRelease = 1 - stackProgress;
-  const stackOffset = newsIdx * NEWS_STACK_OFFSET * stackRelease;
+  const hasMounted = useRef(false);
+
+  useEffect(() => {
+    hasMounted.current = true;
+  }, []);
 
   return (
     <motion.div
-      ref={cardRef}
       className="news-stack-card relative w-full"
       style={{
-        transformOrigin: "top center",
-        transformStyle: "preserve-3d",
-        willChange: "transform, opacity, filter",
-        zIndex: 3 - newsIdx,
-        pointerEvents: "none",
+        transformOrigin: 'top center',
+        transformStyle: 'preserve-3d',
+        willChange: 'transform, opacity, filter',
+        zIndex: newsIdx + 1,
       }}
       initial={{
         opacity: 0,
-        y: 44,
-        rotateX: 0,
-        rotateZ: 0,
-        scale: 0.95,
-        filter: "blur(6px)",
-        transformPerspective: 680,
+        y: 58 - stackOffset,
+        rotateX: perspectiveTilt + 18,
+        rotateZ: stackTilt + (newsIdx % 2 === 0 ? -2.5 : 2.5),
+        scale: 0.94,
+        filter: "blur(7px)",
+        transformPerspective: 560,
       }}
       animate={{
-        opacity: isInView ? 1 : 0,
-        y: isInView ? -stackOffset : 44,
-        rotateX: 0,
-        rotateZ: 0,
+        opacity: 1,
+        y: -stackOffset,
+        rotateX: perspectiveTilt,
+        rotateZ: stackTilt,
         scale: 1,
-        filter: isInView ? "blur(0px)" : "blur(6px)",
-        transformPerspective: 680,
+        filter: "blur(0px)",
+        transformPerspective: 560,
       }}
-      transition={isInView
-        ? {
-            duration: stackProgress > 0 ? 0.18 : 0.72,
-            delay: stackProgress > 0 ? 0 : newsIdx * 0.1,
+      transition={hasMounted.current
+        ? { duration: 0.18, ease: "easeOut" }
+        : {
+            duration: 1.05 + newsIdx * 0.07,
+            delay: 0.12 + newsIdx * 0.11,
             ease: NEWS_EASE,
-          }
-        : { duration: 0.2, ease: "easeOut" }}
+          }}
     >
       {children}
     </motion.div>
@@ -556,8 +555,6 @@ export default function Home() {
   const [devPotential, setDevPotentialState] = useState(() => getDevPotential());
   const [newsStackProgress, setNewsStackProgress] = useState(0);
   const newsScrollFrame = useRef<number | null>(null);
-  const homeScrollRef = useRef<HTMLDivElement>(null);
-  const newsSectionRef = useRef<HTMLElement>(null);
 
   const waitingForAccount =
     !import.meta.env.DEV && (!isAuthLoaded || (isSignedIn && !isAccountReady));
@@ -587,19 +584,8 @@ export default function Home() {
     };
   }, []);
 
-  const updateNewsStackProgress = (container: HTMLDivElement) => {
-    const section = newsSectionRef.current;
-    if (!section) return;
-
-    const containerRect = container.getBoundingClientRect();
-    const sectionRect = section.getBoundingClientRect();
-    const sectionTop = sectionRect.top - containerRect.top + container.scrollTop;
-    const revealStart = Math.max(0, sectionTop - container.clientHeight * 0.62);
-    const nextProgress = Math.min(
-      1,
-      Math.max(0, (container.scrollTop - revealStart) / NEWS_STACK_RELEASE),
-    );
-
+  const handleHomeScroll = (event: UIEvent<HTMLDivElement>) => {
+    const nextProgress = Math.min(1, Math.max(0, event.currentTarget.scrollTop / NEWS_STACK_RELEASE));
     if (newsScrollFrame.current !== null) {
       cancelAnimationFrame(newsScrollFrame.current);
     }
@@ -607,20 +593,6 @@ export default function Home() {
       newsScrollFrame.current = null;
       setNewsStackProgress(nextProgress);
     });
-  };
-
-  useEffect(() => {
-    if (homeScrollRef.current) {
-      updateNewsStackProgress(homeScrollRef.current);
-    }
-  }, []);
-
-  const handleHomeScroll = (event: UIEvent<HTMLDivElement>) => {
-    const container = event.currentTarget;
-    if (newsScrollFrame.current !== null) {
-      cancelAnimationFrame(newsScrollFrame.current);
-    }
-    updateNewsStackProgress(container);
   };
 
   const visualPotential = developerToolsEnabled ? devPotential : potential;
@@ -742,7 +714,7 @@ export default function Home() {
   }
 
   return (
-    <div ref={homeScrollRef} className="relative pb-[110px] overflow-y-auto min-h-[100dvh]" onScroll={handleHomeScroll}>
+    <div className="relative pb-[110px] overflow-y-auto min-h-[100dvh]" onScroll={handleHomeScroll}>
       <div className="relative z-10">
 
         <div className="flex items-center justify-between px-6 pt-[38px] pb-1">
@@ -776,7 +748,7 @@ export default function Home() {
 
         <div className="mx-5 mt-4 mb-6 h-px" style={{ background: 'rgba(100,160,230,0.1)' }} />
 
-        <section ref={newsSectionRef} className="px-5 pb-8">
+        <section className="px-5 pb-8">
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -795,8 +767,20 @@ export default function Home() {
           <div className="news-stack-list relative z-10 space-y-3">
             {NEWS_ITEMS.map((item, i) => {
               const isRead = readNews.includes(item.id);
+              const stackRelease = 1 - newsStackProgress;
+              const stackOffset = i * NEWS_STACK_OFFSET * stackRelease;
+              const stackTilt = i === 0
+                ? 0
+                : (i % 2 === 0 ? 0.35 : -0.45) * stackRelease;
+              const perspectiveTilt = -(16 + i * 0.5) * stackRelease;
               return (
-                <NewsCardMotion key={item.id} newsIdx={i} stackProgress={newsStackProgress}>
+                <NewsCardMotion
+                  key={item.id}
+                  newsIdx={i}
+                  stackOffset={stackOffset}
+                  perspectiveTilt={perspectiveTilt}
+                  stackTilt={stackTilt}
+                >
                   <motion.button
                     type="button"
                     whileTap={{ scale: 0.985 }}
