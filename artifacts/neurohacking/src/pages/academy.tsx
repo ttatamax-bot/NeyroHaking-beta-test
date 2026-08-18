@@ -2,7 +2,7 @@ import { useLocation } from "wouter";
 import { useAppStore } from "@/lib/store";
 import { CalendarDays, Brain, Lightbulb, Lock, MoonStar, Repeat2, Target, Unlock, type LucideIcon } from "lucide-react";
 import { motion, useReducedMotion } from "framer-motion";
-import { useEffect, useRef, useState, type UIEvent } from "react";
+import { useEffect, useRef, useState, type ReactNode, type UIEvent } from "react";
 import { HABIT_GUIDE_TITLE } from "@/content/habit-guide";
 
   const ARTICLES = [
@@ -305,6 +305,65 @@ import { HABIT_GUIDE_TITLE } from "@/content/habit-guide";
     );
   }
 
+  function ArticleCardMotion({
+    children,
+    articleIdx,
+    stackOffset,
+    perspectiveTilt,
+    stackTilt,
+  }: {
+    children: ReactNode;
+    articleIdx: number;
+    stackOffset: number;
+    perspectiveTilt: number;
+    stackTilt: number;
+  }) {
+    const hasMounted = useRef(false);
+
+    useEffect(() => {
+      hasMounted.current = true;
+    }, []);
+
+    return (
+      <motion.div
+        className="article-stack-card relative w-full"
+        style={{
+          transformOrigin: 'top center',
+          transformStyle: 'preserve-3d',
+          willChange: 'transform, opacity, filter',
+          zIndex: articleIdx + 1,
+        }}
+        initial={{
+          opacity: 0,
+          y: 58 - stackOffset,
+          rotateX: perspectiveTilt + 18,
+          rotateZ: stackTilt + (articleIdx % 2 === 0 ? -2.5 : 2.5),
+          scale: 0.94,
+          filter: "blur(7px)",
+          transformPerspective: 560,
+        }}
+        animate={{
+          opacity: 1,
+          y: -stackOffset,
+          rotateX: perspectiveTilt,
+          rotateZ: stackTilt,
+          scale: 1,
+          filter: "blur(0px)",
+          transformPerspective: 560,
+        }}
+        transition={hasMounted.current
+          ? { duration: 0.18, ease: "easeOut" }
+          : {
+              duration: 1.05 + articleIdx * 0.07,
+              delay: 0.12 + articleIdx * 0.11,
+              ease: EASE,
+            }}
+      >
+        {children}
+      </motion.div>
+    );
+  }
+
   export default function Academy() {
     const { unlockedArticles, keys, userState, onboardingHighlight, readArticles } = useAppStore();
     const [, setLocation] = useLocation();
@@ -376,41 +435,14 @@ import { HABIT_GUIDE_TITLE } from "@/content/habit-guide";
             const perspectiveTilt = -(16 + articleIdx * 0.5) * stackRelease;
 
             return (
-              <div
+              <ArticleCardMotion
                 key={a.id}
-                className="article-stack-card relative w-full"
-                style={{
-                  transform: `translate3d(0, -${stackOffset}px, 0)`,
-                  transformOrigin: 'top center',
-                  willChange: 'transform',
-                  zIndex: articleIdx + 1,
-                }}
+                articleIdx={articleIdx}
+                stackOffset={stackOffset}
+                perspectiveTilt={perspectiveTilt}
+                stackTilt={stackTilt}
               >
-                <motion.button
-                  initial={{
-                    opacity: 0,
-                    y: 58,
-                    rotateX: 18,
-                    rotateZ: articleIdx % 2 === 0 ? -2.5 : 2.5,
-                    scale: 0.94,
-                    filter: "blur(7px)",
-                    transformPerspective: 560,
-                  }}
-                  animate={{
-                    opacity: 1,
-                    y: 0,
-                    rotateX: 0,
-                    rotateZ: 0,
-                    scale: 1,
-                    filter: "blur(0px)",
-                    transformPerspective: 560,
-                  }}
-                  transition={{
-                    duration: 1.05 + articleIdx * 0.07,
-                    delay: 0.12 + articleIdx * 0.11,
-                    ease: EASE,
-                  }}
-                  whileTap={isOnboarding ? {} : { filter: "brightness(1.08)" }}
+                <button
                   onClick={() => !isOnboarding && setLocation(`/article/${a.id}`)}
                   className="group relative flex w-full flex-col overflow-hidden rounded-[20px] p-4 text-left transition-[filter] active:brightness-110"
                   style={{
@@ -570,8 +602,8 @@ import { HABIT_GUIDE_TITLE } from "@/content/habit-guide";
                     </span>
                   )}
                 </div>
-                </motion.button>
-              </div>
+                </button>
+              </ArticleCardMotion>
             );
           })}
 
