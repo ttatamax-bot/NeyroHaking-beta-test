@@ -100,7 +100,7 @@ const TECHNIQUE_PARTICLES = [
   { left: "84%", top: "93%", size: 2, color: "#FFE4B5", delay: 1.55, drift: 15 },
 ];
 
-const TECHNIQUE_STACK_OFFSET = 22;
+const TECHNIQUE_STACK_OFFSET = 8;
 const TECHNIQUE_STACK_RELEASE = 260;
 const TECHNIQUE_EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
@@ -679,7 +679,7 @@ export default function Techniques() {
         </span>
       </motion.div>
 
-      <div className="technique-stack-list relative z-10 mx-auto grid w-full grid-cols-2 gap-x-3 gap-y-5">
+      <div className="technique-stack-list relative z-10 mx-auto grid w-full grid-cols-2 gap-x-1 gap-y-0">
         {TECHNIQUES.map((t, idx) => {
           const isDone        = Boolean(t.dayKey && todayTechniques[t.dayKey]);
           const isHighlighted = hasHighlight && onboardingHighlight.includes(t.id);
@@ -701,7 +701,7 @@ export default function Techniques() {
                 onPointerCancel={() => setPressedTechnique(null)}
                 onPointerLeave={() => setPressedTechnique(null)}
                 aria-label={t.title}
-                className="group relative flex min-h-[184px] w-full flex-col items-center justify-center overflow-visible rounded-[24px] px-0 py-1 text-center outline-none focus-visible:ring-1 focus-visible:ring-white/40 disabled:cursor-default"
+                className="group relative flex min-h-[172px] w-full flex-col items-center justify-center overflow-visible rounded-[24px] px-0 py-1 text-center outline-none focus-visible:ring-1 focus-visible:ring-white/40 disabled:cursor-default"
                 style={{
                   cursor: t.route && !isDone ? "pointer" : "default",
                 }}
