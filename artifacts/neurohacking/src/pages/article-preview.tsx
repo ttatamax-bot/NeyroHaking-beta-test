@@ -4,7 +4,8 @@ import { useAppStore } from "@/lib/store";
 import { purchaseArticle, ApiError } from "@/lib/api";
 import { ScreenTransition } from "@/components/ScreenTransition";
 import { BackButton } from "@/components/BackButton";
-import { Lock, Key } from "lucide-react";
+import { CalendarDays, Brain, Key, Lightbulb, Lock, MoonStar, Repeat2, Target, type LucideIcon } from "lucide-react";
+import { motion, useReducedMotion } from "framer-motion";
 import { HABIT_GUIDE_TITLE } from "@/content/habit-guide";
 
 const ARTICLES_DATA: Record<string, {
@@ -53,6 +54,88 @@ function formatKeys(n: number) {
   return `${n}`;
 }
 
+const ARTICLE_VISUALS: Record<string, {
+  Icon: LucideIcon;
+  color: string;
+  glow: string;
+  surface: string;
+}> = {
+  A1: { Icon: Brain, color: "#F59E0B", glow: "rgba(245,158,11,0.2)", surface: "#3D2B18" },
+  A2: { Icon: Target, color: "#A78BFA", glow: "rgba(167,139,250,0.18)", surface: "#302541" },
+  A3: { Icon: Lightbulb, color: "#22D3EE", glow: "rgba(34,211,238,0.18)", surface: "#173340" },
+  A4: { Icon: CalendarDays, color: "#60A5FA", glow: "rgba(96,165,250,0.18)", surface: "#1C304D" },
+  A5: { Icon: MoonStar, color: "#C4B5FD", glow: "rgba(196,181,253,0.18)", surface: "#29244A" },
+  A6: { Icon: Repeat2, color: "#FB7185", glow: "rgba(251,113,133,0.18)", surface: "#3D2931" },
+};
+
+function ArticleInstrumentPreview({ articleId }: { articleId: string }) {
+  const reduced = useReducedMotion();
+  const visual = ARTICLE_VISUALS[articleId] ?? ARTICLE_VISUALS.A1;
+  const { Icon } = visual;
+
+  return (
+    <div
+      className="relative -mx-4 mb-6 h-[190px] overflow-hidden rounded-b-[22px] border-b"
+      style={{
+        background: [
+          `radial-gradient(ellipse 85% 78% at 50% 36%, ${visual.glow}, transparent 72%)`,
+          `linear-gradient(145deg, ${visual.surface} 0%, rgba(9,24,43,0.98) 100%)`,
+        ].join(", "),
+        borderColor: `${visual.color}45`,
+      }}
+    >
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 opacity-40"
+        style={{
+          backgroundImage: [
+            `linear-gradient(90deg, ${visual.color}14 1px, transparent 1px)`,
+            `linear-gradient(${visual.color}10 1px, transparent 1px)`,
+          ].join(", "),
+          backgroundSize: "28px 28px",
+          maskImage: "linear-gradient(to bottom, rgba(0,0,0,.85), transparent 96%)",
+          WebkitMaskImage: "linear-gradient(to bottom, rgba(0,0,0,.85), transparent 96%)",
+        }}
+      />
+
+      {[0, 1, 2].map((ringIndex) => {
+        const size = 128 + ringIndex * 48;
+        return (
+          <motion.div
+            key={`${articleId}-preview-ring-${ringIndex}`}
+            aria-hidden="true"
+            className="pointer-events-none absolute left-1/2 top-[62%] rounded-full border"
+            style={{
+              width: size,
+              height: size,
+              borderWidth: ringIndex === 0 ? 1.5 : 1,
+              borderColor: `${visual.color}${ringIndex === 0 ? "75" : ringIndex === 1 ? "45" : "2b"}`,
+              borderStyle: ringIndex === 1 ? "dashed" : "solid",
+              transform: "translate(-50%, -50%)",
+              boxShadow: ringIndex === 0 ? `0 0 26px ${visual.color}38` : undefined,
+            }}
+            animate={reduced
+              ? { rotate: 0, opacity: ringIndex === 0 ? 0.62 : 0.35 }
+              : { rotate: ringIndex % 2 === 0 ? 360 : -360, opacity: ringIndex === 0 ? [0.42, 0.72, 0.42] : [0.22, 0.44, 0.22] }}
+            transition={reduced
+              ? { duration: 0.3 }
+              : { rotate: { duration: 18 + ringIndex * 8, repeat: Infinity, ease: "linear" }, opacity: { duration: 3.2 + ringIndex * 0.5, repeat: Infinity, ease: "easeInOut" } }}
+          />
+        );
+      })}
+
+      <motion.div
+        className="relative z-10 flex justify-center pt-7"
+        animate={reduced ? { y: 0 } : { y: [0, -2, 0], rotate: [0, 1, 0] }}
+        transition={reduced ? { duration: 0.3 } : { duration: 4.6, repeat: Infinity, ease: "easeInOut" }}
+        style={{ filter: `drop-shadow(0 0 12px ${visual.glow})` }}
+      >
+        <Icon size={42} strokeWidth={1.45} color={visual.color} aria-hidden="true" />
+      </motion.div>
+    </div>
+  );
+}
+
 export default function ArticlePreview() {
   const { id } = useParams<{ id: string }>();
   const [, setLocation] = useLocation();
@@ -67,6 +150,14 @@ export default function ArticlePreview() {
   const isUnlocked = isFree || unlockedArticles.includes(id!);
   const isRead     = readArticles.includes(id || '');
   const canAfford  = keys >= article.cost;
+  const statusLabel = isUnlocked
+    ? (isRead ? 'Прочитано' : 'Открыто')
+    : isFree
+      ? 'Бесплатно'
+      : `${formatKeys(article.cost)} ключей`;
+  const statusClass = isUnlocked
+    ? 'bg-[rgba(34,197,94,0.1)] border-[rgba(34,197,94,0.2)] text-success'
+    : 'bg-surface-1 border-border text-secondary';
 
   const handleAction = async () => {
     if (isUnlocked) {
@@ -116,16 +207,12 @@ export default function ArticlePreview() {
         </div>
       )}
 
+      <ArticleInstrumentPreview articleId={id || 'A1'} />
+
       <div className="flex-1 mt-4">
         <div className="flex items-center gap-2 mb-3">
-          <span className={`label px-2 py-1 rounded-[6px] border ${
-            isFree
-              ? 'bg-[rgba(34,197,94,0.1)] border-[rgba(34,197,94,0.2)] text-success'
-              : isUnlocked
-                ? 'bg-[rgba(34,197,94,0.1)] border-[rgba(34,197,94,0.2)] text-success'
-                : 'bg-surface-1 border-border text-secondary'
-          }`}>
-            {isFree ? 'Бесплатно' : isUnlocked ? (isRead ? 'Прочитано' : 'Открыто') : `${formatKeys(article.cost)} ключей`}
+          <span className={`label px-2 py-1 rounded-[6px] border ${statusClass}`}>
+            {statusLabel}
           </span>
         </div>
 

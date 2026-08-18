@@ -49,8 +49,6 @@ import { HABIT_GUIDE_TITLE } from "@/content/habit-guide";
       visual: { Icon: Repeat2, color: "#FB7185", glow: "rgba(251,113,133,0.14)", surface: "#3D2931" },
     },
   ];
-  type ArticleVisual = (typeof ARTICLES)[number]["visual"];
-
   const ACADEMY_ACCENT = '#F59E0B';
   const CARD_SHADOW = '0 8px 32px rgba(0,0,0,0.68), 0 0 0 1px rgba(255,255,255,0.1)';
 
@@ -273,175 +271,36 @@ import { HABIT_GUIDE_TITLE } from "@/content/habit-guide";
     color,
     glow,
     unread,
-    large = false,
   }: {
     Icon: LucideIcon;
     color: string;
     glow: string;
     unread: boolean;
-    large?: boolean;
   }) {
     const reduced = useReducedMotion();
-    const iconSize = large ? 31 : 24;
 
     return (
       <motion.div
-        className={`relative flex shrink-0 items-center justify-center ${large ? "h-[64px] w-[64px]" : "h-[42px] w-[42px]"}`}
+        className="relative flex h-[42px] w-[42px] shrink-0 items-center justify-center"
         style={{ filter: `drop-shadow(0 0 8px ${glow})` }}
         animate={reduced ? { y: 0 } : { y: [0, -1, 0], rotate: [0, 0.8, 0] }}
         transition={reduced ? { duration: 0.3 } : { duration: 4.6, repeat: Infinity, ease: "easeInOut" }}
       >
         <motion.span
-          className={`pointer-events-none absolute rounded-full blur-lg ${large ? "inset-[-18px]" : "inset-[-6px]"}`}
+          className="pointer-events-none absolute inset-[-6px] rounded-full blur-lg"
           style={{ background: `radial-gradient(circle, ${glow}, transparent 72%)` }}
           animate={reduced ? { opacity: 0.34, scale: 1 } : { opacity: [.1, .34, .1], scale: [.82, 1.1, .82] }}
           transition={reduced ? { duration: 0.3 } : { duration: 2.8, repeat: Infinity, ease: "easeInOut" }}
         />
-        <Icon size={iconSize} strokeWidth={1.55} color={color} className="relative z-10" aria-hidden="true" />
+        <Icon size={24} strokeWidth={1.55} color={color} className="relative z-10" aria-hidden="true" />
         {unread && (
           <motion.span
-            className={`absolute z-20 rounded-full bg-rose-400 ${large ? "-right-1 -top-1 h-2.5 w-2.5" : "-right-1 -top-1 h-2 w-2"}`}
+            className="absolute -right-1 -top-1 z-20 h-2 w-2 rounded-full bg-rose-400"
             animate={reduced ? { opacity: 1 } : { opacity: [0.55, 1, 0.55], scale: [0.86, 1.15, 0.86] }}
             transition={reduced ? { duration: 0.3 } : { duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
           />
         )}
       </motion.div>
-    );
-  }
-
-  function ArticlePreview({
-    visual,
-    ringStyle,
-    unread,
-  }: {
-    visual: ArticleVisual;
-    ringStyle: ArticleRingStyle;
-    unread: boolean;
-  }) {
-    const reduced = useReducedMotion();
-
-    return (
-      <div
-        className="relative -mx-4 -mt-4 mb-4 h-[148px] overflow-hidden border-b"
-        style={{
-          background: [
-            `radial-gradient(ellipse 82% 76% at 50% 38%, ${visual.glow}, transparent 70%)`,
-            `linear-gradient(145deg, ${visual.surface} 0%, rgba(9,24,43,0.96) 100%)`,
-          ].join(", "),
-          borderColor: `${visual.color}45`,
-        }}
-      >
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0 opacity-35"
-          style={{
-            backgroundImage: [
-              `linear-gradient(90deg, ${visual.color}14 1px, transparent 1px)`,
-              `linear-gradient(${visual.color}10 1px, transparent 1px)`,
-            ].join(", "),
-            backgroundSize: "28px 28px",
-            maskImage: "linear-gradient(to bottom, rgba(0,0,0,.8), transparent 92%)",
-            WebkitMaskImage: "linear-gradient(to bottom, rgba(0,0,0,.8), transparent 92%)",
-          }}
-        />
-
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute left-1/2 top-[58%] rounded-full"
-          style={{
-            width: ringStyle.outer.size,
-            height: ringStyle.outer.size,
-            transform: "translate(-50%, -50%)",
-          }}
-        >
-          <motion.div
-            className="absolute inset-0 rounded-full border"
-            style={{
-              borderWidth: ringStyle.outer.width,
-              borderColor: `${visual.color}${ringStyle.outer.alpha}`,
-              boxShadow: `0 0 28px ${visual.color}42`,
-            }}
-            animate={reduced ? { rotate: 0, opacity: 0.62 } : { rotate: 360, opacity: [0.42, 0.72, 0.42] }}
-            transition={reduced
-              ? { duration: 0.3 }
-              : {
-                  rotate: { duration: ringStyle.outer.duration, repeat: Infinity, ease: "linear" },
-                  opacity: { duration: 4.4, repeat: Infinity, ease: "easeInOut" },
-                }}
-          />
-        </div>
-
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute left-1/2 top-[58%] rounded-full"
-          style={{
-            width: ringStyle.dash.size,
-            height: ringStyle.dash.size,
-            transform: "translate(-50%, -50%)",
-          }}
-        >
-          <motion.svg
-            className="absolute inset-0"
-            width={ringStyle.dash.size}
-            height={ringStyle.dash.size}
-            viewBox={`0 0 ${ringStyle.dash.size} ${ringStyle.dash.size}`}
-            fill="none"
-            animate={reduced ? { rotate: 0, opacity: 0.3 } : { rotate: ringStyle.dash.direction * 360, opacity: [0.24, 0.48, 0.24] }}
-            transition={reduced
-              ? { duration: 0.3 }
-              : { rotate: { duration: ringStyle.dash.duration, repeat: Infinity, ease: "linear" }, opacity: { duration: 3.6, repeat: Infinity, ease: "easeInOut" } }}
-            style={{ filter: `drop-shadow(0 0 10px ${visual.color}55)` }}
-          >
-            <circle
-              cx={ringStyle.dash.size / 2}
-              cy={ringStyle.dash.size / 2}
-              r={(ringStyle.dash.size / 2) - 4}
-              stroke={visual.color}
-              strokeWidth={ringStyle.dash.width}
-              strokeDasharray={ringStyle.dash.dashArray}
-              strokeLinecap="butt"
-              opacity={ringStyle.dash.opacity}
-            />
-          </motion.svg>
-        </div>
-
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute left-1/2 top-[58%] rounded-full"
-          style={{
-            width: ringStyle.fine.size,
-            height: ringStyle.fine.size,
-            transform: "translate(-50%, -50%)",
-          }}
-        >
-          <motion.svg
-            className="absolute inset-0"
-            width={ringStyle.fine.size}
-            height={ringStyle.fine.size}
-            viewBox={`0 0 ${ringStyle.fine.size} ${ringStyle.fine.size}`}
-            fill="none"
-            animate={reduced ? { rotate: 0, opacity: 0.3 } : { rotate: ringStyle.fine.direction * 360, opacity: [0.2, 0.42, 0.2] }}
-            transition={reduced
-              ? { duration: 0.3 }
-              : { rotate: { duration: ringStyle.fine.duration, repeat: Infinity, ease: "linear" }, opacity: { duration: 2.8, repeat: Infinity, ease: "easeInOut" } }}
-          >
-            <circle
-              cx={ringStyle.fine.size / 2}
-              cy={ringStyle.fine.size / 2}
-              r={(ringStyle.fine.size / 2) - 3}
-              stroke={visual.color}
-              strokeWidth={ringStyle.fine.width}
-              strokeDasharray={ringStyle.fine.dashArray}
-              strokeLinecap="butt"
-              opacity={ringStyle.fine.opacity}
-            />
-          </motion.svg>
-        </div>
-
-        <div className="relative z-10 flex justify-center pt-5">
-          <ArticleIcon Icon={visual.Icon} color={visual.color} glow={visual.glow} unread={unread} large />
-        </div>
-      </div>
     );
   }
 
@@ -501,7 +360,7 @@ import { HABIT_GUIDE_TITLE } from "@/content/habit-guide";
         <span
           className="label mt-1 block max-w-full leading-tight"
           style={{
-            color: isFree ? "#22C55E" : requiresTask ? ACADEMY_ACCENT : canAfford ? ACADEMY_ACCENT : "var(--text-tertiary)",
+            color: isFree ? "var(--text-secondary)" : requiresTask ? ACADEMY_ACCENT : canAfford ? ACADEMY_ACCENT : "var(--text-tertiary)",
             fontSize: cost === 400 ? 15 : requiresTask ? 10 : 11,
             fontWeight: cost === 400 ? 700 : 500,
             letterSpacing: cost === 400 ? "0.01em" : "0.02em",
@@ -576,6 +435,7 @@ import { HABIT_GUIDE_TITLE } from "@/content/habit-guide";
   export default function Academy() {
     const { unlockedArticles, keys, userState, onboardingHighlight, readArticles } = useAppStore();
     const [, setLocation] = useLocation();
+    const reducedMotion = useReducedMotion();
     const [stackProgress, setStackProgress] = useState(0);
     const scrollFrame = useRef<number | null>(null);
 
@@ -661,8 +521,101 @@ import { HABIT_GUIDE_TITLE } from "@/content/habit-guide";
                   boxShadow: `0 5px 24px ${visual.glow}, 0 1px 0 rgba(255,237,213,0.09) inset, ${CARD_SHADOW}`,
                   }}
                 >
-                <ArticlePreview visual={visual} ringStyle={ringStyle} unread={showUnreadDot} />
-                <div className="relative z-10 flex items-start justify-end">
+                <motion.div
+                  aria-hidden="true"
+                  className="pointer-events-none absolute z-[1] rounded-full border"
+                  style={{
+                    width: ringStyle.outer.size,
+                    height: ringStyle.outer.size,
+                    left: ringStyle.outer.left,
+                    right: ringStyle.outer.right,
+                    top: ringStyle.outer.top,
+                    bottom: ringStyle.outer.bottom,
+                    borderWidth: ringStyle.outer.width,
+                    borderColor: `${visual.color}${ringStyle.outer.alpha}`,
+                    boxShadow: `0 0 32px ${visual.color}40`,
+                  }}
+                  animate={reducedMotion
+                    ? { rotate: 0, opacity: 0.55 }
+                    : { rotate: 360, opacity: [0.45, 0.72, 0.45] }}
+                  transition={reducedMotion
+                    ? { duration: 0.3 }
+                    : {
+                        rotate: { duration: ringStyle.outer.duration, repeat: Infinity, ease: "linear" },
+                        opacity: { duration: 4.4 + articleIdx * 0.35, repeat: Infinity, ease: "easeInOut", delay: articleIdx * 0.18 },
+                      }}
+                />
+                <motion.svg
+                  aria-hidden="true"
+                  className="pointer-events-none absolute z-[1]"
+                  width={ringStyle.dash.size}
+                  height={ringStyle.dash.size}
+                  viewBox={`0 0 ${ringStyle.dash.size} ${ringStyle.dash.size}`}
+                  fill="none"
+                  style={{
+                    left: ringStyle.dash.left,
+                    right: ringStyle.dash.right,
+                    top: ringStyle.dash.top,
+                    bottom: ringStyle.dash.bottom,
+                    filter: `drop-shadow(0 0 12px ${visual.color}66)`,
+                  }}
+                  animate={reducedMotion
+                    ? { rotate: 0, opacity: 0.3 }
+                    : { rotate: ringStyle.dash.direction * 360, opacity: [0.28, 0.48, 0.28] }}
+                  transition={reducedMotion
+                    ? { duration: 0.3 }
+                    : {
+                        rotate: { duration: ringStyle.dash.duration, repeat: Infinity, ease: "linear" },
+                        opacity: { duration: 3.5 + articleIdx * 0.28, repeat: Infinity, ease: "easeInOut", delay: articleIdx * 0.24 },
+                      }}
+                >
+                  <circle
+                    cx={ringStyle.dash.size / 2}
+                    cy={ringStyle.dash.size / 2}
+                    r={(ringStyle.dash.size / 2) - 4}
+                    stroke={visual.color}
+                    strokeWidth={ringStyle.dash.width}
+                    strokeDasharray={ringStyle.dash.dashArray}
+                    strokeLinecap="butt"
+                    opacity={ringStyle.dash.opacity}
+                  />
+                </motion.svg>
+                <motion.svg
+                  aria-hidden="true"
+                  className="pointer-events-none absolute z-[1]"
+                  width={ringStyle.fine.size}
+                  height={ringStyle.fine.size}
+                  viewBox={`0 0 ${ringStyle.fine.size} ${ringStyle.fine.size}`}
+                  fill="none"
+                  style={{
+                    left: ringStyle.fine.left,
+                    right: ringStyle.fine.right,
+                    top: ringStyle.fine.top,
+                    bottom: ringStyle.fine.bottom,
+                  }}
+                  animate={reducedMotion
+                    ? { rotate: 0, opacity: 0.3 }
+                    : { rotate: ringStyle.fine.direction * 360, opacity: [0.26, 0.42, 0.26] }}
+                  transition={reducedMotion
+                    ? { duration: 0.3 }
+                    : {
+                        rotate: { duration: ringStyle.fine.duration, repeat: Infinity, ease: "linear" },
+                        opacity: { duration: 2.8 + articleIdx * 0.22, repeat: Infinity, ease: "easeInOut", delay: articleIdx * 0.3 },
+                      }}
+                >
+                  <circle
+                    cx={ringStyle.fine.size / 2}
+                    cy={ringStyle.fine.size / 2}
+                    r={(ringStyle.fine.size / 2) - 3}
+                    stroke={visual.color}
+                    strokeWidth={ringStyle.fine.width}
+                    strokeDasharray={ringStyle.fine.dashArray}
+                    strokeLinecap="butt"
+                    opacity={ringStyle.fine.opacity}
+                  />
+                </motion.svg>
+                <div className="relative z-10 flex items-start justify-between gap-3">
+                  <ArticleIcon Icon={visual.Icon} color={visual.color} glow={visual.glow} unread={showUnreadDot} />
                   <ArticleAccessMark
                     isUnlocked={isUnlocked}
                     isFree={isFree}
