@@ -15,6 +15,7 @@
 - [Vercel Clerk environment](vercel-clerk-env.md) — external Vercel builds must define the public Clerk key or Clerk stays stuck loading.
 - [Vercel nested API routes](vercel-nested-api-routes.md) — explicit Vercel entrypoints may be needed for nested API paths; normalize stripped prefixes before handing off to Express.
 - [Vercel external env setup](vercel-external-env-setup.md) — external Vercel projects do not inherit Replit Secrets; configure production Clerk and Supabase variables separately.
+- [Vercel preview schema builds](vercel-preview-schema-build.md) — preview builds may not receive production-only DATABASE_URL; keep schema bootstrap out of the Vercel frontend build.
 - [Vercel frozen lockfile](vercel-frozen-lockfile.md) — any package.json rollback must update pnpm-lock.yaml before GitHub/Vercel deployment.
 - [Completion ledger hydration](completion-ledger-hydration.md) — cross-device checklist and activity UI must hydrate from server completion rows, not only debounced client state.
 - [Progress save loop](progress-save-loop.md) — ignore unchanged server save responses, especially volatile profile timestamps, or autosave can loop every few seconds.
@@ -28,3 +29,15 @@
 - [Supabase connector authentication](supabase-connector-auth.md) — an added connection can still return 401 without an authenticated client; never mutate beta data until access is verified.
 - [Referral schema provisioning](referral-schema-provisioning.md) — new persistent tables require the idempotent schema bootstrap before route checks or production enablement.
 - [Preview static assets](preview-static-assets.md) — loading visuals should use BASE_URL-aware public assets, not root-relative Vite source imports.
+- [Trusted economy responses](trusted-economy-responses.md) — apply balances and unlocks from successful purchase/grant responses before any optional profile refresh.
+- [Mobile memory audio](mobile-memory-audio.md) — Web Audio needs a user-gesture unlock and resume handling for mobile practice sounds.
+- [iOS game interaction](ios-game-interaction.md) — memory boards need explicit selection and touch-callout suppression on iPhone.
+- [Techniques icon wells](techniques-icon-wells.md) — on the techniques tab only the outer card backgrounds are removed; colored filled/bordered squares around animated icons remain.
+- [Segmented gauge rendering](segmented-gauge-rendering.md) — render active SVG gauge segments as direct colored paths; reserve dash masks for a partial segment.
+- [Techniques instrument backdrop](techniques-instrument-backdrop.md) — the Techniques background must reuse the main PotentialScale metallic gauge language, not orbital/cosmic decoration.
+- [Techniques Safari gauge](techniques-safari-gauge.md) — critical technique rings should use visible SVG strokes rather than CSS mask gradients for iPhone reliability.
+- [Preview data readiness](preview-data-readiness.md) — unauthenticated DEV must not wait for Clerk hydration before rendering local app data.
+- [Stable app context](stable-app-context.md) — keep the React app context outside the hot-reloaded store module to prevent HMR consumer/provider mismatches.
+- [Day-close glow lock](day-close-glow-lock.md) — the central flash must hold peak brightness from 99.5% through the 100% potential milestone.
+- [Beta Vercel source sync](beta-vercel-source-sync.md) — GitHub API tree updates must preserve the complete frontend source tree before triggering Vercel.
+- [Academy card animation](academy-card-animation.md) — mobile Safari needs one transform owner; scroll targets need a separate short transition from entrance timing.
