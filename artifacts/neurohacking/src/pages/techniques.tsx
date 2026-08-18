@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { useLocation } from "wouter";
 import { useAppStore } from "@/lib/store";
 import { motion, useReducedMotion } from "framer-motion";
@@ -100,75 +100,25 @@ const TECHNIQUE_PARTICLES = [
   { left: "84%", top: "93%", size: 2, color: "#FFE4B5", delay: 1.55, drift: 15 },
 ];
 
-const TECHNIQUE_STACK_OFFSET = 8;
-const TECHNIQUE_STACK_RELEASE = 260;
-const TECHNIQUE_EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
-
 function TechniqueCardMotion({
   children,
   techniqueIdx,
-  stackProgress,
   isDimmed,
 }: {
   children: ReactNode;
   techniqueIdx: number;
-  stackProgress: number;
   isDimmed: boolean;
 }) {
-  const hasMounted = useRef(false);
-  const row = Math.floor(techniqueIdx / 2);
-  const column = techniqueIdx % 2;
-  const stackRelease = 1 - stackProgress;
-  const stackOffset = row * TECHNIQUE_STACK_OFFSET * stackRelease;
-  const stackTilt = row === 0
-    ? 0
-    : (column === 0 ? -1.2 : 1.2) * stackRelease;
-  const perspectiveTilt = -(11 + row * 0.8) * stackRelease;
-  const convergeX = (column === 0 ? -1 : 1) * row * 1.5 * stackRelease;
-
-  useEffect(() => {
-    hasMounted.current = true;
-  }, []);
-
   return (
-    <motion.div
+    <div
       className="technique-stack-card relative w-full"
       style={{
-        transformOrigin: "top center",
-        transformStyle: "preserve-3d",
-        willChange: "transform, opacity, filter",
         zIndex: TECHNIQUES.length - techniqueIdx,
-      }}
-      initial={{
-        opacity: 0,
-        x: convergeX,
-        y: 44 - stackOffset,
-        rotateX: perspectiveTilt + 16,
-        rotateZ: stackTilt + (column === 0 ? -1.8 : 1.8),
-        scale: 0.94,
-        filter: "blur(6px)",
-        transformPerspective: 680,
-      }}
-      animate={{
         opacity: isDimmed ? 0.24 : 1,
-        x: convergeX,
-        y: -stackOffset,
-        rotateX: perspectiveTilt,
-        rotateZ: stackTilt,
-        scale: 1,
-        filter: "blur(0px)",
-        transformPerspective: 680,
       }}
-      transition={hasMounted.current
-        ? { duration: 0.2, ease: "easeOut" }
-        : {
-            duration: 0.9 + row * 0.06,
-            delay: 0.1 + techniqueIdx * 0.07,
-            ease: TECHNIQUE_EASE,
-          }}
     >
       {children}
-    </motion.div>
+    </div>
   );
 }
 
@@ -621,42 +571,13 @@ export default function Techniques() {
   const { userState, todayTechniques, onboardingHighlight } = useAppStore();
   const [, setLocation] = useLocation();
   const [pressedTechnique, setPressedTechnique] = useState<string | null>(null);
-  const [stackProgress, setStackProgress] = useState(0);
-  const techniquesRef = useRef<HTMLDivElement | null>(null);
-  const scrollFrame = useRef<number | null>(null);
 
   const isOnboarding = userState === 'onboarding';
   const hasHighlight = isOnboarding && onboardingHighlight.length > 0;
   const doneCount = TECHNIQUES.filter(t => t.dayKey && todayTechniques[t.dayKey]).length;
 
-  useEffect(() => {
-    const page = techniquesRef.current;
-    const scrollParent = page?.parentElement;
-    if (!scrollParent) return;
-
-    const handleScroll = () => {
-      if (scrollFrame.current !== null) {
-        cancelAnimationFrame(scrollFrame.current);
-      }
-      scrollFrame.current = requestAnimationFrame(() => {
-        scrollFrame.current = null;
-        setStackProgress(Math.min(1, Math.max(0, scrollParent.scrollTop / TECHNIQUE_STACK_RELEASE)));
-      });
-    };
-
-    handleScroll();
-    scrollParent.addEventListener("scroll", handleScroll, { passive: true });
-    return () => {
-      scrollParent.removeEventListener("scroll", handleScroll);
-      if (scrollFrame.current !== null) {
-        cancelAnimationFrame(scrollFrame.current);
-        scrollFrame.current = null;
-      }
-    };
-  }, []);
-
   return (
-    <div ref={techniquesRef} className="relative isolate min-h-full pt-[56px] pb-24">
+    <div className="relative isolate min-h-full pt-[56px] pb-24">
       <MainLikeInstrumentAtmosphere />
 
       <div className="relative z-10 mx-auto w-full max-w-[390px] px-4">
@@ -688,17 +609,14 @@ export default function Techniques() {
             <TechniqueCardMotion
               key={t.id}
               techniqueIdx={idx}
-              stackProgress={stackProgress}
               isDimmed={isDimmed}
             >
-              <a
-                href={t.route ? `${import.meta.env.BASE_URL.replace(/\/$/, "")}${t.route}` : undefined}
+              <button
+                type="button"
+                disabled={!t.route}
                 aria-label={t.title}
                 aria-disabled={!t.route}
-                onClick={(event) => {
-                  event.preventDefault();
-                  if (t.route) setLocation(t.route);
-                }}
+                onClick={() => { if (t.route) setLocation(t.route); }}
                 onPointerDown={() => t.route && setPressedTechnique(t.id)}
                 onPointerUp={() => setPressedTechnique(null)}
                 onPointerCancel={() => setPressedTechnique(null)}
@@ -709,7 +627,6 @@ export default function Techniques() {
                   touchAction: "manipulation",
                   WebkitTapHighlightColor: "transparent",
                   zIndex: 1,
-                  pointerEvents: t.route ? "auto" : "none",
                 }}
               >
                 {isHighlighted && (
@@ -733,7 +650,7 @@ export default function Techniques() {
                 >
                   {t.title}
                 </h3>
-              </a>
+              </button>
             </TechniqueCardMotion>
           );
         })}

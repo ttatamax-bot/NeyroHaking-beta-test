@@ -182,11 +182,13 @@ function MaximBubble({
   messages,
   isLast,
   msgTopOverride,
+  onClick,
 }: {
   idx: number;
   messages: { text: string }[];
   isLast: boolean;
   msgTopOverride?: string;
+  onClick?: () => void;
 }) {
   const msg = messages[Math.min(idx, messages.length - 1)];
   const top = msgTopOverride ?? MSG_TOP_PX[idx] ?? '38%';
@@ -202,7 +204,11 @@ function MaximBubble({
         <img src="/maxim-avatar.png" alt="Максим"
           className="w-[44px] h-[44px] rounded-full object-cover shrink-0"
           style={{ boxShadow: '0 0 0 2px #2563EB' }} />
-        <div className="flex flex-col items-end gap-[3px]">
+        <div
+          className="flex flex-col items-end gap-[3px]"
+          onClick={onClick}
+          style={{ pointerEvents: onClick ? 'auto' : 'none', cursor: onClick ? 'pointer' : undefined }}
+        >
           <span style={{ fontSize: 11, fontWeight: 700, color: '#93c5fd', letterSpacing: '0.03em', paddingRight: 4 }}>
             Татаринов Максим
           </span>
@@ -240,8 +246,7 @@ function TechChatPanel({ onDone }: { onDone: () => void }) {
   };
   return (
     <>
-      <div className="fixed inset-0 z-[35] cursor-pointer" onClick={advance} onTouchMove={e => e.preventDefault()} style={{ touchAction: 'none' }} />
-      <MaximBubble idx={idx} messages={TECH_MESSAGES} isLast={isLast} />
+      <MaximBubble idx={idx} messages={TECH_MESSAGES} isLast={isLast} onClick={advance} />
     </>
   );
 }
