@@ -4,6 +4,7 @@ import { CalendarDays, Brain, Lightbulb, Lock, MoonStar, Repeat2, Target, Unlock
 import { motion, useReducedMotion } from "framer-motion";
 import { useEffect, useRef, useState, type ReactNode, type UIEvent } from "react";
 import { HABIT_GUIDE_TITLE } from "@/content/habit-guide";
+import { isArticleRequirementSatisfied } from "@/content/article-access";
 
   const ARTICLES = [
     {
@@ -17,21 +18,21 @@ import { HABIT_GUIDE_TITLE } from "@/content/habit-guide";
       id: 'A2',
       title: "Как ставить цели, чтобы мозг хотел их достичь?",
       desc: "Работа будет вызывать столько же дофамина сколько и соцсети.",
-      cost: 5,
+      cost: 0,
       visual: { Icon: Target, color: "#C084FC", glow: "rgba(192,132,252,0.14)", surface: "#2F293A" },
     },
     {
       id: 'A3',
       title: "Научись управлять своим дофамином с помощью нейровизуализации",
       desc: "Как применять этот мощный инструмент в приложении, чтобы всегда оставаться мотивированным и верить в достижимость цели.",
-      cost: 10,
+      cost: 0,
       visual: { Icon: Lightbulb, color: "#06B6D4", glow: "rgba(6,182,212,0.14)", surface: "#1D3337" },
     },
     {
       id: 'A4',
       title: "Гайд на планирование дел на день. Научись точно предсказывать время на задачу.",
       desc: "Как укладываться в запланированные сроки и не стрессовать от того, что ничего не успеваешь.",
-      cost: 20,
+      cost: 0,
       visual: { Icon: CalendarDays, color: "#3DB770", glow: "rgba(61,183,112,0.14)", surface: "#23342C" },
     },
     {
@@ -424,7 +425,15 @@ import { HABIT_GUIDE_TITLE } from "@/content/habit-guide";
   }
 
   export default function Academy() {
-    const { unlockedArticles, keys, userState, onboardingHighlight, readArticles } = useAppStore();
+    const {
+      unlockedArticles,
+      keys,
+      activityLog,
+      goals,
+      userState,
+      onboardingHighlight,
+      readArticles,
+    } = useAppStore();
     const [, setLocation] = useLocation();
     const reducedMotion = useReducedMotion();
     const [stackProgress, setStackProgress] = useState(0);
@@ -478,9 +487,11 @@ import { HABIT_GUIDE_TITLE } from "@/content/habit-guide";
           className="article-stack-list relative z-10 space-y-3"
         >
           {ARTICLES.map((a, articleIdx) => {
-            const isUnlocked = unlockedArticles.includes(a.id) || a.id === 'A1';
+            const isUnlocked = unlockedArticles.includes(a.id)
+              || a.id === 'A1'
+              || isArticleRequirementSatisfied(a.id, { activityLog, goals });
             const isRead      = readArticles.includes(a.id);
-            const canAfford   = keys >= a.cost;
+            const canAfford   = a.cost > 0 && keys >= a.cost;
             const showUnreadDot = isUnlocked && !isRead;
 
             const visual = a.visual;

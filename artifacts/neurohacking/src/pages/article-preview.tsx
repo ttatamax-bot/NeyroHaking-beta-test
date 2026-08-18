@@ -4,9 +4,10 @@ import { useAppStore } from "@/lib/store";
 import { purchaseArticle, ApiError } from "@/lib/api";
 import { ScreenTransition } from "@/components/ScreenTransition";
 import { BackButton } from "@/components/BackButton";
-import { CalendarDays, Brain, Key, Lightbulb, Lock, MoonStar, Repeat2, Target, type LucideIcon } from "lucide-react";
+import { CalendarDays, Brain, Lightbulb, MoonStar, Repeat2, Target, type LucideIcon } from "lucide-react";
 import { motion } from "framer-motion";
 import { HABIT_GUIDE_TITLE } from "@/content/habit-guide";
+import { getArticleUnlockInstruction, isArticleRequirementSatisfied } from "@/content/article-access";
 
 const ARTICLES_DATA: Record<string, {
   title: string; desc: string; content: string; cost: number;
@@ -20,19 +21,19 @@ const ARTICLES_DATA: Record<string, {
   A2: {
     title: "Как ставить цели, чтобы мозг хотел их достичь?",
     desc: "Из этой статьи вы узнаете три параметра, от которых зависит, будет ли ваш мозг хотеть достичь цель. Вы научитесь формулировать цель, чтобы она вызывала дофаминовый отклик и желание работать над ней.",
-    cost: 5,
+    cost: 0,
     content: "Что отвечает за значимость твоей цели для мозга. Степень значимости цели зависит от того, насколько много дофамина вырабатывается мозгом при мыслях о ней.",
   },
   A3: {
     title: "Научись управлять своим дофамином с помощью нейровизуализации",
     desc: "В этой статье я расскажу про еще один проблемный эволюционный механизм мозга - чрезмерная опора на прошлый опыт в предсказании будущего, и то как нейровизуализация компенсирует его влияние.",
-    cost: 10,
+    cost: 0,
     content: "С каким сломанным механизмом мозга работает визуализация? Многие замечали у себя подобные эмоции: «Я не могу поверить, что у меня получится, потому что раньше не получалось».",
   },
   A4: {
     title: "Гайд на планирование дел на день. Научись точно предсказывать время на задачу.",
     desc: "Из этой статьи вы узнаете, почему нельзя ставить больше трех задач в день, как механика таймера «Планер» превращает работу в игру на точность и почему «сделать быстро» больше невыгодно.",
-    cost: 20,
+    cost: 0,
     content: "Почему задач только три и зачем нужна механика предсказания в технике «Планер». Рабочая память человека держит от 3 до 7 задач в голове.",
   },
   A5: {
@@ -48,11 +49,6 @@ const ARTICLES_DATA: Record<string, {
     content: "Первые три дня нужны не для автоматического формирования привычки, а для создания правильного цикла: триггер, выбор, действие и последствия. Вы научитесь управлять тем, какой опыт закрепляет каждое повторение.",
   },
 };
-
-function formatKeys(n: number) {
-  if (n >= 1000) return `${(n / 1000).toFixed(0)}к`;
-  return `${n}`;
-}
 
 const ARTICLE_VISUALS: Record<string, {
   Icon: LucideIcon;
@@ -212,7 +208,16 @@ function ArticleInstrumentPreview({ articleId }: { articleId: string }) {
 export default function ArticlePreview() {
   const { id } = useParams<{ id: string }>();
   const [, setLocation] = useLocation();
-  const { keys, unlockedArticles, readArticles, updateState, isSignedIn, applyTrustedServerResult } = useAppStore();
+  const {
+    keys,
+    unlockedArticles,
+    readArticles,
+    activityLog,
+    goals,
+    updateState,
+    isSignedIn,
+    applyTrustedServerResult,
+  } = useAppStore();
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [purchasing, setPurchasing] = useState(false);
 
@@ -220,10 +225,12 @@ export default function ArticlePreview() {
   if (!article) return <div className="p-4 pt-16 text-primary">Статья не найдена</div>;
 
   const isFree = article.cost === 0;
-  const isUnlocked = isFree || unlockedArticles.includes(id!);
+  const hasRequirement = isArticleRequirementSatisfied(id || '', { activityLog, goals });
+  const isUnlocked = isFree || unlockedArticles.includes(id!) || hasRequirement;
   const isRead     = readArticles.includes(id || '');
-  const canAfford  = keys >= article.cost;
+  const canAfford  = article.cost > 0 && keys >= article.cost;
   const visual = ARTICLE_VISUALS[id || 'A1'] ?? ARTICLE_VISUALS.A1;
+  const unlockInstruction = getArticleUnlockInstruction(id || '');
   const statusLabel = isUnlocked
     ? (isRead ? 'Прочитано' : 'Открыто')
     : article.cost === 400 ? '400 ключей' : 'Закрыто';
@@ -239,6 +246,7 @@ export default function ArticlePreview() {
       setLocation(`/article/${id}/read`);
       return;
     }
+    if (article.cost === 0) return;
     if (canAfford) {
       if (purchasing) return;
       setPurchasing(true);
@@ -258,7 +266,7 @@ export default function ArticlePreview() {
         }
       } catch (error) {
         setToastMsg(error instanceof ApiError && error.status === 409
-          ? "Недостаточно ключей. Выполняй техники — зарабатывай ключи."
+          ? "Не хватает ключей для открытия. Выполняй техники и попробуй снова."
           : "Не удалось открыть статью. Проверь соединение и попробуй ещё раз.");
         setTimeout(() => setToastMsg(null), 3000);
         return;
@@ -266,11 +274,6 @@ export default function ArticlePreview() {
         setPurchasing(false);
       }
       setLocation(`/article/${id}/read`);
-    } else {
-      setToastMsg(article.cost === 400
-        ? "Нужно 400 ключей. Выполняй техники — зарабатывай ключи."
-        : "Недостаточно ключей. Выполняй техники — зарабатывай ключи.");
-      setTimeout(() => setToastMsg(null), 3000);
     }
   };
 
@@ -308,30 +311,6 @@ export default function ArticlePreview() {
           </div>
         )}
 
-        {!isUnlocked && !canAfford && (
-           <div
-             className="mt-4 flex items-start gap-3 rounded-[12px] border p-4"
-             style={{ backgroundColor: `${visual.color}10`, borderColor: `${visual.color}42` }}
-           >
-             <Lock size={18} className="shrink-0 mt-0.5" style={{ color: visual.color }} />
-             <p className="body-s text-secondary">
-               {article.cost === 400
-                 ? `У тебя ${keys} ключей. Нужно ещё ${article.cost - keys} — выполняй техники каждый день.`
-                 : "Для открытия этой статьи нужны ключи. Выполняй техники — зарабатывай ключи."}
-             </p>
-          </div>
-        )}
-        {!isUnlocked && canAfford && (
-           <div
-             className="mt-4 flex items-start gap-3 rounded-[12px] border p-4"
-             style={{ backgroundColor: `${visual.color}12`, borderColor: `${visual.color}42` }}
-           >
-             <Key size={18} className="shrink-0 mt-0.5" style={{ color: visual.color }} />
-            <p className="body-s text-secondary">
-              У тебя достаточно ключей ({keys}). После открытия они спишутся.
-            </p>
-          </div>
-        )}
       </div>
 
       <div className="pb-safe mt-8">
@@ -346,12 +325,12 @@ export default function ArticlePreview() {
             boxShadow: `0 0 24px ${visual.color}${isUnlocked || canAfford ? "52" : "34"}`,
           }}
         >
-           {isUnlocked
-             ? 'Читать'
-             : canAfford
-               ? article.cost === 400 ? 'Открыть за 400 ключей' : 'Открыть'
-               : 'Недостаточно ключей'
-           }
+            {isUnlocked
+              ? 'Читать'
+              : article.cost === 400
+                ? 'Открыть за 400 ключей'
+                : unlockInstruction
+            }
         </button>
       </div>
     </ScreenTransition>

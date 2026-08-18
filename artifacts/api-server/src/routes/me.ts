@@ -40,9 +40,6 @@ function objectBody(value: unknown): value is Record<string, unknown> {
 }
 
 const ARTICLE_COSTS: Record<string, number> = {
-  A2: 5,
-  A3: 10,
-  A4: 20,
   A5: 400,
   A6: 400,
 };
