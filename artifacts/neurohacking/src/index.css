@@ -266,6 +266,30 @@
     transform-style: preserve-3d;
   }
 
+  .technique-stack-list {
+    perspective: 1100px;
+    transform-style: preserve-3d;
+  }
+
+  .technique-stack-card {
+    backface-visibility: hidden;
+    transform-style: preserve-3d;
+  }
+
+  .technique-atmosphere,
+  .technique-atmosphere-rings {
+    transform-style: preserve-3d;
+    isolation: isolate;
+  }
+
+  @supports (-webkit-touch-callout: none) {
+    .technique-atmosphere,
+    .technique-atmosphere-rings {
+      -webkit-transform-style: preserve-3d;
+      -webkit-backface-visibility: hidden;
+    }
+  }
+
   .btn-shimmer {
     position: relative;
     overflow: hidden;

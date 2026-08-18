@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useLocation } from "wouter";
 import { useAppStore } from "@/lib/store";
 import { motion, useReducedMotion } from "framer-motion";
@@ -99,6 +99,78 @@ const TECHNIQUE_PARTICLES = [
   { left: "66%", top: "88%", size: 3, color: "#FFB45E", delay: 0.9, drift: -12 },
   { left: "84%", top: "93%", size: 2, color: "#FFE4B5", delay: 1.55, drift: 15 },
 ];
+
+const TECHNIQUE_STACK_OFFSET = 22;
+const TECHNIQUE_STACK_RELEASE = 260;
+const TECHNIQUE_EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
+
+function TechniqueCardMotion({
+  children,
+  techniqueIdx,
+  stackProgress,
+  isDimmed,
+}: {
+  children: ReactNode;
+  techniqueIdx: number;
+  stackProgress: number;
+  isDimmed: boolean;
+}) {
+  const hasMounted = useRef(false);
+  const row = Math.floor(techniqueIdx / 2);
+  const column = techniqueIdx % 2;
+  const stackRelease = 1 - stackProgress;
+  const stackOffset = row * TECHNIQUE_STACK_OFFSET * stackRelease;
+  const stackTilt = row === 0
+    ? 0
+    : (column === 0 ? -1.2 : 1.2) * stackRelease;
+  const perspectiveTilt = -(11 + row * 0.8) * stackRelease;
+  const convergeX = (column === 0 ? -1 : 1) * row * 1.5 * stackRelease;
+
+  useEffect(() => {
+    hasMounted.current = true;
+  }, []);
+
+  return (
+    <motion.div
+      className="technique-stack-card relative w-full"
+      style={{
+        transformOrigin: "top center",
+        transformStyle: "preserve-3d",
+        willChange: "transform, opacity, filter",
+        zIndex: TECHNIQUES.length - techniqueIdx,
+      }}
+      initial={{
+        opacity: 0,
+        x: convergeX,
+        y: 44 - stackOffset,
+        rotateX: perspectiveTilt + 16,
+        rotateZ: stackTilt + (column === 0 ? -1.8 : 1.8),
+        scale: 0.94,
+        filter: "blur(6px)",
+        transformPerspective: 680,
+      }}
+      animate={{
+        opacity: isDimmed ? 0.24 : 1,
+        x: convergeX,
+        y: -stackOffset,
+        rotateX: perspectiveTilt,
+        rotateZ: stackTilt,
+        scale: 1,
+        filter: "blur(0px)",
+        transformPerspective: 680,
+      }}
+      transition={hasMounted.current
+        ? { duration: 0.2, ease: "easeOut" }
+        : {
+            duration: 0.9 + row * 0.06,
+            delay: 0.1 + techniqueIdx * 0.07,
+            ease: TECHNIQUE_EASE,
+          }}
+    >
+      {children}
+    </motion.div>
+  );
+}
 
 function TechniqueAtmosphere() {
   const reducedMotion = useReducedMotion();
@@ -349,113 +421,6 @@ function InstrumentGear({
   );
 }
 
-function TechniqueInstrumentGauge({ reducedMotion }: { reducedMotion: boolean | null }) {
-  const spin = (direction: 1 | -1, duration: number) => reducedMotion
-    ? { rotate: 0, opacity: 0.62 }
-    : { rotate: direction * 360, opacity: [0.38, 0.78, 0.38] };
-  const transition = (duration: number) => reducedMotion
-    ? { duration: 0 }
-    : {
-        rotate: { duration, repeat: Infinity, ease: "linear" },
-        opacity: { duration: duration * 0.5, repeat: Infinity, ease: "easeInOut" },
-      };
-
-  return (
-    <motion.svg
-      aria-hidden="true"
-      className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
-      viewBox="0 0 620 620"
-      fill="none"
-      style={{ width: "min(620px, 150vw)", height: "min(620px, 150vw)", overflow: "visible" }}
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.8, ease: "easeOut" }}
-    >
-      <circle cx="310" cy="310" r="304" stroke="rgba(224,232,237,.16)" strokeWidth="1" />
-      <motion.g
-        animate={spin(1, 19)}
-        transition={transition(19)}
-        style={{ transformOrigin: "310px 310px" }}
-      >
-        <circle
-          cx="310"
-          cy="310"
-          r="298"
-          stroke="rgba(255,237,170,.7)"
-          strokeWidth="2"
-          strokeDasharray="4 17"
-          strokeLinecap="butt"
-        />
-        <circle
-          cx="310"
-          cy="310"
-          r="286"
-          stroke="rgba(249,115,22,.62)"
-          strokeWidth="3"
-          strokeDasharray="54 142 18 242"
-          strokeLinecap="butt"
-        />
-      </motion.g>
-      <motion.g
-        animate={spin(-1, 24)}
-        transition={transition(24)}
-        style={{ transformOrigin: "310px 310px" }}
-      >
-        <circle
-          cx="310"
-          cy="310"
-          r="270"
-          stroke="rgba(211,222,228,.46)"
-          strokeWidth="1.2"
-          strokeDasharray="1 12"
-        />
-        <circle
-          cx="310"
-          cy="310"
-          r="252"
-          stroke="rgba(255,224,166,.54)"
-          strokeWidth="2"
-          strokeDasharray="112 74 36 176"
-        />
-        <path
-          d="M310 42 A268 268 0 0 1 522 146"
-          stroke="rgba(249,115,22,.72)"
-          strokeWidth="2.5"
-          strokeLinecap="round"
-        />
-      </motion.g>
-      <motion.g
-        animate={spin(1, 14)}
-        transition={transition(14)}
-        style={{ transformOrigin: "310px 310px" }}
-      >
-        <circle
-          cx="310"
-          cy="310"
-          r="231"
-          stroke="rgba(216,226,231,.52)"
-          strokeWidth="1"
-          strokeDasharray="2 15"
-        />
-        <circle
-          cx="310"
-          cy="310"
-          r="211"
-          stroke="rgba(249,115,22,.46)"
-          strokeWidth="1.6"
-          strokeDasharray="88 190 42 130"
-        />
-      </motion.g>
-      <circle cx="310" cy="310" r="188" stroke="rgba(255,237,170,.24)" strokeWidth="1" />
-      <circle cx="310" cy="310" r="174" stroke="rgba(249,115,22,.16)" strokeWidth="1" strokeDasharray="2 20" />
-      <g stroke="rgba(255,237,170,.58)" strokeWidth="1.4" strokeLinecap="round">
-        <path d="M310 20v11M310 589v11M20 310h11M589 310h11" />
-        <path d="m105 105 8 8M507 105l-8 8M105 515l8-8M515 515l-8-8" />
-      </g>
-    </motion.svg>
-  );
-}
-
 function MainLikeInstrumentAtmosphere() {
   const reducedMotion = useReducedMotion();
   const particles = [
@@ -482,16 +447,26 @@ function MainLikeInstrumentAtmosphere() {
   return (
     <div
       aria-hidden="true"
-      className="pointer-events-none absolute inset-0 z-0 overflow-hidden"
+      className="technique-atmosphere pointer-events-none absolute inset-0 z-0 overflow-hidden"
       style={{
-        transform: "translateY(8%)",
+        transform: "translate3d(0, 8%, 0)",
+        WebkitTransform: "translate3d(0, 8%, 0)",
+        WebkitBackfaceVisibility: "hidden",
         background: [
           "radial-gradient(ellipse 76% 42% at 50% 42%, rgba(245,158,11,.12), transparent 68%)",
           "radial-gradient(ellipse 58% 34% at 50% 43%, rgba(255,237,170,.06), transparent 66%)",
         ].join(", "),
       }}
     >
-      <div className="pointer-events-none absolute left-1/2 top-[42%] h-0 w-0" style={{ opacity: 0.92 }}>
+      <div
+        className="technique-atmosphere-rings pointer-events-none absolute left-1/2 top-[42%] h-0 w-0"
+        style={{
+          opacity: 0.92,
+          transform: "translate3d(-50%, -50%, 0)",
+          WebkitTransform: "translate3d(-50%, -50%, 0)",
+          WebkitBackfaceVisibility: "hidden",
+        }}
+      >
         <motion.div
           className="absolute left-1/2 top-1/2 h-[640px] w-[640px] -translate-x-1/2 -translate-y-1/2 rounded-full"
           animate={reducedMotion ? { opacity: 0.2, scale: 1 } : { opacity: [0.12, 0.28, 0.12], scale: [0.96, 1.03, 0.96] }}
@@ -501,7 +476,114 @@ function MainLikeInstrumentAtmosphere() {
             filter: "blur(18px)",
           }}
         />
-        <TechniqueInstrumentGauge reducedMotion={reducedMotion} />
+        <div
+          className="absolute left-1/2 top-1/2 h-[620px] w-[620px] rounded-full"
+          style={{
+            left: "50%",
+            top: "50%",
+            transform: "translate(-50%, -50%)",
+          }}
+        >
+          <motion.div
+            className="absolute inset-0 rounded-full"
+            animate={spin(18, 1)}
+            transition={transition(18)}
+            style={{
+              background: "repeating-conic-gradient(from 8deg, rgba(224,232,237,.58) 0deg 4.2deg, transparent 4.2deg 17deg)",
+              maskImage: "radial-gradient(circle, transparent 95.4%, #000 96%, #000 97.1%, transparent 97.8%)",
+              WebkitMaskImage: "radial-gradient(circle, transparent 95.4%, #000 96%, #000 97.1%, transparent 97.8%)",
+            }}
+          />
+        </div>
+        <motion.div
+          className="absolute left-1/2 top-1/2 h-[592px] w-[592px] -translate-x-1/2 -translate-y-1/2 rounded-full border-[0.5px]"
+          animate={spin(22, -1)}
+          transition={transition(22)}
+          style={{
+            borderColor: "rgba(255,224,166,.2)",
+            borderTopColor: "rgba(255,237,170,.48)",
+            borderLeftColor: "rgba(249,115,22,.3)",
+          }}
+        />
+        <motion.div
+          className="absolute left-1/2 top-1/2 h-[564px] w-[564px] -translate-x-1/2 -translate-y-1/2 rounded-full"
+          animate={spin(24, -1)}
+          transition={transition(24)}
+          style={{
+            background: "conic-gradient(from 20deg, transparent 0deg, rgba(255,237,170,.48) 40deg, transparent 78deg, transparent 174deg, rgba(249,115,22,.32) 218deg, transparent 266deg)",
+            maskImage: "radial-gradient(circle, transparent 67%, #000 69%, #000 73%, transparent 76%)",
+            WebkitMaskImage: "radial-gradient(circle, transparent 67%, #000 69%, #000 73%, transparent 76%)",
+          }}
+        />
+        <div
+          className="absolute left-1/2 top-1/2 h-[536px] w-[536px] rounded-full"
+          style={{
+            left: "50%",
+            top: "50%",
+            transform: "translate(-50%, -50%)",
+          }}
+        >
+          <motion.div
+            className="absolute inset-0 rounded-full"
+            animate={spin(15, 1)}
+            transition={transition(15)}
+            style={{
+              background: "repeating-conic-gradient(from -18deg, rgba(255,224,166,.52) 0deg 5deg, transparent 5deg 20deg)",
+              maskImage: "radial-gradient(circle, transparent 95.2%, #000 95.9%, #000 97%, transparent 97.7%)",
+              WebkitMaskImage: "radial-gradient(circle, transparent 95.2%, #000 95.9%, #000 97%, transparent 97.7%)",
+            }}
+          />
+        </div>
+        <motion.div
+          className="absolute left-1/2 top-1/2 h-[510px] w-[510px] -translate-x-1/2 -translate-y-1/2 rounded-full"
+          animate={spin(12, 1)}
+          transition={transition(12)}
+          style={{
+            background: "repeating-conic-gradient(from 4deg, rgba(255,215,145,.38) 0deg 1.5deg, transparent 1.5deg 14deg)",
+            maskImage: "radial-gradient(circle, transparent 65%, #000 67%, #000 70%, transparent 73%)",
+            WebkitMaskImage: "radial-gradient(circle, transparent 65%, #000 67%, #000 70%, transparent 73%)",
+          }}
+        />
+        <motion.div
+          className="absolute left-1/2 top-1/2 h-[486px] w-[486px] -translate-x-1/2 -translate-y-1/2 rounded-full"
+          animate={spin(19, -1)}
+          transition={transition(19)}
+          style={{
+            background: "conic-gradient(from -34deg, rgba(255,237,170,.5) 0deg 166deg, transparent 166deg 360deg)",
+            maskImage: "radial-gradient(circle, transparent 76%, #000 77.5%, #000 79%, transparent 80.5%)",
+            WebkitMaskImage: "radial-gradient(circle, transparent 76%, #000 77.5%, #000 79%, transparent 80.5%)",
+          }}
+        />
+        <motion.div
+          className="absolute left-1/2 top-1/2 h-[452px] w-[452px] -translate-x-1/2 -translate-y-1/2 rounded-full border-[0.5px]"
+          animate={spin(16, -1)}
+          transition={transition(16)}
+          style={{
+            borderColor: "rgba(255,210,125,.16)",
+            borderLeftColor: "rgba(249,115,22,.42)",
+            borderBottomColor: "rgba(255,237,170,.28)",
+          }}
+        />
+        <motion.div
+          className="absolute left-1/2 top-1/2 h-[420px] w-[420px] -translate-x-1/2 -translate-y-1/2 rounded-full border-[0.5px]"
+          animate={spin(10, 1)}
+          transition={transition(10)}
+          style={{
+            borderColor: "rgba(255,224,166,.16)",
+            borderTopColor: "rgba(255,237,170,.42)",
+            borderRightColor: "rgba(249,115,22,.3)",
+          }}
+        />
+        <motion.div
+          className="absolute left-1/2 top-1/2 h-[394px] w-[394px] -translate-x-1/2 -translate-y-1/2 rounded-full border-[0.5px]"
+          animate={spin(7, 1)}
+          transition={transition(7)}
+          style={{
+            borderColor: "rgba(255,248,225,.24)",
+            borderTopColor: "rgba(255,255,245,.58)",
+            borderLeftColor: "rgba(255,224,166,.34)",
+          }}
+        />
       </div>
 
       <InstrumentGear left="calc(17% - 50px)" top="calc(27% + 50px)" size="min(96vw, 464px)" duration={22} direction={-1} accent="rgba(218,226,230,.5)" />
@@ -539,10 +621,39 @@ export default function Techniques() {
   const { userState, todayTechniques, onboardingHighlight } = useAppStore();
   const [, setLocation] = useLocation();
   const [pressedTechnique, setPressedTechnique] = useState<string | null>(null);
+  const [stackProgress, setStackProgress] = useState(0);
+  const techniquesRef = useRef<HTMLDivElement | null>(null);
+  const scrollFrame = useRef<number | null>(null);
 
   const isOnboarding = userState === 'onboarding';
   const hasHighlight = isOnboarding && onboardingHighlight.length > 0;
   const doneCount = TECHNIQUES.filter(t => t.dayKey && todayTechniques[t.dayKey]).length;
+
+  useEffect(() => {
+    const page = techniquesRef.current;
+    const scrollParent = page?.parentElement;
+    if (!scrollParent) return;
+
+    const handleScroll = () => {
+      if (scrollFrame.current !== null) {
+        cancelAnimationFrame(scrollFrame.current);
+      }
+      scrollFrame.current = requestAnimationFrame(() => {
+        scrollFrame.current = null;
+        setStackProgress(Math.min(1, Math.max(0, scrollParent.scrollTop / TECHNIQUE_STACK_RELEASE)));
+      });
+    };
+
+    handleScroll();
+    scrollParent.addEventListener("scroll", handleScroll, { passive: true });
+    return () => {
+      scrollParent.removeEventListener("scroll", handleScroll);
+      if (scrollFrame.current !== null) {
+        cancelAnimationFrame(scrollFrame.current);
+        scrollFrame.current = null;
+      }
+    };
+  }, []);
 
   const handleTap = (technique: Technique, isDone: boolean) => {
     if (userState === 'new') return;
@@ -553,7 +664,7 @@ export default function Techniques() {
   };
 
   return (
-    <div className="relative isolate pt-[56px] px-4 pb-24">
+    <div ref={techniquesRef} className="relative isolate min-h-full pt-[56px] px-4 pb-24">
       <MainLikeInstrumentAtmosphere />
 
       <motion.div
@@ -568,57 +679,56 @@ export default function Techniques() {
         </span>
       </motion.div>
 
-      <div className="relative z-10 mx-auto grid w-[min(100%,280px)] grid-cols-2 gap-x-0 gap-y-1">
+      <div className="technique-stack-list relative z-10 mx-auto grid w-full grid-cols-2 gap-x-3 gap-y-5">
         {TECHNIQUES.map((t, idx) => {
           const isDone        = Boolean(t.dayKey && todayTechniques[t.dayKey]);
           const isHighlighted = hasHighlight && onboardingHighlight.includes(t.id);
           const isDimmed      = hasHighlight && !onboardingHighlight.includes(t.id);
 
           return (
-            <motion.button
+            <TechniqueCardMotion
               key={t.id}
-              type="button"
-              disabled={!t.route}
-              initial={{ opacity: 0, y: 24 }}
-              animate={isDimmed
-                ? { opacity: 0.24, y: 0 }
-                : { opacity: 1, y: 0 }
-              }
-              transition={{ delay: isOnboarding ? 0 : idx * 0.08, duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
-              whileTap={isOnboarding || isDone || !t.route ? {} : { scale: 0.97 }}
-              onClick={() => handleTap(t, isDone)}
-              onPointerDown={() => t.route && setPressedTechnique(t.id)}
-              onPointerUp={() => setPressedTechnique(null)}
-              onPointerCancel={() => setPressedTechnique(null)}
-              onPointerLeave={() => setPressedTechnique(null)}
-              aria-label={t.title}
-              className="group relative flex min-h-[158px] flex-col items-center justify-center overflow-visible rounded-[24px] px-1 py-1 text-center outline-none focus-visible:ring-1 focus-visible:ring-white/40 disabled:cursor-default"
-              style={{
-                cursor: t.route && !isDone ? 'pointer' : 'default',
-              }}
+              techniqueIdx={idx}
+              stackProgress={stackProgress}
+              isDimmed={isDimmed}
             >
-              {isHighlighted && (
-                <motion.span
-                  aria-hidden="true"
-                  className="pointer-events-none absolute inset-2 rounded-[28px] border border-white/25"
-                  animate={{ opacity: [0.25, 0.8, 0.25], scale: [0.96, 1.03, 0.96] }}
-                  transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
-                />
-              )}
-              <TechniqueArtwork
-                kind={t.artwork}
-                color={t.color}
-                done={isDone}
-                highlighted={isHighlighted}
-                pressed={pressedTechnique === t.id}
-              />
-              <h3
-                className="max-w-full px-1 text-primary leading-tight"
-                style={{ fontSize: 12, fontWeight: 300, letterSpacing: '0.06em', textTransform: 'uppercase', opacity: isDone ? 0.58 : 0.88, wordBreak: 'break-word' }}
+              <button
+                type="button"
+                disabled={!t.route}
+                onClick={() => handleTap(t, isDone)}
+                onPointerDown={() => t.route && setPressedTechnique(t.id)}
+                onPointerUp={() => setPressedTechnique(null)}
+                onPointerCancel={() => setPressedTechnique(null)}
+                onPointerLeave={() => setPressedTechnique(null)}
+                aria-label={t.title}
+                className="group relative flex min-h-[184px] w-full flex-col items-center justify-center overflow-visible rounded-[24px] px-0 py-1 text-center outline-none focus-visible:ring-1 focus-visible:ring-white/40 disabled:cursor-default"
+                style={{
+                  cursor: t.route && !isDone ? "pointer" : "default",
+                }}
               >
-                {t.title}
-              </h3>
-            </motion.button>
+                {isHighlighted && (
+                  <motion.span
+                    aria-hidden="true"
+                    className="pointer-events-none absolute inset-2 rounded-[28px] border border-white/25"
+                    animate={{ opacity: [0.25, 0.8, 0.25], scale: [0.96, 1.03, 0.96] }}
+                    transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
+                  />
+                )}
+                <TechniqueArtwork
+                  kind={t.artwork}
+                  color={t.color}
+                  done={isDone}
+                  highlighted={isHighlighted}
+                  pressed={pressedTechnique === t.id}
+                />
+                <h3
+                  className="max-w-full px-1 text-primary leading-tight"
+                  style={{ fontSize: 12, fontWeight: 300, letterSpacing: "0.06em", textTransform: "uppercase", opacity: isDone ? 0.58 : 0.88, wordBreak: "break-word" }}
+                >
+                  {t.title}
+                </h3>
+              </button>
+            </TechniqueCardMotion>
           );
         })}
       </div>

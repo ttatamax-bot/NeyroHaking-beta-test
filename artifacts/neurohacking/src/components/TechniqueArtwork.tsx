@@ -19,7 +19,7 @@ interface TechniqueArtworkProps {
   pressed?: boolean;
 }
 
-const ICON_SIZE = 74;
+const ICON_SIZE = 84;
 
 function iconMotion(reduced: boolean | null, kind: TechniqueArtworkKind, pressed: boolean) {
   if (reduced) return {};
@@ -285,9 +285,9 @@ export function TechniqueArtwork({ kind, color, done = false, highlighted = fals
   const rgb = color.slice(1).match(/.{2}/g)?.map((part) => parseInt(part, 16)).join(",") ?? "249,115,22";
 
   return (
-    <div className="relative flex h-[clamp(124px,31vw,150px)] w-full items-center justify-center">
+    <div className="relative flex h-[clamp(154px,40vw,178px)] w-full items-center justify-center">
       <motion.div
-        className="relative flex aspect-square w-[clamp(108px,29vw,136px)] items-center justify-center overflow-visible rounded-[21px] border"
+        className="relative flex aspect-square w-[clamp(128px,35vw,154px)] items-center justify-center overflow-visible rounded-[24px] border"
         style={{
           backgroundColor: "#0B1729",
           backgroundImage: `linear-gradient(145deg, rgba(${rgb},0.28), rgba(${rgb},0.09))`,
