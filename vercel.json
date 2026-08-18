@@ -1,6 +1,6 @@
 {
   "installCommand": "pnpm install --frozen-lockfile",
-  "buildCommand": "pnpm --filter @workspace/db run ensure-schema && pnpm --filter @workspace/neurohacking run build",
+  "buildCommand": "pnpm --filter @workspace/neurohacking run build",
   "outputDirectory": "artifacts/neurohacking/dist/public",
   "rewrites": [
     {
