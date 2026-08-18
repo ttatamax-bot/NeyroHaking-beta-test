@@ -122,6 +122,13 @@ const ARTICLE_VISUALS: Record<string, {
 function ArticleInstrumentPreview({ articleId }: { articleId: string }) {
   const visual = ARTICLE_VISUALS[articleId] ?? ARTICLE_VISUALS.A1;
   const { Icon } = visual;
+  const extraRings = [
+    { left: "-10%", top: "31%", size: 580, dash: "208 28 7 24", duration: 52, opacity: 0.24, direction: 1 as const },
+    { left: "112%", top: "69%", size: 760, dash: "318 20 8 34", duration: 64, opacity: 0.2, direction: -1 as const },
+    { left: "51%", top: "39%", size: 92, dash: "12 11", duration: 18, opacity: 0.24, direction: 1 as const },
+    { left: "44%", top: "74%", size: 124, dash: "24 9 5 14", duration: 23, opacity: 0.2, direction: -1 as const },
+  ];
+  const rings = [...visual.rings, ...extraRings];
 
   return (
     <div
@@ -147,7 +154,9 @@ function ArticleInstrumentPreview({ articleId }: { articleId: string }) {
         }}
       />
 
-      {visual.rings.map((ring, ringIndex) => (
+      {rings.map((ring, ringIndex) => {
+        const ringOpacity = ring.opacity * 0.8;
+        return (
         <div
           key={`${articleId}-preview-ring-${ringIndex}`}
           aria-hidden="true"
@@ -166,7 +175,7 @@ function ArticleInstrumentPreview({ articleId }: { articleId: string }) {
             viewBox="0 0 100 100"
             animate={{
               rotate: ring.direction * 360,
-              opacity: [ring.opacity * 0.72, ring.opacity, ring.opacity * 0.72],
+              opacity: [ringOpacity * 0.72, ringOpacity, ringOpacity * 0.72],
             }}
             transition={{
               rotate: { duration: ring.duration, repeat: Infinity, ease: "linear" },
@@ -179,14 +188,15 @@ function ArticleInstrumentPreview({ articleId }: { articleId: string }) {
               r="47"
               fill="none"
               stroke={visual.color}
-              strokeWidth={ringIndex === 0 ? 1.15 : 0.8}
+              strokeWidth={ringIndex < 3 ? 0.85 : 0.52}
               strokeOpacity="0.9"
               strokeDasharray={ring.dash}
               strokeLinecap="round"
             />
           </motion.svg>
         </div>
-      ))}
+        );
+      })}
 
       <motion.div
         aria-hidden="true"
