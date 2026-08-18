@@ -285,9 +285,9 @@ export function TechniqueArtwork({ kind, color, done = false, highlighted = fals
   const rgb = color.slice(1).match(/.{2}/g)?.map((part) => parseInt(part, 16)).join(",") ?? "249,115,22";
 
   return (
-    <div className="relative flex h-[clamp(146px,36vw,164px)] w-full items-center justify-center">
+    <div className="relative flex h-[148px] w-full items-center justify-center">
       <motion.div
-        className="relative flex aspect-square w-[clamp(128px,35vw,154px)] items-center justify-center overflow-visible rounded-[24px] border"
+        className="relative flex h-[136px] w-[136px] items-center justify-center overflow-visible rounded-[24px] border"
         style={{
           backgroundColor: "#0B1729",
           backgroundImage: `linear-gradient(145deg, rgba(${rgb},0.28), rgba(${rgb},0.09))`,

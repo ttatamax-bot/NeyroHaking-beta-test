@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useLocation } from "wouter";
 import { useAppStore } from "@/lib/store";
 import { motion, useReducedMotion } from "framer-motion";
 import { Check } from "lucide-react";
@@ -618,6 +619,7 @@ function MainLikeInstrumentAtmosphere() {
 
 export default function Techniques() {
   const { userState, todayTechniques, onboardingHighlight } = useAppStore();
+  const [, setLocation] = useLocation();
   const [pressedTechnique, setPressedTechnique] = useState<string | null>(null);
   const [stackProgress, setStackProgress] = useState(0);
   const techniquesRef = useRef<HTMLDivElement | null>(null);
@@ -654,22 +656,29 @@ export default function Techniques() {
   }, []);
 
   return (
-    <div ref={techniquesRef} className="relative isolate min-h-full pt-[56px] px-4 pb-24">
+    <div ref={techniquesRef} className="relative isolate min-h-full pt-[56px] pb-24">
       <MainLikeInstrumentAtmosphere />
 
-      <motion.div
-        initial={{ opacity: 0, y: -12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, ease: 'easeOut' }}
-        className="relative z-10 mb-7 flex items-center justify-between"
-      >
-        <p className="text-tertiary uppercase tracking-[0.12em]" style={{ fontSize: 14, fontWeight: 500 }}>Техники дня</p>
-        <span className="num tabular-nums" style={{ fontSize: 13, color: doneCount === 6 ? '#22C55E' : 'var(--text-secondary)' }}>
-          {doneCount} / {TECHNIQUES.length}
-        </span>
-      </motion.div>
+      <div className="relative z-10 mx-auto w-full max-w-[390px] px-4">
+        <motion.div
+          initial={{ opacity: 0, y: -12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: 'easeOut' }}
+          className="mb-7 flex items-center justify-between"
+        >
+          <p className="text-tertiary uppercase tracking-[0.12em]" style={{ fontSize: 14, fontWeight: 500 }}>Техники дня</p>
+          <span className="num tabular-nums" style={{ fontSize: 13, color: doneCount === 6 ? '#22C55E' : 'var(--text-secondary)' }}>
+            {doneCount} / {TECHNIQUES.length}
+          </span>
+        </motion.div>
 
-      <div className="technique-stack-list relative z-10 mx-auto -mx-2 grid w-[calc(100%+16px)] grid-cols-2 gap-x-0 gap-y-0">
+        <div
+          className="technique-stack-list relative mx-auto grid justify-center gap-y-0"
+          style={{
+            gridTemplateColumns: "repeat(2, 136px)",
+            columnGap: 12,
+          }}
+        >
         {TECHNIQUES.map((t, idx) => {
           const isDone        = Boolean(t.dayKey && todayTechniques[t.dayKey]);
           const isHighlighted = hasHighlight && onboardingHighlight.includes(t.id);
@@ -683,11 +692,12 @@ export default function Techniques() {
               isDimmed={isDimmed}
             >
               <a
-                href={t.route ?? undefined}
+                href={t.route ? `${import.meta.env.BASE_URL.replace(/\/$/, "")}${t.route}` : undefined}
                 aria-label={t.title}
                 aria-disabled={!t.route}
                 onClick={(event) => {
-                  if (!t.route) event.preventDefault();
+                  event.preventDefault();
+                  if (t.route) setLocation(t.route);
                 }}
                 onPointerDown={() => t.route && setPressedTechnique(t.id)}
                 onPointerUp={() => setPressedTechnique(null)}
@@ -727,25 +737,26 @@ export default function Techniques() {
             </TechniqueCardMotion>
           );
         })}
-      </div>
+        </div>
 
-      {doneCount === 6 && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-           className="relative z-10 mt-4 rounded-[16px] p-4 flex items-center gap-3"
-          style={{ background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.2)' }}
-        >
-          <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
-            style={{ background: 'rgba(34,197,94,0.15)' }}>
-            <Check size={16} color="#22C55E" />
-          </div>
-          <p className="body-s" style={{ color: '#22C55E' }}>
-            Все техники дня выполнены — день засчитан!
-          </p>
-        </motion.div>
-      )}
+        {doneCount === 6 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+             className="relative z-10 mt-4 rounded-[16px] p-4 flex items-center gap-3"
+            style={{ background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.2)' }}
+          >
+            <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
+              style={{ background: 'rgba(34,197,94,0.15)' }}>
+              <Check size={16} color="#22C55E" />
+            </div>
+            <p className="body-s" style={{ color: '#22C55E' }}>
+              Все техники дня выполнены — день засчитан!
+            </p>
+          </motion.div>
+        )}
+      </div>
     </div>
   );
 }
