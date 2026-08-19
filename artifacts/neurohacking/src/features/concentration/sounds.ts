@@ -101,6 +101,12 @@ export function playConcentrationCorrect(): void {
   tone(880, 0.08, 0, 0.14, "triangle");
 }
 
+export function playConcentrationLevelSuccess(): void {
+  tone(660, 0.1, 0, 0.13, "triangle");
+  tone(880, 0.12, 0.1, 0.14, "triangle");
+  tone(1320, 0.18, 0.22, 0.16, "sine");
+}
+
 export function playConcentrationFail(): void {
   tone(220, 0.22, 0, 0.12, "sawtooth", 110);
 }
