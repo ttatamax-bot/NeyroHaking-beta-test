@@ -8,6 +8,7 @@ import { CalendarDays, Brain, Lightbulb, MoonStar, Repeat2, Target, type LucideI
 import { motion } from "framer-motion";
 import { HABIT_GUIDE_TITLE } from "@/content/habit-guide";
 import { getArticleUnlockInstruction, isArticleRequirementSatisfied } from "@/content/article-access";
+import { ringRotationTarget, ringRotationTransition, useRingBurst } from "@/lib/ring-burst";
 
 const ARTICLES_DATA: Record<string, {
   title: string; desc: string; content: string; cost: number;
@@ -118,6 +119,7 @@ const ARTICLE_VISUALS: Record<string, {
 function ArticleInstrumentPreview({ articleId }: { articleId: string }) {
   const visual = ARTICLE_VISUALS[articleId] ?? ARTICLE_VISUALS.A1;
   const { Icon } = visual;
+  const ringBurst = useRingBurst();
 
   return (
     <div
@@ -163,11 +165,11 @@ function ArticleInstrumentPreview({ articleId }: { articleId: string }) {
             className="h-full w-full"
             viewBox="0 0 100 100"
             animate={{
-              rotate: ring.direction * 360,
+              rotate: ringRotationTarget(ring.direction, ringBurst),
               opacity: [ringOpacity * 0.72, ringOpacity, ringOpacity * 0.72],
             }}
             transition={{
-              rotate: { duration: ring.duration, repeat: Infinity, ease: "linear" },
+               rotate: ringRotationTransition(ring.duration, ringBurst),
               opacity: { duration: 3.8 + ringIndex * 0.6, repeat: Infinity, ease: "easeInOut" },
             }}
           >
@@ -279,7 +281,7 @@ export default function ArticlePreview() {
   };
 
   return (
-    <ScreenTransition className="pt-[64px] px-4 pb-24 relative flex flex-col min-h-[100dvh]">
+    <ScreenTransition variant="reveal" className="pt-[64px] px-4 pb-24 relative flex flex-col min-h-[100dvh]">
       <BackButton />
 
       {toastMsg && (
@@ -290,15 +292,39 @@ export default function ArticlePreview() {
 
       <ArticleInstrumentPreview articleId={id || 'A1'} />
 
-       <div className="relative z-10 flex-1 mt-4 pt-[132px]">
-        <div className="flex items-center gap-2 mb-3">
+       <motion.div
+         className="relative z-10 flex-1 mt-4 pt-[132px]"
+         initial={{ opacity: 0, y: 28 }}
+         animate={{ opacity: 1, y: 0 }}
+         transition={{ delay: 0.1, duration: 0.65, ease: [0.16, 1, 0.3, 1] }}
+       >
+         <motion.div
+           className="flex items-center gap-2 mb-3"
+           initial={{ opacity: 0, scale: 0.88, x: -12 }}
+           animate={{ opacity: 1, scale: 1, x: 0 }}
+           transition={{ delay: 0.18, duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+         >
            <span className="label rounded-[6px] border px-2 py-1" style={statusStyle}>
             {statusLabel}
           </span>
-        </div>
+         </motion.div>
 
-        <h1 className="title-l text-primary mb-4">{article.title}</h1>
-        <p className="body text-secondary mb-6">{article.desc}</p>
+         <motion.h1
+           className="title-l text-primary mb-4"
+           initial={{ opacity: 0, y: 16, filter: "blur(7px)" }}
+           animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+           transition={{ delay: 0.24, duration: 0.58, ease: [0.16, 1, 0.3, 1] }}
+         >
+           {article.title}
+         </motion.h1>
+         <motion.p
+           className="body text-secondary mb-6"
+           initial={{ opacity: 0, y: 14 }}
+           animate={{ opacity: 1, y: 0 }}
+           transition={{ delay: 0.34, duration: 0.5 }}
+         >
+           {article.desc}
+         </motion.p>
 
         {!isUnlocked && (
           <div className="relative">
@@ -312,12 +338,19 @@ export default function ArticlePreview() {
           </div>
         )}
 
-      </div>
+       </motion.div>
 
-      <div className="pb-safe mt-8">
-        <button
+       <motion.div
+         className="pb-safe mt-8"
+         initial={{ opacity: 0, y: 24 }}
+         animate={{ opacity: 1, y: 0 }}
+         transition={{ delay: 0.42, duration: 0.58, ease: [0.16, 1, 0.3, 1] }}
+       >
+         <motion.button
           onClick={handleAction}
           className="btn-shimmer w-full h-[56px] rounded-[14px] title-s active:opacity-90"
+           whileTap={{ scale: 0.975, y: 2, filter: "brightness(1.18) saturate(1.12)" }}
+           transition={{ type: "spring", stiffness: 420, damping: 24, mass: 0.65 }}
           style={{
             background: `linear-gradient(135deg, ${visual.color}${isUnlocked || canAfford ? "" : "88"}, ${visual.color}${isUnlocked || canAfford ? "bf" : "55"})`,
             border: `1px solid ${visual.color}${isUnlocked || canAfford ? "d9" : "a0"}`,
@@ -332,8 +365,8 @@ export default function ArticlePreview() {
                 ? 'Открыть за 400 ключей'
                 : unlockInstruction
             }
-        </button>
-      </div>
+         </motion.button>
+       </motion.div>
     </ScreenTransition>
   );
 }

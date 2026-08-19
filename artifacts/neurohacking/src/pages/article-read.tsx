@@ -781,33 +781,48 @@ export default function ArticleRead() {
         </div>
       </div>
 
-      <div className="pt-[60px] px-5 pb-[100px]">
+       <motion.div
+         className="pt-[60px] px-5 pb-[100px]"
+         initial={{ opacity: 0, y: 24, scale: 0.985, filter: "blur(8px)" }}
+         animate={{ opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }}
+         transition={{ duration: 0.62, ease: [0.16, 1, 0.3, 1] }}
+       >
         <motion.h1
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
+           transition={{ delay: 0.12, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
           className="text-primary mb-2 mt-4 leading-tight"
           style={{ fontSize: 30, lineHeight: 1.14, fontWeight: 700, letterSpacing: '-0.025em' }}
         >
           {article.title}
         </motion.h1>
-        <span className="caption text-primary mb-8 block">{new Date().toLocaleDateString('ru-RU')}</span>
+         <motion.span
+           className="caption text-primary mb-8 block"
+           initial={{ opacity: 0, x: -10 }}
+           animate={{ opacity: 1, x: 0 }}
+           transition={{ delay: 0.24, duration: 0.4 }}
+         >
+           {new Date().toLocaleDateString('ru-RU')}
+         </motion.span>
 
         <div className="space-y-4">
           {article.content.split('\n\n').map((block, i) => renderBlock(block, i))}
-        </div>
-      </div>
+         </div>
+       </motion.div>
 
       <div
         className="fixed bottom-0 left-0 right-0 flex justify-center"
         style={{ background: 'rgba(15,32,53,0.97)', backdropFilter: 'blur(20px)', borderTop: '1px solid rgba(255,255,255,0.05)' }}
       >
         <div className="w-full max-w-none px-4 py-4">
-          <button
+           <motion.button
             onClick={handleFinish}
             className="btn-grad btn-shimmer w-full h-[52px] rounded-[14px] text-white title-s active:opacity-90"
+             whileTap={{ scale: 0.975, y: 2, filter: "brightness(1.16)" }}
+             transition={{ type: "spring", stiffness: 420, damping: 24, mass: 0.65 }}
           >
             {alreadyRewarded ? 'Готово' : 'Завершить чтение'}
-          </button>
+           </motion.button>
         </div>
       </div>
     </div>

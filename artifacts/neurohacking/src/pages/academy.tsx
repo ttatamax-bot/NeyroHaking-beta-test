@@ -5,6 +5,7 @@ import { motion, useReducedMotion } from "framer-motion";
 import { useEffect, useRef, useState, type ReactNode, type UIEvent } from "react";
 import { HABIT_GUIDE_TITLE } from "@/content/habit-guide";
 import { isArticleRequirementSatisfied } from "@/content/article-access";
+import { ringRotationTarget, ringRotationTransition, useRingBurst } from "@/lib/ring-burst";
 
   const ARTICLES = [
     {
@@ -119,6 +120,7 @@ import { isArticleRequirementSatisfied } from "@/content/article-access";
 
   function KnowledgeBaseMark() {
     const reduced = useReducedMotion();
+    const ringBurst = useRingBurst();
     const ringTickAngles = Array.from({ length: 24 }, (_, index) => index * 15);
 
     return (
@@ -143,23 +145,23 @@ import { isArticleRequirementSatisfied } from "@/content/article-access";
             WebkitMaskImage: "radial-gradient(circle, transparent 76%, #000 77.5%, #000 79%, transparent 80.5%)",
             filter: "drop-shadow(0 0 4px rgba(255,215,145,.24))",
           }}
-          animate={reduced ? { rotate: 0, opacity: 0.38 } : { rotate: -360, opacity: [.24, .42, .24] }}
+           animate={reduced ? { rotate: 0, opacity: 0.38 } : { rotate: ringRotationTarget(-1, ringBurst), opacity: [.24, .42, .24] }}
           transition={reduced
             ? { duration: 0.4 }
             : {
-                rotate: { duration: 17, repeat: Infinity, ease: "linear" },
+                 rotate: ringRotationTransition(17, ringBurst),
                 opacity: { duration: 3.8, repeat: Infinity, ease: "easeInOut" },
               }}
         />
         <motion.span
           className="pointer-events-none absolute inset-[2px] rounded-full border"
           style={{ borderColor: "rgba(249,115,22,.42)" }}
-          animate={reduced ? { opacity: 0.48, rotate: 0 } : { opacity: [.32, .72, .32], rotate: [360, 0] }}
+           animate={reduced ? { opacity: 0.48, rotate: 0 } : { opacity: [.32, .72, .32], rotate: ringRotationTarget(-1, ringBurst) }}
           transition={reduced
             ? { duration: 0.4 }
             : {
                 opacity: { duration: 3.8, repeat: Infinity, ease: "easeInOut" },
-                rotate: { duration: 16, repeat: Infinity, ease: "linear" },
+                 rotate: ringRotationTransition(16, ringBurst),
               }}
         />
         <motion.svg
@@ -167,8 +169,8 @@ import { isArticleRequirementSatisfied } from "@/content/article-access";
           viewBox="0 0 230 230"
           fill="none"
           aria-hidden="true"
-          animate={reduced ? { rotate: 0 } : { rotate: 360 }}
-          transition={reduced ? { duration: 0.4 } : { duration: 22, repeat: Infinity, ease: "linear" }}
+           animate={reduced ? { rotate: 0 } : { rotate: ringRotationTarget(1, ringBurst) }}
+           transition={reduced ? { duration: 0.4 } : ringRotationTransition(22, ringBurst)}
           style={{ filter: "drop-shadow(0 0 5px rgba(255,210,125,.24))" }}
         >
           <g opacity="0.24" stroke="#FFE8B0" strokeWidth="2.6" strokeLinecap="butt">
@@ -187,11 +189,11 @@ import { isArticleRequirementSatisfied } from "@/content/article-access";
               maskImage: "radial-gradient(circle, transparent 78%, #000 79.5%, #000 82%, transparent 83.5%)",
               WebkitMaskImage: "radial-gradient(circle, transparent 78%, #000 79.5%, #000 82%, transparent 83.5%)",
             }}
-            animate={reduced ? { rotate: 0, opacity: ring.opacity } : { rotate: ring.direction * 360, opacity: [ring.opacity * 0.65, ring.opacity, ring.opacity * 0.65] }}
+             animate={reduced ? { rotate: 0, opacity: ring.opacity } : { rotate: ringRotationTarget(ring.direction, ringBurst), opacity: [ring.opacity * 0.65, ring.opacity, ring.opacity * 0.65] }}
             transition={reduced
               ? { duration: 0.4 }
               : {
-                  rotate: { duration: ring.duration, repeat: Infinity, ease: "linear" },
+                   rotate: ringRotationTransition(ring.duration, ringBurst),
                   opacity: { duration: ring.duration * 0.55, repeat: Infinity, ease: "easeInOut" },
                 }}
           />
@@ -433,6 +435,7 @@ import { isArticleRequirementSatisfied } from "@/content/article-access";
     } = useAppStore();
     const [, setLocation] = useLocation();
     const reducedMotion = useReducedMotion();
+    const ringBurst = useRingBurst();
     const [stackProgress, setStackProgress] = useState(0);
     const scrollFrame = useRef<number | null>(null);
 
@@ -508,9 +511,12 @@ import { isArticleRequirementSatisfied } from "@/content/article-access";
                 perspectiveTilt={perspectiveTilt}
                 stackTilt={stackTilt}
               >
-                <button
+                <motion.button
                   onClick={() => !isOnboarding && setLocation(`/article/${a.id}`)}
                   className="group relative flex w-full flex-col overflow-hidden rounded-[20px] p-4 text-left transition-[filter] active:brightness-110"
+                  whileHover={{ y: -2, scale: 1.006 }}
+                  whileTap={{ scale: 0.968, y: 3, rotateX: -3, filter: "brightness(1.18) saturate(1.14)" }}
+                  transition={{ type: "spring", stiffness: 420, damping: 25, mass: 0.65 }}
                   style={{
                     transformOrigin: "top center",
                     transformStyle: "preserve-3d",
@@ -535,11 +541,11 @@ import { isArticleRequirementSatisfied } from "@/content/article-access";
                   }}
                   animate={reducedMotion
                     ? { rotate: 0, opacity: 0.55 }
-                    : { rotate: 360, opacity: [0.45, 0.72, 0.45] }}
+                     : { rotate: ringRotationTarget(1, ringBurst), opacity: [0.45, 0.72, 0.45] }}
                   transition={reducedMotion
                     ? { duration: 0.3 }
                     : {
-                        rotate: { duration: ringStyle.outer.duration, repeat: Infinity, ease: "linear" },
+                         rotate: ringRotationTransition(ringStyle.outer.duration, ringBurst),
                         opacity: { duration: 4.4 + articleIdx * 0.35, repeat: Infinity, ease: "easeInOut", delay: articleIdx * 0.18 },
                       }}
                 />
@@ -559,11 +565,11 @@ import { isArticleRequirementSatisfied } from "@/content/article-access";
                   }}
                   animate={reducedMotion
                     ? { rotate: 0, opacity: 0.3 }
-                    : { rotate: ringStyle.dash.direction * 360, opacity: [0.28, 0.48, 0.28] }}
+                     : { rotate: ringRotationTarget(ringStyle.dash.direction, ringBurst), opacity: [0.28, 0.48, 0.28] }}
                   transition={reducedMotion
                     ? { duration: 0.3 }
                     : {
-                        rotate: { duration: ringStyle.dash.duration, repeat: Infinity, ease: "linear" },
+                         rotate: ringRotationTransition(ringStyle.dash.duration, ringBurst),
                         opacity: { duration: 3.5 + articleIdx * 0.28, repeat: Infinity, ease: "easeInOut", delay: articleIdx * 0.24 },
                       }}
                 >
@@ -593,11 +599,11 @@ import { isArticleRequirementSatisfied } from "@/content/article-access";
                   }}
                   animate={reducedMotion
                     ? { rotate: 0, opacity: 0.3 }
-                    : { rotate: ringStyle.fine.direction * 360, opacity: [0.26, 0.42, 0.26] }}
+                     : { rotate: ringRotationTarget(ringStyle.fine.direction, ringBurst), opacity: [0.26, 0.42, 0.26] }}
                   transition={reducedMotion
                     ? { duration: 0.3 }
                     : {
-                        rotate: { duration: ringStyle.fine.duration, repeat: Infinity, ease: "linear" },
+                         rotate: ringRotationTransition(ringStyle.fine.duration, ringBurst),
                         opacity: { duration: 2.8 + articleIdx * 0.22, repeat: Infinity, ease: "easeInOut", delay: articleIdx * 0.3 },
                       }}
                 >
@@ -644,7 +650,7 @@ import { isArticleRequirementSatisfied } from "@/content/article-access";
                     </span>
                   )}
                 </div>
-                </button>
+                </motion.button>
               </ArticleCardMotion>
             );
           })}

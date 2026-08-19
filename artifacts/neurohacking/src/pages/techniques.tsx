@@ -4,6 +4,7 @@ import { useAppStore } from "@/lib/store";
 import { motion, useReducedMotion } from "framer-motion";
 import { Check } from "lucide-react";
 import { TechniqueArtwork, type TechniqueArtworkKind } from "@/components/TechniqueArtwork";
+import { ringRotationTarget, ringRotationTransition, useRingBurst } from "@/lib/ring-burst";
 
 type Technique = {
   id: string;
@@ -190,6 +191,7 @@ function TechniqueCardVisualMotion({
 
 function TechniqueAtmosphere() {
   const reducedMotion = useReducedMotion();
+  const ringBurst = useRingBurst();
 
   return (
     <div
@@ -232,14 +234,14 @@ function TechniqueAtmosphere() {
                 animate={reducedMotion
                   ? { rotate: 0, scale: 1, opacity: ring.opacity }
                   : {
-                      rotate: ring.direction * 360,
+                      rotate: ringRotationTarget(ring.direction, ringBurst),
                       scale: ring.scale,
                       opacity: [ring.opacity * 0.68, ring.opacity, ring.opacity * 0.68],
                     }}
                 transition={reducedMotion
                   ? { duration: 0 }
                   : {
-                      rotate: { duration: ring.duration, repeat: Infinity, ease: "linear" },
+                       rotate: ringRotationTransition(ring.duration, ringBurst),
                       scale: { duration: ring.duration * 0.62, repeat: Infinity, ease: "easeInOut" },
                       opacity: { duration: ring.duration * 0.62, repeat: Infinity, ease: "easeInOut" },
                     }}
@@ -273,11 +275,11 @@ function TechniqueAtmosphere() {
             initial={{ rotate: 0, opacity: 0.42 }}
             animate={reducedMotion
               ? { rotate: 0, opacity: 0.42 }
-              : { rotate: 360, opacity: [0.42, 0.76, 0.42] }}
+              : { rotate: ringRotationTarget(1, ringBurst), opacity: [0.42, 0.76, 0.42] }}
             transition={reducedMotion
               ? { duration: 0 }
               : {
-                  rotate: { duration: 36, repeat: Infinity, ease: "linear" },
+                   rotate: ringRotationTransition(36, ringBurst),
                   opacity: { duration: 5.5, repeat: Infinity, ease: "easeInOut" },
                 }}
             style={{
@@ -300,11 +302,11 @@ function TechniqueAtmosphere() {
             initial={{ rotate: 0, opacity: 0.24 }}
             animate={reducedMotion
               ? { rotate: 0, opacity: 0.24 }
-              : { rotate: -360, opacity: [0.18, 0.34, 0.18] }}
+              : { rotate: ringRotationTarget(-1, ringBurst), opacity: [0.18, 0.34, 0.18] }}
             transition={reducedMotion
               ? { duration: 0 }
               : {
-                  rotate: { duration: 26, repeat: Infinity, ease: "linear" },
+                   rotate: ringRotationTransition(26, ringBurst),
                   opacity: { duration: 6, repeat: Infinity, ease: "easeInOut" },
                 }}
             style={{
@@ -329,11 +331,11 @@ function TechniqueAtmosphere() {
               initial={{ rotate: tickRing.start, opacity: tickRing.opacity }}
               animate={reducedMotion
                 ? { rotate: tickRing.start, opacity: tickRing.opacity }
-                : { rotate: tickRing.direction * 360 + tickRing.start, opacity: [tickRing.opacity * 0.7, tickRing.opacity, tickRing.opacity * 0.7] }}
+                : { rotate: ringRotationTarget(tickRing.direction, ringBurst, tickRing.start), opacity: [tickRing.opacity * 0.7, tickRing.opacity, tickRing.opacity * 0.7] }}
               transition={reducedMotion
                 ? { duration: 0 }
                 : {
-                    rotate: { duration: tickRing.duration, repeat: Infinity, ease: "linear" },
+                    rotate: ringRotationTransition(tickRing.duration, ringBurst),
                     opacity: { duration: tickRing.duration * 0.55, repeat: Infinity, ease: "easeInOut" },
                   }}
               style={{
@@ -389,11 +391,12 @@ function InstrumentGear({
   accent: string;
 }) {
   const reducedMotion = useReducedMotion();
-  const animate = reducedMotion ? { rotate: 0, opacity: 0.28 } : { rotate: direction * 360, opacity: [0.16, 0.38, 0.16] };
+  const ringBurst = useRingBurst();
+  const animate = reducedMotion ? { rotate: 0, opacity: 0.28 } : { rotate: ringRotationTarget(direction, ringBurst), opacity: [0.16, 0.38, 0.16] };
   const transition = reducedMotion
     ? { duration: 0 }
     : {
-        rotate: { duration, repeat: Infinity, ease: "linear" },
+        rotate: ringRotationTransition(duration, ringBurst),
         opacity: { duration: duration * 0.4, repeat: Infinity, ease: "easeInOut" },
       };
 
@@ -415,8 +418,8 @@ function InstrumentGear({
       />
       <motion.div
         className="absolute inset-[8%] rounded-full"
-        animate={reducedMotion ? { rotate: 0 } : { rotate: direction * -360 }}
-        transition={reducedMotion ? { duration: 0 } : { duration: duration * 1.34, repeat: Infinity, ease: "linear" }}
+         animate={reducedMotion ? { rotate: 0 } : { rotate: ringRotationTarget(direction === 1 ? -1 : 1, ringBurst) }}
+         transition={reducedMotion ? { duration: 0 } : ringRotationTransition(duration * 1.34, ringBurst)}
         style={{
           background: `conic-gradient(from 18deg, ${accent} 0deg 24deg, transparent 24deg 76deg, rgba(249,115,22,.35) 76deg 98deg, transparent 98deg 188deg, ${accent} 188deg 206deg, transparent 206deg 360deg)`,
           maskImage: "radial-gradient(circle, transparent 78%, #000 79.5%, #000 83%, transparent 84.5%)",
@@ -425,8 +428,8 @@ function InstrumentGear({
       />
       <motion.div
         className="absolute inset-[17%] rounded-full"
-        animate={reducedMotion ? { rotate: 0 } : { rotate: direction * 360 }}
-        transition={reducedMotion ? { duration: 0 } : { duration: duration * 0.72, repeat: Infinity, ease: "linear" }}
+         animate={reducedMotion ? { rotate: 0 } : { rotate: ringRotationTarget(direction, ringBurst) }}
+         transition={reducedMotion ? { duration: 0 } : ringRotationTransition(duration * 0.72, ringBurst)}
         style={{
           background: "repeating-conic-gradient(from 3deg, rgba(224,232,237,.5) 0deg 2.4deg, transparent 2.4deg 20deg)",
           maskImage: "radial-gradient(circle, transparent 86%, #000 87%, #000 91%, transparent 92%)",
@@ -439,6 +442,7 @@ function InstrumentGear({
 
 function MainLikeInstrumentAtmosphere() {
   const reducedMotion = useReducedMotion();
+  const ringBurst = useRingBurst();
   const particles = [
     { left: "4%", top: "13%", size: 4, color: "#EF4444", delay: 0 },
     { left: "96%", top: "18%", size: 5, color: "#F97316", delay: 0.8 },
@@ -452,11 +456,11 @@ function MainLikeInstrumentAtmosphere() {
 
   const spin = (duration: number, direction: 1 | -1 = 1) => reducedMotion
     ? { rotate: 0, opacity: 0.28 }
-    : { rotate: direction * 360, opacity: [0.16, 0.42, 0.16] };
+    : { rotate: ringRotationTarget(direction, ringBurst), opacity: [0.16, 0.42, 0.16] };
   const transition = (duration: number) => reducedMotion
     ? { duration: 0 }
     : {
-        rotate: { duration, repeat: Infinity, ease: "linear" },
+        rotate: ringRotationTransition(duration, ringBurst),
         opacity: { duration: duration * 0.32, repeat: Infinity, ease: "easeInOut" },
       };
 
