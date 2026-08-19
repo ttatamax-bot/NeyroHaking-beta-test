@@ -24,6 +24,7 @@ import { MemoryOnboarding } from "./MemoryOnboarding";
 import { MemoryPreview } from "./MemoryPreview";
 import { MemoryModeLogo } from "./MemoryModeLogo";
 import { memorySymbolLabel, MemorySymbol } from "./MemorySymbol";
+import { GameInstrumentBackdrop } from "../shared/GameInstrumentBackdrop";
 
 type GamePhase = "idle" | "showing" | "waiting" | "input" | "success" | "failed";
 
@@ -79,9 +80,20 @@ function LevelRail({ level, bestLevel, phase }: { level: number; bestLevel: numb
       <div>
         <p className="caption text-tertiary">ТЕКУЩИЙ УРОВЕНЬ</p>
         <div className="mt-1 flex items-baseline gap-2">
-          <span className="num inline-block min-w-[2ch] text-center text-[38px] leading-none tabular-nums" style={{ color: MEMORY_ACCENT, fontVariantNumeric: "tabular-nums" }} data-testid="text-memory-level">
-            {level}
-          </span>
+          <AnimatePresence mode="popLayout" initial={false}>
+            <motion.span
+              key={level}
+              initial={{ opacity: 0, y: 12, filter: "blur(4px)" }}
+              animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+              exit={{ opacity: 0, y: -12, filter: "blur(4px)" }}
+              transition={{ duration: .24, ease: "easeOut" }}
+              className="num inline-block min-w-[2ch] text-center text-[38px] leading-none tabular-nums"
+              style={{ color: MEMORY_ACCENT, fontVariantNumeric: "tabular-nums" }}
+              data-testid="text-memory-level"
+            >
+              {level}
+            </motion.span>
+          </AnimatePresence>
         </div>
       </div>
       <div className="text-right">
@@ -101,9 +113,12 @@ function StepDots({ level, phase }: { level: number; phase: GamePhase }) {
   return (
     <div className="flex gap-1.5" aria-label={`Прогресс цикла уровней: ${cycleLevel} из 5`}>
       {[1, 2, 3, 4, 5].map((step) => (
-        <span
+        <motion.span
           key={step}
-          className="h-1.5 flex-1 rounded-full"
+          initial={{ scaleX: .45, opacity: .35 }}
+          animate={{ scaleX: 1, opacity: step <= cycleLevel || failed ? 1 : .72 }}
+          transition={{ duration: .38, delay: step * .055, ease: "easeOut" }}
+          className={`level-step h-1.5 flex-1 rounded-full ${failed ? "level-step-failed" : step <= cycleLevel ? "level-step-active" : ""}`}
           style={{
             background: failed ? "rgba(244,63,94,.9)" : step <= cycleLevel ? MEMORY_ACCENT : "rgba(147,197,253,.14)",
             boxShadow: failed ? "0 0 10px rgba(244,63,94,.72)" : step <= cycleLevel ? "0 0 10px rgba(249,115,22,.72)" : "none",
@@ -628,6 +643,7 @@ export function MemoryGame({
 
   return (
     <div className="relative isolate min-h-[100dvh] overflow-y-auto px-4 pb-8 pt-6" data-testid={`memory-game-${mode}`}>
+      <GameInstrumentBackdrop accent={MEMORY_ACCENT} phase={phase} />
       <div className="relative z-10">
       <div className="mb-7 flex items-center justify-between">
         <button type="button" onClick={onBack} className="p-1 text-tertiary" aria-label="Назад" data-testid="button-memory-back">

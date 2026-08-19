@@ -187,15 +187,13 @@
   .game-card::after {
     content: "";
     position: absolute;
-    left: 18px;
-    right: 18px;
-    top: 1px;
-    height: 2px;
+    inset: 0;
     z-index: 1;
-    background: linear-gradient(90deg, transparent, rgba(249,115,22,.95) 18%, rgba(255,224,166,1) 50%, rgba(249,115,22,.95) 82%, transparent);
-    box-shadow: 0 0 14px rgba(249,115,22,.58);
-    transform-origin: left center;
-    animation: game-card-scan 3.8s cubic-bezier(.4,0,.2,1) infinite;
+    border: 1px solid rgba(249,115,22,.26);
+    border-radius: inherit;
+    background: transparent;
+    box-shadow: inset 0 0 0 rgba(249,115,22,0), 0 0 0 rgba(249,115,22,0);
+    animation: game-card-outline 5.2s cubic-bezier(.42,0,.2,1) infinite;
   }
 
   .game-card > * {
@@ -203,13 +201,73 @@
     z-index: 1;
   }
 
-  @keyframes game-card-scan {
-    0%, 100% { opacity: .38; transform: scaleX(.42); }
-    45%, 55% { opacity: 1; transform: scaleX(1); }
+  @keyframes game-card-outline {
+    0%, 100% {
+      opacity: .38;
+      border-color: rgba(249,115,22,.22);
+      box-shadow: inset 0 0 0 rgba(249,115,22,0), 0 0 0 rgba(249,115,22,0);
+    }
+    48%, 58% {
+      opacity: .96;
+      border-color: rgba(255,224,166,.74);
+      box-shadow: inset 0 0 16px rgba(249,115,22,.08), 0 0 18px rgba(249,115,22,.18);
+    }
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .game-card::after { animation: none; opacity: .45; }
+    .game-card::after { animation: none; opacity: .52; }
+  }
+
+  .game-backdrop {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    overflow: hidden;
+    pointer-events: none;
+    contain: paint;
+    transform: translate3d(0, 0, 0);
+    backface-visibility: hidden;
+  }
+
+  .game-backdrop-anchor {
+    position: absolute;
+    left: 50%;
+    top: 43%;
+    transform: translate3d(-50%, -50%, 0);
+    transform-style: preserve-3d;
+    backface-visibility: hidden;
+  }
+
+  .level-step {
+    position: relative;
+    min-width: 0;
+    overflow: hidden;
+    transform-origin: left center;
+  }
+
+  .level-step::after {
+    content: "";
+    position: absolute;
+    inset: 0 auto 0 -45%;
+    width: 38%;
+    background: linear-gradient(90deg, transparent, rgba(255,236,199,.95), transparent);
+    opacity: 0;
+    transform: skewX(-18deg);
+  }
+
+  .level-step-active::after {
+    animation: level-step-shine 2.9s ease-in-out infinite;
+  }
+
+  .level-step-failed::after {
+    background: linear-gradient(90deg, transparent, rgba(255,210,220,.9), transparent);
+    animation: level-step-shine 1.7s ease-in-out infinite;
+  }
+
+  @keyframes level-step-shine {
+    0%, 38% { opacity: 0; transform: translateX(0) skewX(-18deg); }
+    52% { opacity: .85; }
+    72%, 100% { opacity: 0; transform: translateX(420%) skewX(-18deg); }
   }
 
   .game-card--success {
