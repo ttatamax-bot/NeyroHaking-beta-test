@@ -7,9 +7,9 @@ interface GameInstrumentBackdropProps {
 }
 
 const RINGS = [
-  { size: 760, duration: 52, direction: 1, opacity: 0.18, dash: "180 120", extraTurns: 0.14 },
-  { size: 610, duration: 39, direction: -1, opacity: 0.24, dash: "1 18", extraTurns: 0.18 },
-  { size: 470, duration: 29, direction: 1, opacity: 0.16, dash: "240 80 12 120", extraTurns: 0.22 },
+  { size: 760, duration: 52, direction: 1, opacity: 0.28, dash: "180 120", extraTurns: 0.14 },
+  { size: 610, duration: 39, direction: -1, opacity: 0.34, dash: "3 13", extraTurns: 0.18 },
+  { size: 470, duration: 29, direction: 1, opacity: 0.22, dash: "240 80 12 120", extraTurns: 0.22 },
 ];
 
 function BackdropRing({
@@ -36,12 +36,12 @@ function BackdropRing({
           initial={{ rotate: direction < 0 ? 180 : 0 }}
           animate={reducedMotion ? { opacity } : { rotate: direction * 360 + (direction < 0 ? 180 : 0), opacity: [opacity * 0.7, opacity, opacity * 0.7] }}
           transition={reducedMotion ? { duration: 0 } : { rotate: { duration, repeat: Infinity, ease: "linear" }, opacity: { duration: duration * .7, repeat: Infinity, ease: "easeInOut" } }}
-          style={{ filter: `drop-shadow(0 0 5px ${accent}55)` }}
+           style={{ filter: `drop-shadow(0 0 8px ${accent}88)` }}
           aria-hidden="true"
         >
-          <circle cx="160" cy="160" r="145" fill="none" stroke={accent} strokeOpacity={opacity} strokeWidth="1.15" strokeDasharray={dash} strokeLinecap="round" />
-          <ellipse cx="160" cy="160" rx="76" ry="145" fill="none" stroke={accent} strokeOpacity={opacity * 0.82} strokeWidth="1" strokeDasharray="2 14" strokeLinecap="round" transform="rotate(18 160 160)" />
-          <ellipse cx="160" cy="160" rx="42" ry="145" fill="none" stroke={accent} strokeOpacity={opacity * 0.5} strokeWidth="0.8" strokeDasharray="1 24" transform="rotate(-18 160 160)" />
+          <circle cx="160" cy="160" r="145" fill="none" stroke={accent} strokeOpacity="1" strokeWidth="1.2" strokeDasharray={dash} strokeLinecap="round" />
+          <ellipse cx="160" cy="160" rx="76" ry="145" fill="none" stroke={accent} strokeOpacity=".78" strokeWidth="1" strokeDasharray="3 13" strokeLinecap="round" transform="rotate(18 160 160)" />
+          <ellipse cx="160" cy="160" rx="42" ry="145" fill="none" stroke={accent} strokeOpacity=".5" strokeWidth=".8" strokeDasharray="2 16" transform="rotate(-18 160 160)" />
         </motion.svg>
       </motion.div>
     </div>

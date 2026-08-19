@@ -19,6 +19,12 @@ import {
   type MemorySymbolId,
   type MemoryMode,
 } from "./config";
+
+const matrixGridStyle = (size: number) => ({
+  width: size >= 7 ? "min(94vw, 390px)" : "min(92vw, 360px)",
+  gridTemplateColumns: `repeat(${size}, minmax(0, 1fr))`,
+  ...(size >= 7 ? { gridAutoRows: "44px" } : {}),
+});
 import { initMemorySound, playCorrect, playFail, playLevelUp, playReward, playTap } from "./sounds";
 import { MemoryOnboarding } from "./MemoryOnboarding";
 import { MemoryPreview } from "./MemoryPreview";
@@ -202,7 +208,7 @@ function ShowingState({ challenge, level }: { challenge: MemoryChallenge; level:
         </div>
       )}
       {challenge.mode === "matrix" && (
-        <div className="memory-grid grid w-[min(70vw,246px)] gap-2" style={{ gridTemplateColumns: `repeat(${challenge.size}, minmax(0, 1fr))` }} data-testid="memory-matrix-display">
+        <div className="memory-grid grid max-w-full gap-1.5 sm:gap-2" style={matrixGridStyle(challenge.size)} data-testid="memory-matrix-display">
           {Array.from({ length: challenge.size * challenge.size }, (_, index) => (
             <motion.span
               key={index}
@@ -258,9 +264,9 @@ function ReverseInput({ digits, entered, onDigit }: { digits: number[]; entered:
 
 function MatrixInput({ challenge, selected, onCell }: { challenge: MatrixChallenge; selected: number[]; onCell: (cell: number) => void }) {
   return (
-    <div className="game-card flex min-h-[330px] flex-col items-center justify-center rounded-[25px] border border-orange-300/35 p-5" data-testid="memory-matrix-input">
+    <div className="game-card flex min-h-[330px] flex-col items-center justify-center rounded-[25px] border border-orange-300/35 px-4 py-6" data-testid="memory-matrix-input">
       <p className="caption mb-5 text-tertiary">ВОССТАНОВИ КЛЕТКИ · {selected.length}/{challenge.cells.length}</p>
-      <div className="memory-grid grid w-[min(70vw,246px)] gap-2" style={{ gridTemplateColumns: `repeat(${challenge.size}, minmax(0, 1fr))` }}>
+      <div className="memory-grid grid max-w-full gap-1.5 sm:gap-2" style={matrixGridStyle(challenge.size)}>
         {Array.from({ length: challenge.size * challenge.size }, (_, index) => {
           const active = selected.includes(index);
           return (
@@ -272,7 +278,7 @@ function MatrixInput({ challenge, selected, onCell }: { challenge: MatrixChallen
                 whileHover={{ scale: 1.04 }}
                 animate={{ scale: active ? [1, 1.06, 1] : 1 }}
                 transition={{ duration: .24, ease: "easeOut" }}
-                className="game-control aspect-square rounded-[8px] border transition-none"
+                className="game-control min-h-11 rounded-[8px] border transition-none"
               style={{
                 background: active ? MEMORY_ACCENT : "#102b46",
                 borderColor: active ? "rgba(249,115,22,.9)" : "rgba(147,197,253,.12)",
