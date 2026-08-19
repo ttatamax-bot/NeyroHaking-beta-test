@@ -95,15 +95,16 @@ function LevelRail({ level, bestLevel, phase }: { level: number; bestLevel: numb
 
 function StepDots({ level, phase }: { level: number; phase: GamePhase }) {
   const failed = phase === "failed";
+  const cycleLevel = ((Math.max(1, level) - 1) % 5) + 1;
   return (
-    <div className="flex gap-1.5" aria-label={`Прогресс первых пяти уровней: ${Math.min(level, 5)} из 5`}>
+    <div className="flex gap-1.5" aria-label={`Прогресс цикла уровней: ${cycleLevel} из 5`}>
       {[1, 2, 3, 4, 5].map((step) => (
         <span
           key={step}
           className="h-1.5 flex-1 rounded-full"
           style={{
-            background: failed ? "rgba(244,63,94,.9)" : step <= Math.min(level, 5) ? MEMORY_ACCENT : "rgba(147,197,253,.14)",
-            boxShadow: failed ? "0 0 10px rgba(244,63,94,.72)" : step <= Math.min(level, 5) ? "0 0 10px rgba(249,115,22,.72)" : "none",
+            background: failed ? "rgba(244,63,94,.9)" : step <= cycleLevel ? MEMORY_ACCENT : "rgba(147,197,253,.14)",
+            boxShadow: failed ? "0 0 10px rgba(244,63,94,.72)" : step <= cycleLevel ? "0 0 10px rgba(249,115,22,.72)" : "none",
           }}
         />
       ))}
@@ -326,12 +327,8 @@ function SuccessGlowState({
 
 function FailedGlowState({
   challenge,
-  errorIndex,
-  onRetry,
 }: {
   challenge: MemoryChallenge;
-  errorIndex: number | null;
-  onRetry: () => void;
 }) {
   const tiles = challenge.mode === "reverse" ? challenge.digits.map(String) : challenge.mode === "symbols" ? challenge.symbols : [];
   return (
@@ -339,13 +336,13 @@ function FailedGlowState({
       key="failed"
       initial={{ opacity: 0.7, x: -4 }}
       animate={{ opacity: 1, x: 0 }}
-      className="flex min-h-[330px] flex-col items-center justify-center rounded-[25px] border border-rose-400/45 bg-rose-500/[.06] px-6"
+      className="flex min-h-[330px] items-center justify-center rounded-[25px] border border-rose-400/45 bg-rose-500/[.06] px-6"
       data-testid="memory-failed-state"
     >
       {challenge.mode === "matrix" ? (
         <div className="grid w-[min(70vw,246px)] gap-2" style={{ gridTemplateColumns: `repeat(${challenge.size}, minmax(0, 1fr))` }}>
           {Array.from({ length: challenge.size * challenge.size }, (_, index) => {
-            const active = challenge.cells.includes(index) || index === errorIndex;
+            const active = challenge.cells.includes(index);
             return (
               <motion.span
                 key={index}
@@ -376,10 +373,31 @@ function FailedGlowState({
           ))}
         </div>
       )}
-      <button type="button" onClick={onRetry} className="mt-8 flex min-h-12 min-w-[178px] items-center justify-center gap-2 self-center rounded-[15px] bg-rose-500 px-6 text-sm font-semibold text-white shadow-[0_0_18px_rgba(244,63,94,.28)]" data-testid="button-memory-retry">
-        <RotateCcw size={16} /> Начать сначала
-      </button>
     </motion.div>
+  );
+}
+
+function RetryBonusCard({ onRetry }: { onRetry: () => void }) {
+  return (
+    <motion.button
+      type="button"
+      onClick={onRetry}
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      whileTap={{ scale: 0.98 }}
+      className="relative mt-4 flex min-h-[78px] w-full items-center gap-3 overflow-hidden rounded-[24px] border border-rose-300/45 bg-[linear-gradient(135deg,rgba(116,42,78,.98),rgba(40,30,67,.98)_58%,rgba(13,31,57,.98))] px-4 py-3 text-left shadow-[0_0_0_5px_rgba(244,63,94,.06),0_12px_28px_rgba(0,0,0,.24),inset_0_1px_0_rgba(255,255,255,.12)]"
+      data-testid="button-memory-retry"
+    >
+      <span className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-[16px] border border-rose-200/45 bg-[linear-gradient(145deg,rgba(255,145,169,.95),rgba(212,47,103,.9))] text-white shadow-[0_0_22px_rgba(244,63,94,.42),inset_0_1px_0_rgba(255,255,255,.45)]">
+        <RotateCcw size={21} strokeWidth={2.2} />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-[10px] font-semibold uppercase tracking-[0.16em] text-rose-100/65">Восстановить ритм</span>
+        <span className="mt-1 block text-[16px] font-semibold leading-tight text-white">Начать сначала</span>
+        <span className="mt-0.5 block text-xs text-rose-100/65">Новая попытка с первого уровня</span>
+      </span>
+      <span className="text-xl text-rose-100/75" aria-hidden="true">→</span>
+    </motion.button>
   );
 }
 
@@ -406,7 +424,6 @@ export function MemoryGame({
   const [enteredDigits, setEnteredDigits] = useState<number[]>([]);
   const [enteredSymbols, setEnteredSymbols] = useState<string[]>([]);
   const [selectedCells, setSelectedCells] = useState<number[]>([]);
-  const [errorIndex, setErrorIndex] = useState<number | null>(null);
   const [onboardingVisible, setOnboardingVisible] = useState(showOnboarding);
   const [rewardFlash, setRewardFlash] = useState(false);
   const timerRef = useRef<number | null>(null);
@@ -419,7 +436,6 @@ export function MemoryGame({
     setEnteredDigits([]);
     setEnteredSymbols([]);
     setSelectedCells([]);
-    setErrorIndex(null);
     setOnboardingVisible(showOnboarding);
     setRewardFlash(false);
     rewardSentRef.current = false;
@@ -445,7 +461,6 @@ export function MemoryGame({
     setEnteredDigits([]);
     setEnteredSymbols([]);
     setSelectedCells([]);
-    setErrorIndex(null);
     setPhase("showing");
     timerRef.current = window.setTimeout(() => {
       setPhase("waiting");
@@ -477,10 +492,9 @@ export function MemoryGame({
     }, 1800);
   };
 
-  const fail = (index: number | null = null) => {
+  const fail = () => {
     clearGameTimer();
     playFail();
-    setErrorIndex(index);
     setPhase("failed");
   };
 
@@ -491,7 +505,7 @@ export function MemoryGame({
     const expected = [...challenge.digits].reverse();
     const index = enteredDigits.length;
     if (digit !== expected[index]) {
-      fail(index);
+      fail();
       return;
     }
     const next = [...enteredDigits, digit];
@@ -504,7 +518,7 @@ export function MemoryGame({
     initMemorySound();
     playTap();
     if (!challenge.cells.includes(cell)) {
-      fail(cell);
+      fail();
       return;
     }
     if (selectedCells.includes(cell)) return;
@@ -519,7 +533,7 @@ export function MemoryGame({
     playTap();
     const index = enteredSymbols.length;
     if (symbol !== challenge.symbols[index]) {
-      fail(index);
+      fail();
       return;
     }
     const next = [...enteredSymbols, symbol];
@@ -592,8 +606,9 @@ export function MemoryGame({
             rewardFlash={rewardFlash}
           />
         )}
-        {phase === "failed" && <FailedGlowState challenge={challenge} errorIndex={errorIndex} onRetry={() => beginRound(1)} />}
+        {phase === "failed" && <FailedGlowState challenge={challenge} />}
       </AnimatePresence>
+      {phase === "failed" && <RetryBonusCard onRetry={() => beginRound(1)} />}
 
       {onboardingVisible && <MemoryOnboarding mode={mode} onComplete={finishOnboarding} />}
     </div>
