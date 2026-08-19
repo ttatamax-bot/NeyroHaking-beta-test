@@ -7,7 +7,7 @@ import { DataLoadingScreen } from "@/components/DataLoadingScreen";
 import { DEV_POTENTIAL_EVENT, getDevPotential } from "@/lib/dev-potential";
 import { hasDeveloperTools } from "@/lib/developer-mode";
 import { useAuthInfo } from "@/lib/clerk";
-import { ringRotationTarget, ringRotationTransition, useRingBurst, useSmoothRingBurstRotation } from "@/lib/ring-burst";
+import { ringRotationTarget, ringRotationTransition, useSmoothRingBurstRotation } from "@/lib/ring-burst";
 
 const NEWS_ITEMS = [
   { id: '1', title: "Новая техника нейровизуализации", description: "Обновлён алгоритм прохождения техники T2 — визуализация теперь более структурированная и точная.", date: "28.05.2026" },
@@ -41,7 +41,7 @@ function getTodayLabels() {
 
 function NewsSystemMark() {
   const reduced = useReducedMotion();
-  const ringBurst = useRingBurst();
+  const ringBurst = false;
   const burstRotation = useSmoothRingBurstRotation(!reduced);
   const ringTickAngles = Array.from({ length: 24 }, (_, index) => index * 15);
 
@@ -416,7 +416,7 @@ export function PotentialScale({
   const glowFactor = .28 + ringProgress * .72;
   const highProgress = Math.max(0, (visualValue - 70) / 30);
   const speedFactor = 1 - highProgress * .55;
-  const ringBurst = useRingBurst();
+  const ringBurst = false;
   const burstRotation = useSmoothRingBurstRotation();
   useEffect(() => {
     const duration = 3200;
@@ -481,11 +481,11 @@ export function PotentialScale({
           transition={{ duration: 3.2 * speedFactor, repeat: Infinity, ease: 'easeInOut' }}
         />
       )}
+      <motion.div className="pointer-events-none absolute inset-0" style={{ rotate: burstRotation }}>
       <div
-        className="pointer-events-none absolute left-1/2 top-[120px] z-0 h-0 w-0 -translate-x-1/2 -translate-y-1/2"
-        style={{ opacity: .18 + ringProgress * .82 }}
+        className="absolute left-1/2 top-[120px] z-0 h-0 w-0"
+        style={{ opacity: .18 + ringProgress * .82, transform: "translate(-50%, -50%)" }}
       >
-        <motion.div className="absolute inset-0" style={{ rotate: burstRotation }}>
         <motion.div
           className="absolute left-1/2 top-1/2 h-[390px] w-[390px] -translate-x-1/2 -translate-y-1/2 rounded-full"
           animate={{ opacity: [.34, .7, .34], scale: [.92, 1.05, .92] }}
@@ -680,8 +680,8 @@ export function PotentialScale({
             <span className="absolute bottom-[16%] left-[8%] h-[4px] w-[4px] rounded-full" style={{ background: '#FFE4B5', boxShadow: '0 0 12px 4px rgba(255,224,166,.55)' }} />
           </motion.div>
         )}
-        </motion.div>
       </div>
+      </motion.div>
       {particles.slice(0, particleCount).map((particle, index) => (
         <motion.span
           key={index}
@@ -822,7 +822,7 @@ export default function Home() {
   const developerToolsEnabled = hasDeveloperTools(authEmail, isSignedIn);
   const [devPotential, setDevPotentialState] = useState(() => getDevPotential());
   const [newsStackProgress, setNewsStackProgress] = useState(0);
-  const ringBurst = useRingBurst();
+  const ringBurst = false;
   const burstRotation = useSmoothRingBurstRotation();
   const newsScrollFrame = useRef<number | null>(null);
 

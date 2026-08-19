@@ -29,7 +29,7 @@ export function ringRotationTransition(baseDuration: number, isBursting: boolean
 
 export function useSmoothRingBurstRotation(
   enabled = true,
-  extraTurns = 1.15,
+  extraTurns = 0.18,
 ): MotionValue<number> {
   const rotation = useMotionValue(0);
   const configRef = useRef({ enabled, extraTurns });

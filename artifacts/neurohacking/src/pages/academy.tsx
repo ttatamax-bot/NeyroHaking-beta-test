@@ -5,7 +5,7 @@ import { motion, useReducedMotion } from "framer-motion";
 import { useEffect, useRef, useState, type ReactNode, type UIEvent } from "react";
 import { HABIT_GUIDE_TITLE } from "@/content/habit-guide";
 import { isArticleRequirementSatisfied } from "@/content/article-access";
-import { ringRotationTarget, ringRotationTransition, useRingBurst, useSmoothRingBurstRotation } from "@/lib/ring-burst";
+import { ringRotationTarget, ringRotationTransition, useSmoothRingBurstRotation } from "@/lib/ring-burst";
 
   const ARTICLES = [
     {
@@ -120,7 +120,7 @@ import { ringRotationTarget, ringRotationTransition, useRingBurst, useSmoothRing
 
   function KnowledgeBaseMark() {
     const reduced = useReducedMotion();
-    const ringBurst = useRingBurst();
+    const ringBurst = false;
     const burstRotation = useSmoothRingBurstRotation(!reduced);
     const ringTickAngles = Array.from({ length: 24 }, (_, index) => index * 15);
 
@@ -441,7 +441,7 @@ import { ringRotationTarget, ringRotationTransition, useRingBurst, useSmoothRing
     } = useAppStore();
     const [, setLocation] = useLocation();
     const reducedMotion = useReducedMotion();
-    const ringBurst = useRingBurst();
+    const ringBurst = false;
     const [stackProgress, setStackProgress] = useState(0);
     const scrollFrame = useRef<number | null>(null);
 

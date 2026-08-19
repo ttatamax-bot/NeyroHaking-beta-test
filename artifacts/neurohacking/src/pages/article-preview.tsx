@@ -8,7 +8,7 @@ import { CalendarDays, Brain, Lightbulb, MoonStar, Repeat2, Target, type LucideI
 import { motion } from "framer-motion";
 import { HABIT_GUIDE_TITLE } from "@/content/habit-guide";
 import { getArticleUnlockInstruction, isArticleRequirementSatisfied } from "@/content/article-access";
-import { ringRotationTarget, ringRotationTransition, useRingBurst, useSmoothRingBurstRotation } from "@/lib/ring-burst";
+import { ringRotationTarget, ringRotationTransition, useSmoothRingBurstRotation } from "@/lib/ring-burst";
 
 const ARTICLES_DATA: Record<string, {
   title: string; desc: string; content: string; cost: number;
@@ -119,7 +119,7 @@ const ARTICLE_VISUALS: Record<string, {
 function ArticleInstrumentPreview({ articleId }: { articleId: string }) {
   const visual = ARTICLE_VISUALS[articleId] ?? ARTICLE_VISUALS.A1;
   const { Icon } = visual;
-  const ringBurst = useRingBurst();
+  const ringBurst = false;
   const burstRotation = useSmoothRingBurstRotation();
 
   return (
