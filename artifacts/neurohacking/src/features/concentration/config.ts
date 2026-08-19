@@ -63,6 +63,11 @@ export function signalThresholdForLevel(level: number): number {
   return Math.max(280, 400 - Math.floor((level - 5) / 2) * 12);
 }
 
+export function signalPrepareDurationForLevel(level: number): number {
+  const extraWindow = Math.min(1800, 900 + Math.max(0, level - 1) * 180);
+  return SIGNALS_PREPARE_MS + Math.floor(Math.random() * (extraWindow + 1));
+}
+
 export function trackingObjectsForLevel(level: number): { total: number; targets: number; moveMs: number } {
   return {
     total: 20 + Math.min(7, Math.max(0, level - 1)) * 5,

@@ -12,6 +12,7 @@ import {
   levelHint,
   randomUniqueIndexes,
   searchTimeForLevel,
+  signalPrepareDurationForLevel,
   signalCountForLevel,
   signalThresholdForLevel,
   trackingObjectsForLevel,
@@ -226,11 +227,12 @@ export function ConcentrationGame({
 
   const beginSignalPreparation = (roundLevel: number, nextIndex: number) => {
     clearTimers();
+    const duration = signalPrepareDurationForLevel(roundLevel);
     setSignalIndex(nextIndex);
     setReactionStart(null);
     setPhase("preparing");
     playConcentrationPrepare();
-    timerRef.current = window.setTimeout(() => showSignal(roundLevel, nextIndex), SIGNALS_PREPARE_MS);
+    timerRef.current = window.setTimeout(() => showSignal(roundLevel, nextIndex), duration);
   };
 
   const beginRound = (nextLevel: number) => {
@@ -353,6 +355,10 @@ export function ConcentrationGame({
     showSignalResult(level, signalIndex + 1, nextTimes, reaction);
   };
 
+  const handlePreparationClick = () => {
+    if (phase === "preparing") failGame("Слишком рано");
+  };
+
   const handleTrackingObject = (id: number) => {
     if (phase !== "tracking-input") return;
     if (!trackingTargets.includes(id)) {
@@ -383,8 +389,27 @@ export function ConcentrationGame({
     onOnboardingComplete?.(mode);
   };
 
+  const signalSurface =
+    mode !== "signals"
+      ? undefined
+      : phase === "signals"
+        ? signal.isTarget ? "#43210f" : "#102d47"
+        : phase === "signal-result"
+          ? "#163b3e"
+          : phase === "failed"
+            ? "#3b2031"
+            : phase === "preparing"
+              ? "#102b46"
+              : undefined;
+
+  const signalIndicatorScale = Math.max(.48, 1 - Math.min(8, Math.max(0, level - 1)) * .065);
+
   return (
-    <div className="relative isolate min-h-[100dvh] overflow-y-auto px-4 pb-8 pt-6" data-testid={`concentration-game-${mode}`}>
+    <div
+      className={`relative isolate min-h-[100dvh] overflow-y-auto px-4 pb-8 pt-6 ${mode === "signals" ? "signals-screen" : ""}`}
+      style={signalSurface ? { backgroundColor: signalSurface } : undefined}
+      data-testid={`concentration-game-${mode}`}
+    >
       <GameInstrumentBackdrop accent={CONCENTRATION_ACCENT} phase={phase} />
       <div className="relative z-10">
       <div className="mb-7 flex items-center justify-between">
@@ -421,67 +446,61 @@ export function ConcentrationGame({
         )}
 
         {phase === "preparing" && (
-          <StateShell key="preparing">
+          <motion.button
+            key="preparing"
+            type="button"
+            onClick={handlePreparationClick}
+            initial={{ opacity: 0, scale: .94 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="game-card flex min-h-[330px] w-full flex-col items-center justify-center rounded-[25px] border border-orange-400/40 px-7 text-center outline-none"
+            data-testid="concentration-preparing-state"
+          >
             <motion.div
-              animate={{ scale: [1, 1.08, 1], opacity: [.65, 1, .65] }}
-              transition={{ duration: 1.2, repeat: Infinity, ease: "easeInOut" }}
-              className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl border"
+              animate={{ rotate: [0, -8, 8, 0], scale: [1, 1.08, 1] }}
+              transition={{ duration: 1, ease: "easeInOut" }}
+              className="mb-6 flex h-20 w-20 items-center justify-center rounded-[22px] border border-orange-300/45 bg-[#153653]"
               style={{ borderColor: CONCENTRATION_ACCENT_BORDER, background: CONCENTRATION_ACCENT_SOFT }}
             >
-              <span className="h-3 w-3 rounded-full bg-orange-300 shadow-[0_0_18px_rgba(253,186,116,.9)]" />
+              <span className="relative flex h-11 w-11 items-center justify-center rounded-full border-2 border-orange-300/90">
+                <span className="h-2.5 w-2.5 rounded-full bg-orange-300 shadow-[0_0_18px_rgba(253,186,116,.9)]" />
+                <span className="absolute h-14 w-14 rounded-full border border-orange-300/25" />
+              </span>
             </motion.div>
-            <p className="title-m text-primary">Приготовьтесь</p>
-            <p className="body-s mt-2 max-w-[280px] text-secondary">Следующий сигнал появится через несколько секунд.</p>
-            <div className="mt-6 h-1.5 w-44 overflow-hidden rounded-full bg-blue-200/10">
-              <motion.div
-                className="h-full origin-left rounded-full bg-orange-400"
-                initial={{ scaleX: 0 }}
-                animate={{ scaleX: 1 }}
-                transition={{ duration: SIGNALS_PREPARE_MS / 1000, ease: "linear" }}
-              />
-            </div>
-          </StateShell>
+            <p className="title-m text-[24px] text-primary">Приготовьтесь</p>
+          </motion.button>
         )}
 
         {phase === "signal-result" && (
-          <StateShell key="signal-result" className="game-card--success">
+          <motion.div key="signal-result" initial={{ opacity: 0, scale: .94 }} animate={{ opacity: 1, scale: 1 }} className="game-card game-card--success flex min-h-[330px] w-full items-center justify-center rounded-[25px] border">
             <motion.div
-              initial={{ scale: .7, opacity: .4 }}
-              animate={{ scale: [1, 1.08, 1], opacity: [1, .75, 1] }}
+              initial={{ scale: .75, opacity: .5 }}
+              animate={{ scale: [1, 1.12, 1], opacity: [1, .75, 1] }}
               transition={{ duration: 1.1, repeat: Infinity, ease: "easeInOut" }}
-              className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl border border-orange-300/45 bg-orange-500/15"
+              className="flex h-[min(42vw,180px)] w-[min(72vw,280px)] items-center justify-center rounded-[28px] border-[3px] border-orange-200/75 bg-orange-500/20 shadow-[0_0_42px_rgba(249,115,22,.32),inset_0_0_28px_rgba(249,115,22,.18)]"
             >
-              <span className="h-3 w-3 rounded-full bg-orange-300 shadow-[0_0_18px_rgba(253,186,116,.95)]" />
+              <span className="num text-[36px] text-orange-100" aria-label={`Результат ${lastReaction ?? 0} миллисекунд`}>{lastReaction ?? 0}</span>
             </motion.div>
-            <p className="title-m text-primary">Попадание</p>
-            <p className="num mt-4 text-3xl" style={{ color: CONCENTRATION_ACCENT }}>{lastReaction ?? 0} мс</p>
-            <p className="body-s mt-2 text-secondary">Результат сохранён. Следующая фаза готовится.</p>
-          </StateShell>
+          </motion.div>
         )}
 
         {phase === "signals" && (
-          <StateShell key="signals" className="cursor-pointer">
-            <button type="button" onClick={handleSignalClick} className="flex min-h-[330px] w-full flex-col items-center justify-center outline-none">
-              <p className="caption text-tertiary">СИГНАЛ {Math.min(signalIndex + 1, signalCountForLevel(level))} / {signalCountForLevel(level)}</p>
-              <span className="relative mt-8 flex h-32 w-32 items-center justify-center">
-                <motion.span
-                  animate={{ scale: signal.isTarget ? [1, 1.06, 1] : [1, .98, 1], opacity: signal.isTarget ? [0.78, 1, .78] : 1 }}
-                  transition={{ duration: signal.isTarget ? .7 : 1.1, repeat: Infinity, ease: "easeInOut" }}
-                  className="absolute inset-0 rounded-full border-[3px]"
-                  style={{ background: `${signal.color}28`, borderColor: `${signal.color}dd`, boxShadow: `0 0 44px ${signal.color}66, inset 0 0 28px ${signal.color}22` }}
-                />
-                <motion.span
-                  animate={{ rotate: signal.isTarget ? [0, 360] : 0 }}
-                  transition={{ duration: 3.2, repeat: Infinity, ease: "linear" }}
-                  className="absolute inset-[-9px] rounded-full border border-dashed"
-                  style={{ borderColor: `${signal.color}80` }}
-                />
-                <span className="relative h-2 w-2 rounded-full" style={{ background: signal.color, boxShadow: `0 0 12px ${signal.color}` }} />
-              </span>
-              <p className="title-m mt-7 text-primary">{signal.isTarget ? "НАЖМИ" : "НЕ НАЖИМАЙ"}</p>
-              <p className="body-s mt-2 text-secondary">{lastReaction ? `${lastReaction} мс` : `порог ≤ ${signalThresholdForLevel(level)} мс`}</p>
-            </button>
-          </StateShell>
+          <motion.button
+            key="signals"
+            type="button"
+            onClick={handleSignalClick}
+            initial={{ opacity: 0, scale: .96 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="game-card flex min-h-[330px] w-full items-center justify-center rounded-[25px] border border-orange-400/40 p-0 outline-none"
+            data-testid="concentration-signal-hit-area"
+          >
+            <motion.span
+              animate={{ scale: [signalIndicatorScale, signalIndicatorScale * 1.025, signalIndicatorScale], opacity: signal.isTarget ? [0.82, 1, .82] : [.7, .9, .7] }}
+              transition={{ duration: signal.isTarget ? .72 : 1.05, repeat: Infinity, ease: "easeInOut" }}
+              className="block h-[190px] w-[min(76vw,296px)] rounded-[28px] border-[3px]"
+              style={{ background: `${signal.color}30`, borderColor: `${signal.color}e6`, boxShadow: `0 0 52px ${signal.color}72, inset 0 0 32px ${signal.color}2e` }}
+              aria-hidden="true"
+            />
+          </motion.button>
         )}
 
         {(phase === "tracking-show" || phase === "tracking-move" || phase === "tracking-input") && (
