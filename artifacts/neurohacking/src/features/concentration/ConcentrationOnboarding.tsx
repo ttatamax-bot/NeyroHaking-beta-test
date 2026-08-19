@@ -44,7 +44,10 @@ export function ConcentrationOnboarding({ mode, hub = false, onComplete }: Conce
               >
                 <p className="body leading-snug text-primary">{CONCENTRATION_INTRO}</p>
               </div>
-              <span className="mt-0.5 pr-1.5 text-[11px] text-blue-300/45">продолжить →</span>
+              <span className="mt-0.5 flex items-center gap-1 pr-1.5 text-[11px] text-blue-300/45">
+                продолжить
+                <ArrowRight size={13} />
+              </span>
             </div>
           </div>
         </motion.div>

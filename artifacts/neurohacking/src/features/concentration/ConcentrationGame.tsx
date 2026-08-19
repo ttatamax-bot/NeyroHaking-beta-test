@@ -1,17 +1,19 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { ChevronLeft, RotateCcw } from "lucide-react";
+import { ArrowRight, ChevronLeft, Play, RotateCcw } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import {
   CONCENTRATION_ACCENT,
-  CONCENTRATION_REWARD_LEVEL,
   signalFalseDurationForLevel,
   SIGNALS_RESULT_MS,
   concentrationModeMeta,
+  concentrationRewardLevelForMode,
   levelHint,
   randomUniqueIndexes,
+  searchGridSizeForLevel,
   searchTimeForLevel,
   signalPrepareDurationForLevel,
   signalCountForLevel,
+  signalDifficultyLevel,
   signalThresholdForLevel,
   trackingObjectsForLevel,
   type ConcentrationMode,
@@ -19,7 +21,7 @@ import {
 import { ConcentrationModeLogo } from "./ConcentrationModeLogo";
 import { ConcentrationOnboarding } from "./ConcentrationOnboarding";
 import { ConcentrationPreview } from "./ConcentrationPreview";
-import { initConcentrationSound, playConcentrationCorrect, playConcentrationFail, playConcentrationPrepare, playConcentrationResult, playConcentrationSignal } from "./sounds";
+import { initConcentrationSound, playConcentrationCorrect, playConcentrationFail, playConcentrationLevelSuccess, playConcentrationPrepare, playConcentrationResult, playConcentrationSignal } from "./sounds";
 
 type GamePhase = "idle" | "preparing" | "signal-result" | "signals" | "tracking-show" | "tracking-move" | "tracking-input" | "search" | "success" | "failed";
 type SignalName = "orange" | "red" | "green" | "blue" | "yellow";
@@ -140,19 +142,24 @@ const SIGNALS: Record<SignalName, { color: string; label: string }> = {
   yellow: { color: "#EAB308", label: "жёлтый" },
 };
 
-function createSignal(level: number, index: number): Signal {
+function createSignal(level: number, index: number, previousFalseName: SignalName | null, redFalseStreak: number): Signal {
   const signalLimit = signalCountForLevel(level);
   if (level === 1) return { name: "orange", color: SIGNALS.orange.color, isTarget: true };
   const targetChance = Math.max(.16, .42 - Math.min(9, Math.max(0, level - 1)) * .025);
   const isTarget = index === signalLimit - 1 || (level <= 3 && index % 2 === 1) || Math.random() < targetChance;
   if (isTarget) return { name: "orange", color: SIGNALS.orange.color, isTarget: true };
-  const decoys: SignalName[] =
-    level <= 5
-      ? ["red"]
-      : level <= 9
-        ? ["red", "green", "blue"]
-        : ["red", "green", "blue", "yellow"];
-  const name = decoys[Math.floor(Math.random() * decoys.length)] ?? "red";
+  const difficultyLevel = signalDifficultyLevel(level);
+  const decoys: SignalName[] = difficultyLevel >= 5
+    ? ["red", "green", "blue", "yellow"]
+    : ["red", "green", "blue"];
+  const availableDecoys = decoys.filter((name) => (
+    (redFalseStreak < 4 || name !== "red") &&
+    (previousFalseName === null || name !== previousFalseName || decoys.length === 1)
+  ));
+  const pool = availableDecoys.length > 0
+    ? availableDecoys
+    : decoys.filter((name) => redFalseStreak < 4 || name !== "red");
+  const name = pool[Math.floor(Math.random() * pool.length)] ?? "green";
   return { name, color: SIGNALS[name].color, isTarget: false };
 }
 
@@ -237,12 +244,13 @@ function createTrackingObjects(level: number): { objects: TrackingObject[]; targ
 }
 
 function createSearchShapes(level: number): { targetIndex: number; shapes: string[] } {
-  const targetIndex = Math.floor(Math.random() * 100);
+  const shapeCount = searchGridSizeForLevel(level) ** 2;
+  const targetIndex = Math.floor(Math.random() * shapeCount);
   const distractor = level === 1 ? "○" : level === 2 ? "□" : level === 3 ? "◇" : level === 4 ? "◉" : "⬡";
   const target = level === 1 ? "△" : level === 2 ? "◇" : level === 3 ? "◈" : level === 4 ? "◌" : "⬢";
   return {
     targetIndex,
-    shapes: Array.from({ length: 100 }, (_, index) => index === targetIndex ? target : distractor),
+    shapes: Array.from({ length: shapeCount }, (_, index) => index === targetIndex ? target : distractor),
   };
 }
 
@@ -279,17 +287,17 @@ function LevelRail({ level, bestLevel, phase }: { level: number; bestLevel: numb
 function StepDots({ level, phase }: { level: number; phase: GamePhase }) {
   const failed = phase === "failed";
   return (
-    <div className="flex gap-1.5" aria-label={`Прогресс десяти уровней: ${Math.min(level, 10)} из 10`}>
-      {Array.from({ length: 10 }, (_, index) => index + 1).map((step) => (
+    <div className="flex gap-1.5" aria-label={`Прогресс пяти уровней: ${Math.min(level, 5)} из 5`}>
+      {Array.from({ length: 5 }, (_, index) => index + 1).map((step) => (
         <motion.span
           key={step}
           initial={{ scaleX: .45, opacity: .35 }}
-          animate={{ scaleX: 1, opacity: step <= Math.min(level, 10) || failed ? 1 : .72 }}
-          transition={{ duration: .38, delay: step * .055, ease: "easeOut" }}
-          className={`level-step h-1.5 flex-1 rounded-full ${failed ? "level-step-failed" : step <= Math.min(level, 10) ? "level-step-active" : ""}`}
+            animate={{ scaleX: 1, opacity: step <= Math.min(level, 5) || failed ? 1 : .72 }}
+            transition={{ duration: .38, delay: step * .055, ease: "easeOut" }}
+            className={`level-step h-1.5 flex-1 rounded-full ${failed ? "level-step-failed" : step <= Math.min(level, 5) ? "level-step-active" : ""}`}
           style={{
-            background: failed ? "rgba(244,63,94,.9)" : step <= Math.min(level, 10) ? CONCENTRATION_ACCENT : "rgba(147,197,253,.14)",
-            boxShadow: failed ? "0 0 10px rgba(244,63,94,.72)" : step <= Math.min(level, 10) ? "0 0 10px rgba(249,115,22,.72)" : "none",
+              background: failed ? "rgba(244,63,94,.9)" : step <= Math.min(level, 5) ? CONCENTRATION_ACCENT : "rgba(147,197,253,.14)",
+              boxShadow: failed ? "0 0 10px rgba(244,63,94,.72)" : step <= Math.min(level, 5) ? "0 0 10px rgba(249,115,22,.72)" : "none",
           }}
         />
       ))}
@@ -335,7 +343,7 @@ function ConcentrationActionCard({
         <span className="mt-1 block text-[16px] font-semibold leading-tight text-white">{title}</span>
          {subtitle && <span className={`mt-0.5 block text-xs ${isOrange ? "text-orange-100/70" : "text-red-100/75"}`}>{subtitle}</span>}
       </span>
-       <span className={`text-xl ${isOrange ? "text-orange-100/80" : "text-red-100/85"}`} aria-hidden="true">→</span>
+        <ArrowRight className={isOrange ? "text-orange-100/80" : "text-red-100/85"} size={23} strokeWidth={1.8} aria-hidden="true" />
     </motion.button>
   );
 }
@@ -359,7 +367,7 @@ export function ConcentrationGame({
   const meta = concentrationModeMeta(mode);
   const [phase, setPhase] = useState<GamePhase>("idle");
   const [level, setLevel] = useState(1);
-  const [signal, setSignal] = useState<Signal>(() => createSignal(1, 0));
+  const [signal, setSignal] = useState<Signal>(() => createSignal(1, 0, null, 0));
   const [signalIndex, setSignalIndex] = useState(0);
   const [reactionStart, setReactionStart] = useState<number | null>(null);
   const [reactionTimes, setReactionTimes] = useState<number[]>([]);
@@ -377,6 +385,8 @@ export function ConcentrationGame({
   const intervalRef = useRef<number | null>(null);
   const searchDeadlineRef = useRef(0);
   const rewardSentRef = useRef(false);
+  const previousFalseSignalRef = useRef<SignalName | null>(null);
+  const redFalseStreakRef = useRef(0);
 
   useEffect(() => {
     setLevel(1);
@@ -388,6 +398,8 @@ export function ConcentrationGame({
     setRewardFlash(false);
     setOnboardingVisible(showOnboarding);
     rewardSentRef.current = false;
+    previousFalseSignalRef.current = null;
+    redFalseStreakRef.current = 0;
     return () => {
       if (timerRef.current !== null) window.clearTimeout(timerRef.current);
       if (intervalRef.current !== null) window.clearInterval(intervalRef.current);
@@ -420,13 +432,15 @@ export function ConcentrationGame({
 
   const beginRound = (nextLevel: number) => {
     clearTimers();
-    if (mode === "signals") initConcentrationSound();
+    initConcentrationSound();
     onStartMode?.(mode);
     setLevel(nextLevel);
     setReactionTimes([]);
     setLastReaction(null);
     setSelectedTracking([]);
     setFailureReason("");
+    previousFalseSignalRef.current = null;
+    redFalseStreakRef.current = 0;
     if (mode === "signals") {
       beginSignalPreparation(nextLevel, 0);
     } else if (mode === "tracking") {
@@ -465,7 +479,7 @@ export function ConcentrationGame({
       });
       return;
     }
-    const nextSignal = createSignal(roundLevel, nextIndex);
+    const nextSignal = createSignal(roundLevel, nextIndex, previousFalseSignalRef.current, redFalseStreakRef.current);
     setSignal(nextSignal);
     setSignalIndex(nextIndex);
     if (nextSignal.isTarget) {
@@ -473,6 +487,8 @@ export function ConcentrationGame({
       setReactionStart(started);
       timerRef.current = window.setTimeout(() => failGame("Оранжевый сигнал пропущен"), signalThresholdForLevel(roundLevel));
     } else {
+      previousFalseSignalRef.current = nextSignal.name;
+      redFalseStreakRef.current = nextSignal.name === "red" ? redFalseStreakRef.current + 1 : 0;
       setReactionStart(null);
       timerRef.current = window.setTimeout(() => beginSignalPreparation(roundLevel, nextIndex + 1), signalFalseDurationForLevel(roundLevel));
     }
@@ -495,9 +511,11 @@ export function ConcentrationGame({
 
   const completeRound = (completedLevel: number, stats: ConcentrationStats = {}) => {
     clearTimers();
+    playConcentrationLevelSuccess();
     if (completedLevel >= bestLevel) onBestLevelUpdate?.(mode, completedLevel, stats);
-    const showReward = completedLevel === CONCENTRATION_REWARD_LEVEL && !rewardAwardedToday && !rewardSentRef.current;
-    if (completedLevel === CONCENTRATION_REWARD_LEVEL && showReward) {
+    const rewardLevel = concentrationRewardLevelForMode(mode);
+    const showReward = completedLevel === rewardLevel && !rewardAwardedToday && !rewardSentRef.current;
+    if (completedLevel === rewardLevel && showReward) {
       rewardSentRef.current = true;
       setRewardFlash(true);
       onReward?.(mode);
@@ -692,16 +710,18 @@ export function ConcentrationGame({
         )}
 
         {(phase === "tracking-show" || phase === "tracking-move" || phase === "tracking-input") && (
-          <StateShell key="tracking" className="!p-3">
+          <StateShell key="tracking" className={`!p-3 ${phase === "tracking-input" ? "tracking-recovery-card" : ""}`}>
             <div className="mb-4 flex w-full flex-col items-center px-2 text-center">
-              <span className={`caption ${phase === "tracking-input" ? "text-orange-200" : "text-tertiary"}`}>
+              <span
+                className={`caption ${phase === "tracking-input" ? "tracking-recovery-label" : "text-tertiary"}`}
+              >
                 {phase === "tracking-show" ? "ЗАПОМНИ ЦЕЛИ" : phase === "tracking-move" ? "ОТСЛЕЖИВАЙ ДВИЖЕНИЕ" : "ВОССТАНОВИ ЦЕЛИ"}
               </span>
-              <span className="mt-1 text-[11px] text-secondary">
+              <span className={`mt-1 text-[11px] ${phase === "tracking-input" ? "tracking-recovery-copy" : "text-secondary"}`}>
                 {phase === "tracking-show" ? "Запомни оранжевые шарики" : phase === "tracking-move" ? "Не нажимай" : "Нажми на оранжевые шарики"}
               </span>
               {phase === "tracking-input" && (
-                <span className="num mt-1 text-xs tabular-nums text-orange-200">{selectedTracking.length}/{trackingTargets.length}</span>
+                <span className="num tracking-recovery-count mt-1 text-xs tabular-nums">{selectedTracking.length}/{trackingTargets.length}</span>
               )}
             </div>
             <div className="game-instrument relative h-[300px] w-full overflow-hidden rounded-[20px]">
@@ -726,7 +746,10 @@ export function ConcentrationGame({
               <span className="caption text-tertiary">НАЙДИ ЦЕЛЬ</span>
               <span className="num text-sm tabular-nums" style={{ color: searchRemaining < 1000 ? "#FB7185" : CONCENTRATION_ACCENT }}>{(searchRemaining / 1000).toFixed(1)} с</span>
             </div>
-            <div className="game-instrument relative grid w-full grid-cols-10 gap-1.5 rounded-[18px] p-2">
+            <div
+              className="game-instrument relative grid w-full gap-1.5 rounded-[18px] p-2"
+              style={{ gridTemplateColumns: `repeat(${searchGridSizeForLevel(level)}, minmax(0, 1fr))` }}
+            >
               <motion.span
                 aria-hidden="true"
                 initial={{ x: "-100%" }}
@@ -832,7 +855,7 @@ export function ConcentrationGame({
         <ConcentrationActionCard
           onClick={() => beginRound(level)}
           accent="orange"
-          icon={<span className="text-[24px] leading-none">▶</span>}
+           icon={<Play size={21} fill="currentColor" strokeWidth={1.8} />}
           title="Начать уровень"
           testId="button-concentration-start"
         />
