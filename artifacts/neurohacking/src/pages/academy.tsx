@@ -132,18 +132,15 @@ import { ringRotationTarget, ringRotationTransition, useSmoothRingBurstRotation 
         transition={{ duration: 0.9, ease: EASE }}
         aria-hidden="true"
       >
-        <motion.div
-          className="pointer-events-none absolute inset-0"
-          style={{ rotate: burstRotation }}
-        >
         <motion.span
           className="pointer-events-none absolute inset-[-20px] rounded-full"
           style={{ background: 'radial-gradient(circle, rgba(245,158,11,.34), rgba(249,115,22,.18) 38%, transparent 72%)' }}
           animate={reduced ? { opacity: 0.72, scale: 1 } : { opacity: [.52, .98, .52], scale: [.94, 1.08, .94] }}
           transition={reduced ? { duration: 0.4 } : { duration: 4.2, repeat: Infinity, ease: "easeInOut" }}
         />
+        <motion.div className="pointer-events-none absolute inset-[-3px] z-[3]" style={{ rotate: burstRotation }}>
         <motion.span
-          className="pointer-events-none absolute inset-[-3px] z-[3] rounded-full"
+          className="absolute inset-0 rounded-full"
           style={{
             background: "conic-gradient(from -34deg, rgba(255,237,170,.72) 0deg 166deg, transparent 166deg 360deg)",
             maskImage: "radial-gradient(circle, transparent 76%, #000 77.5%, #000 79%, transparent 80.5%)",
@@ -158,8 +155,10 @@ import { ringRotationTarget, ringRotationTransition, useSmoothRingBurstRotation 
                 opacity: { duration: 3.8, repeat: Infinity, ease: "easeInOut" },
               }}
         />
+        </motion.div>
+        <motion.div className="pointer-events-none absolute inset-[2px]" style={{ rotate: burstRotation }}>
         <motion.span
-          className="pointer-events-none absolute inset-[2px] rounded-full border"
+          className="absolute inset-0 rounded-full border"
           style={{ borderColor: "rgba(249,115,22,.42)" }}
            animate={reduced ? { opacity: 0.48, rotate: 0 } : { opacity: [.32, .72, .32], rotate: ringRotationTarget(-1, 16, ringBurst) }}
           transition={reduced
@@ -169,8 +168,10 @@ import { ringRotationTarget, ringRotationTransition, useSmoothRingBurstRotation 
                  rotate: ringRotationTransition(16, ringBurst),
               }}
         />
+        </motion.div>
+        <motion.div className="pointer-events-none absolute inset-[-31px] z-[1]" style={{ rotate: burstRotation }}>
         <motion.svg
-          className="pointer-events-none absolute inset-[-31px] z-[1] h-auto w-auto"
+          className="absolute inset-0 h-full w-full"
           viewBox="0 0 230 230"
           fill="none"
           aria-hidden="true"
@@ -184,12 +185,19 @@ import { ringRotationTarget, ringRotationTransition, useSmoothRingBurstRotation 
             ))}
           </g>
         </motion.svg>
+        </motion.div>
         {POTENTIAL_RING_STYLES.map((ring, index) => (
-          <motion.span
+          <motion.div
             key={`academy-potential-ring-${index}`}
             className="pointer-events-none absolute rounded-full"
             style={{
               inset: ring.inset,
+              rotate: burstRotation,
+            }}
+          >
+          <motion.span
+            className="absolute inset-0 rounded-full"
+            style={{
               background: `repeating-conic-gradient(from ${index === 0 ? -34 : 14}deg, rgba(255,237,170,${ring.opacity}) 0deg 0.8deg, transparent 0.8deg ${ring.spacing}deg)`,
               maskImage: "radial-gradient(circle, transparent 78%, #000 79.5%, #000 82%, transparent 83.5%)",
               WebkitMaskImage: "radial-gradient(circle, transparent 78%, #000 79.5%, #000 82%, transparent 83.5%)",
@@ -202,8 +210,8 @@ import { ringRotationTarget, ringRotationTransition, useSmoothRingBurstRotation 
                   opacity: { duration: ring.duration * 0.55, repeat: Infinity, ease: "easeInOut" },
                 }}
           />
+          </motion.div>
         ))}
-        </motion.div>
         {POTENTIAL_PARTICLES.map((particle, index) => (
           <motion.span
             key={`academy-potential-particle-${index}`}

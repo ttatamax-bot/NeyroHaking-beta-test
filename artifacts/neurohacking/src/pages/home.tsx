@@ -53,10 +53,6 @@ function NewsSystemMark() {
       transition={{ duration: 0.9, ease: NEWS_EASE }}
       aria-hidden="true"
     >
-      <motion.div
-        className="pointer-events-none absolute inset-0"
-        style={{ rotate: burstRotation }}
-      >
       <motion.span
         className="pointer-events-none absolute inset-[-34px] z-0 rounded-full"
         style={{
@@ -94,8 +90,9 @@ function NewsSystemMark() {
         animate={reduced ? { opacity: 0.55, scale: 1 } : { opacity: [.35, .78, .35], scale: [.94, 1.06, .94] }}
         transition={reduced ? { duration: 0.4 } : { duration: 4.2, repeat: Infinity, ease: "easeInOut" }}
       />
+      <motion.div className="pointer-events-none absolute inset-[-18px]" style={{ rotate: burstRotation }}>
       <motion.span
-        className="pointer-events-none absolute inset-[-18px] rounded-full border"
+        className="absolute inset-0 rounded-full border"
         style={{ borderColor: "rgba(255,210,125,.16)", boxShadow: "0 0 14px rgba(249,115,22,.08)" }}
          animate={reduced ? { opacity: 0.22, rotate: 0 } : { opacity: [.12, .26, .12], rotate: ringRotationTarget(1, 24, ringBurst) }}
         transition={reduced
@@ -105,8 +102,10 @@ function NewsSystemMark() {
               rotate: ringRotationTransition(24, ringBurst),
             }}
       />
+      </motion.div>
+      <motion.div className="pointer-events-none absolute inset-[2px]" style={{ rotate: burstRotation }}>
       <motion.span
-        className="pointer-events-none absolute inset-[2px] rounded-full border"
+        className="absolute inset-0 rounded-full border"
         style={{ borderColor: "rgba(249,115,22,.2)" }}
          animate={reduced ? { opacity: 0.26, rotate: 0 } : { opacity: [.16, .34, .16], rotate: ringRotationTarget(-1, 16, ringBurst) }}
         transition={reduced
@@ -116,8 +115,10 @@ function NewsSystemMark() {
               rotate: ringRotationTransition(16, ringBurst),
             }}
       />
+      </motion.div>
+      <motion.div className="pointer-events-none absolute inset-[-31px] z-[1]" style={{ rotate: burstRotation }}>
       <motion.svg
-        className="pointer-events-none absolute inset-[-31px] z-[1] h-auto w-auto"
+        className="absolute inset-0 h-full w-full"
         viewBox="0 0 230 230"
         fill="none"
         aria-hidden="true"
@@ -131,8 +132,10 @@ function NewsSystemMark() {
           ))}
         </g>
       </motion.svg>
+      </motion.div>
+      <motion.div className="pointer-events-none absolute inset-[-8px]" style={{ rotate: burstRotation }}>
       <motion.span
-        className="pointer-events-none absolute inset-[-8px] rounded-full"
+        className="absolute inset-0 rounded-full"
         style={{
           background: "repeating-conic-gradient(from -34deg, rgba(255,237,170,.38) 0deg .8deg, transparent .8deg 18deg)",
           maskImage: "radial-gradient(circle, transparent 78%, #000 79.5%, #000 82%, transparent 83.5%)",
@@ -146,8 +149,10 @@ function NewsSystemMark() {
               opacity: { duration: 9, repeat: Infinity, ease: "easeInOut" },
             }}
       />
+      </motion.div>
+      <motion.div className="pointer-events-none absolute inset-[16px]" style={{ rotate: burstRotation }}>
       <motion.span
-        className="pointer-events-none absolute inset-[16px] rounded-full"
+        className="absolute inset-0 rounded-full"
         style={{
           background: "repeating-conic-gradient(from 14deg, rgba(255,237,170,.26) 0deg .8deg, transparent .8deg 24deg)",
           maskImage: "radial-gradient(circle, transparent 78%, #000 79.5%, #000 82%, transparent 83.5%)",
