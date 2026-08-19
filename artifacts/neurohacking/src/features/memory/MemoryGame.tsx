@@ -16,12 +16,14 @@ import {
   randomSymbols,
   symbolKeypad,
   symbolsForLevel,
+  type MemorySymbolId,
   type MemoryMode,
 } from "./config";
 import { initMemorySound, playCorrect, playFail, playLevelUp, playReward, playTap } from "./sounds";
 import { MemoryOnboarding } from "./MemoryOnboarding";
 import { MemoryPreview } from "./MemoryPreview";
 import { MemoryModeLogo } from "./MemoryModeLogo";
+import { memorySymbolLabel, MemorySymbol } from "./MemorySymbol";
 
 type GamePhase = "idle" | "showing" | "waiting" | "input" | "success" | "failed";
 
@@ -38,8 +40,8 @@ interface MatrixChallenge {
 
 interface SymbolsChallenge {
   mode: "symbols";
-  symbols: string[];
-  keypad: string[];
+  symbols: MemorySymbolId[];
+  keypad: MemorySymbolId[];
 }
 
 type MemoryChallenge = ReverseChallenge | MatrixChallenge | SymbolsChallenge;
@@ -147,7 +149,11 @@ function ShowingState({ challenge, level }: { challenge: MemoryChallenge; level:
       )}
       {challenge.mode === "symbols" && (
         <div className="flex max-w-full flex-wrap justify-center gap-2 text-[28px] text-primary" data-testid="memory-sequence-display">
-          {challenge.symbols.map((symbol, index) => <span key={`${symbol}-${index}`}>{symbol}</span>)}
+          {challenge.symbols.map((symbol, index) => (
+            <span key={`${symbol}-${index}`} className="flex h-9 w-9 items-center justify-center">
+              <MemorySymbol symbol={symbol} className="h-8 w-8" />
+            </span>
+          ))}
         </div>
       )}
       {challenge.mode === "matrix" && (
@@ -228,15 +234,15 @@ function MatrixInput({ challenge, selected, onCell }: { challenge: MatrixChallen
   );
 }
 
-function SymbolsInput({ challenge, entered, onSymbol }: { challenge: SymbolsChallenge; entered: string[]; onSymbol: (symbol: string) => void }) {
+function SymbolsInput({ challenge, entered, onSymbol }: { challenge: SymbolsChallenge; entered: MemorySymbolId[]; onSymbol: (symbol: MemorySymbolId) => void }) {
   return (
     <div className="flex min-h-[330px] flex-col justify-between rounded-[25px] border border-white/[.08] bg-[#0a1c31] p-5" data-testid="memory-symbols-input">
       <div>
         <p className="caption text-tertiary">ПОВТОРИ ПОРЯДОК</p>
         <div className="mt-4 flex min-h-12 flex-wrap items-center justify-center gap-2 rounded-[15px] border border-orange-400/25 bg-orange-500/[.06]">
           {challenge.symbols.map((_, index) => (
-            <span key={index} className="text-xl" style={{ color: entered[index] ? MEMORY_ACCENT : "rgba(167,185,201,.38)" }}>
-              {entered[index] ?? "·"}
+            <span key={index} className="flex h-7 w-7 items-center justify-center" style={{ color: entered[index] ? MEMORY_ACCENT : "rgba(167,185,201,.38)" }}>
+              {entered[index] ? <MemorySymbol symbol={entered[index]} className="h-6 w-6" /> : "·"}
             </span>
           ))}
         </div>
@@ -248,9 +254,10 @@ function SymbolsInput({ challenge, entered, onSymbol }: { challenge: SymbolsChal
             type="button"
             onClick={() => onSymbol(symbol)}
             className="min-h-12 rounded-[13px] border border-white/[.08] bg-[#102945] text-xl text-primary"
+            aria-label={`Символ: ${memorySymbolLabel(symbol)}`}
             data-testid={`button-memory-symbol-${symbol}`}
           >
-            {symbol}
+            <MemorySymbol symbol={symbol} className="mx-auto h-7 w-7" />
           </button>
         ))}
       </div>
@@ -267,11 +274,10 @@ function SuccessGlowState({
 }: {
   challenge: MemoryChallenge;
   enteredDigits: number[];
-  enteredSymbols: string[];
+  enteredSymbols: MemorySymbolId[];
   selectedCells: number[];
   rewardFlash: boolean;
 }) {
-  const tiles = challenge.mode === "reverse" ? enteredDigits.map(String) : challenge.mode === "symbols" ? enteredSymbols : [];
   return (
     <motion.div
       key="success"
@@ -310,15 +316,25 @@ function SuccessGlowState({
         </div>
       ) : (
         <div className="flex flex-wrap justify-center gap-2">
-          {tiles.map((tile, index) => (
-            <span
-              key={`${tile}-${index}`}
-              className="num flex h-12 min-w-10 items-center justify-center rounded-xl border px-2 text-xl text-orange-100 shadow-[0_0_22px_rgba(249,115,22,.62)]"
-              style={{ background: "rgba(249,115,22,.22)", borderColor: "rgba(249,115,22,.85)" }}
-            >
-              {tile}
-            </span>
-          ))}
+          {challenge.mode === "reverse"
+            ? enteredDigits.map((tile, index) => (
+                <span
+                  key={`${tile}-${index}`}
+                  className="num flex h-12 min-w-10 items-center justify-center rounded-xl border px-2 text-xl text-orange-100 shadow-[0_0_22px_rgba(249,115,22,.62)]"
+                  style={{ background: "rgba(249,115,22,.22)", borderColor: "rgba(249,115,22,.85)" }}
+                >
+                  {tile}
+                </span>
+              ))
+            : enteredSymbols.map((tile, index) => (
+                <span
+                  key={`${tile}-${index}`}
+                  className="flex h-12 min-w-10 items-center justify-center rounded-xl border px-2 text-orange-100 shadow-[0_0_22px_rgba(249,115,22,.62)]"
+                  style={{ background: "rgba(249,115,22,.22)", borderColor: "rgba(249,115,22,.85)" }}
+                >
+                  <MemorySymbol symbol={tile} className="h-7 w-7" />
+                </span>
+              ))}
         </div>
       )}
     </motion.div>
@@ -330,7 +346,6 @@ function FailedGlowState({
 }: {
   challenge: MemoryChallenge;
 }) {
-  const tiles = challenge.mode === "reverse" ? challenge.digits.map(String) : challenge.mode === "symbols" ? challenge.symbols : [];
   return (
     <motion.div
       key="failed"
@@ -360,17 +375,29 @@ function FailedGlowState({
         </div>
       ) : (
         <div className="flex flex-wrap justify-center gap-2">
-          {tiles.map((tile, index) => (
-            <motion.span
-              key={`${tile}-${index}`}
-              animate={{ scale: [1, 1.08, 1], opacity: [0.76, 1, 0.76] }}
-              transition={{ duration: 0.8, repeat: Infinity, delay: index * 0.08 }}
-              className="num flex h-12 min-w-10 items-center justify-center rounded-xl border px-2 text-xl text-rose-100"
-              style={{ background: "rgba(244,63,94,.28)", borderColor: "rgba(251,113,133,.95)", boxShadow: "0 0 22px rgba(244,63,94,.82)" }}
-            >
-              {tile}
-            </motion.span>
-          ))}
+          {challenge.mode === "reverse"
+            ? challenge.digits.map((tile, index) => (
+                <motion.span
+                  key={`${tile}-${index}`}
+                  animate={{ scale: [1, 1.08, 1], opacity: [0.76, 1, 0.76] }}
+                  transition={{ duration: 0.8, repeat: Infinity, delay: index * 0.08 }}
+                  className="num flex h-12 min-w-10 items-center justify-center rounded-xl border px-2 text-xl text-rose-100"
+                  style={{ background: "rgba(244,63,94,.28)", borderColor: "rgba(251,113,133,.95)", boxShadow: "0 0 22px rgba(244,63,94,.82)" }}
+                >
+                  {tile}
+                </motion.span>
+              ))
+            : challenge.symbols.map((tile, index) => (
+                <motion.span
+                  key={`${tile}-${index}`}
+                  animate={{ scale: [1, 1.08, 1], opacity: [0.76, 1, 0.76] }}
+                  transition={{ duration: 0.8, repeat: Infinity, delay: index * 0.08 }}
+                  className="flex h-12 min-w-10 items-center justify-center rounded-xl border px-2 text-rose-100"
+                  style={{ background: "rgba(244,63,94,.28)", borderColor: "rgba(251,113,133,.95)", boxShadow: "0 0 22px rgba(244,63,94,.82)" }}
+                >
+                  <MemorySymbol symbol={tile} className="h-7 w-7" />
+                </motion.span>
+              ))}
         </div>
       )}
     </motion.div>
@@ -422,7 +449,7 @@ export function MemoryGame({
   const [level, setLevel] = useState(1);
   const [challenge, setChallenge] = useState<MemoryChallenge>(() => createChallenge(mode, 1));
   const [enteredDigits, setEnteredDigits] = useState<number[]>([]);
-  const [enteredSymbols, setEnteredSymbols] = useState<string[]>([]);
+  const [enteredSymbols, setEnteredSymbols] = useState<MemorySymbolId[]>([]);
   const [selectedCells, setSelectedCells] = useState<number[]>([]);
   const [onboardingVisible, setOnboardingVisible] = useState(showOnboarding);
   const [rewardFlash, setRewardFlash] = useState(false);

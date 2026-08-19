@@ -1,6 +1,7 @@
 import { ArrowRight, Check, ChevronLeft, LockKeyhole, Sparkles } from "lucide-react";
 import { motion } from "framer-motion";
 import { MemoryModeLogo } from "./MemoryModeLogo";
+import { MemorySymbol } from "./MemorySymbol";
 import {
   MEMORY_ACCENT,
   MEMORY_ACCENT_BORDER,
@@ -62,7 +63,7 @@ function PreviewVisual({ mode }: { mode: MemoryMode }) {
 
   return (
     <div className="flex items-center justify-center gap-2" aria-label="Пример последовательности символов">
-      {["●", "▲", "★", "◆"].map((symbol, index) => (
+      {(["dot", "triangle", "star", "diamond"] as const).map((symbol, index) => (
         <span
           key={symbol}
           className="flex h-11 w-11 items-center justify-center rounded-xl border text-lg"
@@ -72,7 +73,7 @@ function PreviewVisual({ mode }: { mode: MemoryMode }) {
             borderColor: index === 1 ? MEMORY_ACCENT_BORDER : "rgba(147,197,253,.14)",
           }}
         >
-          {symbol}
+          <MemorySymbol symbol={symbol} className="h-6 w-6" />
         </span>
       ))}
     </div>

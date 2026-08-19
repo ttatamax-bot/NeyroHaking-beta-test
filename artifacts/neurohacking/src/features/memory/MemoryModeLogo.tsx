@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import type { MemoryMode } from "./config";
+import { MemorySymbol } from "./MemorySymbol";
 
 export function MemoryModeLogo({ mode, large = false }: { mode: MemoryMode; large?: boolean }) {
   const cellClass = large ? "h-5 w-5 rounded-[6px]" : "h-3.5 w-3.5 rounded-[4px]";
@@ -47,14 +48,14 @@ export function MemoryModeLogo({ mode, large = false }: { mode: MemoryMode; larg
 
   return (
     <div className={`flex items-center ${large ? "gap-1" : "gap-0.5"}`} aria-label="Логотип последовательности символов">
-      {["◆", "✦", "◉"].map((symbol, index) => (
+      {(["diamond", "sparkle", "dot"] as const).map((symbol, index) => (
         <motion.span
           key={symbol}
           animate={{ y: [0, large ? -5 : -3, 0], rotate: [0, index % 2 === 0 ? 5 : -5, 0], opacity: [0.72, 1, 0.72] }}
           transition={{ duration: 2.2, repeat: Infinity, delay: index * 0.12 }}
           className={`flex items-center justify-center border border-orange-400/45 bg-orange-500/[.12] text-orange-300 ${symbolClass}`}
         >
-          {symbol}
+          <MemorySymbol symbol={symbol} className={large ? "h-5 w-5" : "h-4 w-4"} />
         </motion.span>
       ))}
     </div>

@@ -16,7 +16,8 @@ export const MEMORY_ACCENT_SOFT = "rgba(249,115,22,0.14)";
 export const MEMORY_ACCENT_BORDER = "rgba(249,115,22,0.42)";
 
 /** These are deliberately geometric rather than pictographic. */
-export const MEMORY_SYMBOLS = ["●", "▲", "★", "◆", "■", "✦", "⬟", "◗"] as const;
+export const MEMORY_SYMBOLS = ["dot", "triangle", "star", "diamond", "square", "sparkle", "hexagon", "half"] as const;
+export type MemorySymbolId = typeof MEMORY_SYMBOLS[number];
 
 export interface MemoryModeMeta {
   mode: MemoryMode;
@@ -53,7 +54,7 @@ export const MEMORY_MODES: MemoryModeMeta[] = [
     shortTitle: "Символы",
     onboarding: "Запомни порядок символов. После исчезновения нажми их в правильной последовательности.",
     previewHint: "Символы появляются рядом — затем повтори их порядок.",
-    previewExample: "●  ▲  ★  →  ●  ▲  ★",
+    previewExample: "точка · треугольник · звезда → тот же порядок",
   },
 ];
 
@@ -93,7 +94,7 @@ export function randomDigits(count: number): number[] {
   return Array.from({ length: count }, () => Math.floor(Math.random() * 10));
 }
 
-export function randomSymbols(count: number): string[] {
+export function randomSymbols(count: number): MemorySymbolId[] {
   return Array.from({ length: count }, () => MEMORY_SYMBOLS[Math.floor(Math.random() * MEMORY_SYMBOLS.length)]);
 }
 
@@ -115,7 +116,7 @@ function shuffle<T>(items: T[]): T[] {
   return shuffled;
 }
 
-export function symbolKeypad(sequence: string[]): string[] {
+export function symbolKeypad(sequence: MemorySymbolId[]): MemorySymbolId[] {
   const unique = Array.from(new Set(sequence));
   const keypad = [...unique];
   for (const symbol of MEMORY_SYMBOLS) {
