@@ -1,12 +1,10 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { ChevronLeft, Crosshair, RotateCcw, Target, Trophy } from "lucide-react";
+import { ChevronLeft, RotateCcw } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import {
   CONCENTRATION_ACCENT,
-  CONCENTRATION_ACCENT_BORDER,
-  CONCENTRATION_ACCENT_SOFT,
   CONCENTRATION_REWARD_LEVEL,
-  SIGNALS_PREPARE_MS,
+  signalFalseDurationForLevel,
   SIGNALS_RESULT_MS,
   concentrationModeMeta,
   levelHint,
@@ -21,7 +19,6 @@ import {
 import { ConcentrationModeLogo } from "./ConcentrationModeLogo";
 import { ConcentrationOnboarding } from "./ConcentrationOnboarding";
 import { ConcentrationPreview } from "./ConcentrationPreview";
-import { GameInstrumentBackdrop } from "../shared/GameInstrumentBackdrop";
 import { initConcentrationSound, playConcentrationCorrect, playConcentrationFail, playConcentrationPrepare, playConcentrationResult, playConcentrationSignal } from "./sounds";
 
 type GamePhase = "idle" | "preparing" | "signal-result" | "signals" | "tracking-show" | "tracking-move" | "tracking-input" | "search" | "success" | "failed";
@@ -37,8 +34,79 @@ interface TrackingObject {
   id: number;
   left: number;
   top: number;
-  driftX: number;
-  driftY: number;
+  pathLeft: number[];
+  pathTop: number[];
+  finalLeft: number;
+  finalTop: number;
+}
+
+function TrackingBall({
+  object,
+  phase,
+  isTarget,
+  isSelected,
+  moveMs,
+  onSelect,
+}: {
+  object: TrackingObject;
+  phase: "tracking-show" | "tracking-move" | "tracking-input";
+  isTarget: boolean;
+  isSelected: boolean;
+  moveMs: number;
+  onSelect: () => void;
+}) {
+  const ballRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    const ball = ballRef.current;
+    if (!ball) return;
+
+    let animationFrame = 0;
+    const setPosition = (left: number, top: number) => {
+      ball.style.left = `${left}%`;
+      ball.style.top = `${top}%`;
+    };
+
+    if (phase === "tracking-show") {
+      setPosition(object.left, object.top);
+    } else if (phase === "tracking-input") {
+      setPosition(object.finalLeft, object.finalTop);
+    } else {
+      const startedAt = performance.now();
+      const segments = object.pathLeft.length - 1;
+      const tick = (now: number) => {
+        const progress = Math.min(1, (now - startedAt) / moveMs);
+        const scaled = progress * segments;
+        const segment = Math.min(segments - 1, Math.floor(scaled));
+        const localProgress = scaled - segment;
+        const eased = localProgress;
+        const left = object.pathLeft[segment] + (object.pathLeft[segment + 1] - object.pathLeft[segment]) * eased;
+        const top = object.pathTop[segment] + (object.pathTop[segment + 1] - object.pathTop[segment]) * eased;
+        setPosition(left, top);
+        if (progress < 1) animationFrame = requestAnimationFrame(tick);
+      };
+      animationFrame = requestAnimationFrame(tick);
+    }
+
+    return () => cancelAnimationFrame(animationFrame);
+  }, [moveMs, object, phase]);
+
+  return (
+    <button
+      ref={ballRef}
+      type="button"
+      onClick={onSelect}
+      className="absolute h-5 w-5 -translate-x-1/2 -translate-y-1/2 rounded-full border transition-transform active:scale-[.78]"
+      style={{
+        left: `${object.left}%`,
+        top: `${object.top}%`,
+        background: phase === "tracking-show" && isTarget ? "#F97316" : isSelected ? "#F97316" : "#52718A",
+        borderColor: phase === "tracking-show" && isTarget ? "#FFD29A" : isSelected ? CONCENTRATION_ACCENT : "#9AB2C4",
+        boxShadow: phase === "tracking-show" && isTarget ? "0 0 12px rgba(249,115,22,.55)" : isSelected ? "0 0 10px rgba(249,115,22,.45)" : "none",
+      }}
+      aria-label={isSelected ? "Выбранный объект" : "Объект"}
+    />
+  );
 }
 
 interface ConcentrationStats {
@@ -73,21 +141,97 @@ const SIGNALS: Record<SignalName, { color: string; label: string }> = {
 };
 
 function createSignal(level: number, index: number): Signal {
-  const isTarget = index % Math.max(2, 4 - Math.floor(level / 3)) === 0 || Math.random() < .3;
+  const signalLimit = signalCountForLevel(level);
+  if (level === 1) return { name: "orange", color: SIGNALS.orange.color, isTarget: true };
+  const targetChance = Math.max(.16, .42 - Math.min(9, Math.max(0, level - 1)) * .025);
+  const isTarget = index === signalLimit - 1 || (level <= 3 && index % 2 === 1) || Math.random() < targetChance;
   if (isTarget) return { name: "orange", color: SIGNALS.orange.color, isTarget: true };
-  const decoys: SignalName[] = level < 3 ? ["red"] : level < 4 ? ["red", "green"] : ["red", "green", "blue", "yellow"];
+  const decoys: SignalName[] =
+    level <= 5
+      ? ["red"]
+      : level <= 9
+        ? ["red", "green", "blue"]
+        : ["red", "green", "blue", "yellow"];
   const name = decoys[Math.floor(Math.random() * decoys.length)] ?? "red";
   return { name, color: SIGNALS[name].color, isTarget: false };
 }
 
 function createTrackingObjects(level: number): { objects: TrackingObject[]; targets: number[] } {
   const { total, targets } = trackingObjectsForLevel(level);
-  const objects = Array.from({ length: total }, (_, id) => ({
+  const minDistance = 22;
+  const bounds = { minX: 12, maxX: 288, minY: 12, maxY: 288 };
+  const positions: Array<{ x: number; y: number }> = [];
+  const paths = Array.from({ length: total }, () => ({ left: [] as number[], top: [] as number[] }));
+  const velocities = Array.from({ length: total }, () => {
+    const angle = Math.random() * Math.PI * 2;
+    return { angle, speed: 7 + Math.random() * 5 };
+  });
+
+  for (let id = 0; id < total; id += 1) {
+    let candidate = { x: 24 + Math.random() * 252, y: 24 + Math.random() * 252 };
+    for (let attempt = 0; attempt < 30000; attempt += 1) {
+      candidate = { x: 24 + Math.random() * 252, y: 24 + Math.random() * 252 };
+      if (positions.every((position) => Math.hypot(candidate.x - position.x, candidate.y - position.y) >= minDistance)) break;
+    }
+    positions.push(candidate);
+    paths[id].left.push(candidate.x / 3);
+    paths[id].top.push(candidate.y / 3);
+  }
+
+  for (let step = 0; step < 31; step += 1) {
+    positions.forEach((position, id) => {
+      const velocity = velocities[id];
+      velocity.angle += (Math.random() - 0.5) * 0.42;
+      const nextX = position.x + Math.cos(velocity.angle) * velocity.speed;
+      const nextY = position.y + Math.sin(velocity.angle) * velocity.speed;
+      if (nextX < bounds.minX || nextX > bounds.maxX) velocity.angle = Math.PI - velocity.angle;
+      if (nextY < bounds.minY || nextY > bounds.maxY) velocity.angle = -velocity.angle;
+      position.x = Math.max(bounds.minX, Math.min(bounds.maxX, position.x + Math.cos(velocity.angle) * velocity.speed));
+      position.y = Math.max(bounds.minY, Math.min(bounds.maxY, position.y + Math.sin(velocity.angle) * velocity.speed));
+    });
+
+    for (let pass = 0; pass < 10; pass += 1) {
+      for (let first = 0; first < positions.length; first += 1) {
+        for (let second = first + 1; second < positions.length; second += 1) {
+          const a = positions[first];
+          const b = positions[second];
+          let dx = b.x - a.x;
+          let dy = b.y - a.y;
+          const distance = Math.hypot(dx, dy);
+          if (distance >= minDistance) continue;
+          if (distance < 0.01) {
+            dx = 1;
+            dy = 0;
+          }
+          const push = (minDistance - Math.max(distance, 0.01)) / 2;
+          const unitX = dx / Math.max(distance, 0.01);
+          const unitY = dy / Math.max(distance, 0.01);
+          a.x -= unitX * push;
+          a.y -= unitY * push;
+          b.x += unitX * push;
+          b.y += unitY * push;
+        }
+      }
+      positions.forEach((position) => {
+        position.x = Math.max(bounds.minX, Math.min(bounds.maxX, position.x));
+        position.y = Math.max(bounds.minY, Math.min(bounds.maxY, position.y));
+      });
+    }
+
+    positions.forEach((position, id) => {
+      paths[id].left.push(position.x / 3);
+      paths[id].top.push(position.y / 3);
+    });
+  }
+
+  const objects = positions.map((position, id) => ({
     id,
-    left: 8 + Math.random() * 84,
-    top: 9 + Math.random() * 80,
-    driftX: (Math.random() * 2 - 1) * (7 + level * 1.5),
-    driftY: (Math.random() * 2 - 1) * (7 + level * 1.2),
+    left: paths[id].left[0],
+    top: paths[id].top[0],
+    pathLeft: paths[id].left,
+    pathTop: paths[id].top,
+    finalLeft: paths[id].left[paths[id].left.length - 1],
+    finalTop: paths[id].top[paths[id].top.length - 1],
   }));
   return { objects, targets: randomUniqueIndexes(total, targets) };
 }
@@ -110,9 +254,9 @@ function LevelRail({ level, bestLevel, phase }: { level: number; bestLevel: numb
         <AnimatePresence mode="popLayout" initial={false}>
           <motion.p
             key={level}
-            initial={{ opacity: 0, y: 12, filter: "blur(4px)" }}
-            animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-            exit={{ opacity: 0, y: -12, filter: "blur(4px)" }}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -12 }}
             transition={{ duration: .24, ease: "easeOut" }}
             className="num mt-1 min-w-[2ch] text-[38px] leading-none tabular-nums"
             style={{ color: CONCENTRATION_ACCENT }}
@@ -135,17 +279,17 @@ function LevelRail({ level, bestLevel, phase }: { level: number; bestLevel: numb
 function StepDots({ level, phase }: { level: number; phase: GamePhase }) {
   const failed = phase === "failed";
   return (
-    <div className="flex gap-1.5" aria-label={`Прогресс первых пяти уровней: ${Math.min(level, 5)} из 5`}>
-      {[1, 2, 3, 4, 5].map((step) => (
+    <div className="flex gap-1.5" aria-label={`Прогресс десяти уровней: ${Math.min(level, 10)} из 10`}>
+      {Array.from({ length: 10 }, (_, index) => index + 1).map((step) => (
         <motion.span
           key={step}
           initial={{ scaleX: .45, opacity: .35 }}
-          animate={{ scaleX: 1, opacity: step <= Math.min(level, 5) || failed ? 1 : .72 }}
+          animate={{ scaleX: 1, opacity: step <= Math.min(level, 10) || failed ? 1 : .72 }}
           transition={{ duration: .38, delay: step * .055, ease: "easeOut" }}
-          className={`level-step h-1.5 flex-1 rounded-full ${failed ? "level-step-failed" : step <= Math.min(level, 5) ? "level-step-active" : ""}`}
+          className={`level-step h-1.5 flex-1 rounded-full ${failed ? "level-step-failed" : step <= Math.min(level, 10) ? "level-step-active" : ""}`}
           style={{
-            background: failed ? "rgba(244,63,94,.9)" : step <= Math.min(level, 5) ? CONCENTRATION_ACCENT : "rgba(147,197,253,.14)",
-            boxShadow: failed ? "0 0 10px rgba(244,63,94,.72)" : step <= Math.min(level, 5) ? "0 0 10px rgba(249,115,22,.72)" : "none",
+            background: failed ? "rgba(244,63,94,.9)" : step <= Math.min(level, 10) ? CONCENTRATION_ACCENT : "rgba(147,197,253,.14)",
+            boxShadow: failed ? "0 0 10px rgba(244,63,94,.72)" : step <= Math.min(level, 10) ? "0 0 10px rgba(249,115,22,.72)" : "none",
           }}
         />
       ))}
@@ -154,7 +298,46 @@ function StepDots({ level, phase }: { level: number; phase: GamePhase }) {
 }
 
 function StateShell({ children, className = "" }: { children: React.ReactNode; className?: string }) {
-  return <motion.div initial={{ opacity: 0, scale: .98 }} animate={{ opacity: 1, scale: 1 }} className={`game-card flex min-h-[330px] flex-col items-center justify-center rounded-[25px] border border-orange-400/40 px-5 text-center ${className}`}>{children}</motion.div>;
+  return <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className={`game-card flex min-h-[330px] flex-col items-center justify-center rounded-[25px] border border-orange-400/40 px-5 text-center ${className}`}>{children}</motion.div>;
+}
+
+function ConcentrationActionCard({
+  onClick,
+  accent,
+  icon,
+  eyebrow,
+  title,
+  subtitle,
+  testId,
+}: {
+  onClick: () => void;
+  accent: "orange" | "red";
+  icon: React.ReactNode;
+  eyebrow?: string;
+  title: string;
+  subtitle?: string;
+  testId: string;
+}) {
+  const isOrange = accent === "orange";
+  return (
+    <motion.button
+      type="button"
+      onClick={onClick}
+      whileTap={{ scale: 0.98 }}
+       className={`relative mt-4 flex min-h-[78px] w-full items-center gap-3 overflow-hidden rounded-[24px] border px-4 py-3 text-left shadow-[0_0_0_5px_rgba(249,115,22,.06),0_12px_28px_rgba(0,0,0,.24),inset_0_1px_0_rgba(255,255,255,.12)] ${isOrange ? "border-orange-300/50 bg-[linear-gradient(135deg,rgba(249,115,22,.98),rgba(154,63,11,.98)_58%,rgba(13,31,57,.98))]" : "border-red-400/55 bg-[linear-gradient(135deg,rgba(127,29,29,.98),rgba(69,24,31,.98)_58%,rgba(13,31,57,.98))]"}`}
+      data-testid={testId}
+    >
+       <span className={`relative flex h-12 w-12 shrink-0 items-center justify-center rounded-[16px] border text-white ${isOrange ? "border-orange-100/50 bg-orange-300/80 shadow-[0_0_22px_rgba(249,115,22,.42),inset_0_1px_0_rgba(255,255,255,.45)]" : "border-red-200/55 bg-[linear-gradient(145deg,rgba(248,113,113,.95),rgba(185,28,28,.92))] shadow-[0_0_22px_rgba(239,68,68,.48),inset_0_1px_0_rgba(255,255,255,.45)]"}`}>
+        {icon}
+      </span>
+      <span className="min-w-0 flex-1">
+         {eyebrow && <span className={`block text-[10px] font-semibold uppercase tracking-[0.16em] ${isOrange ? "text-orange-100/75" : "text-red-100/75"}`}>{eyebrow}</span>}
+        <span className="mt-1 block text-[16px] font-semibold leading-tight text-white">{title}</span>
+         {subtitle && <span className={`mt-0.5 block text-xs ${isOrange ? "text-orange-100/70" : "text-red-100/75"}`}>{subtitle}</span>}
+      </span>
+       <span className={`text-xl ${isOrange ? "text-orange-100/80" : "text-red-100/85"}`} aria-hidden="true">→</span>
+    </motion.button>
+  );
 }
 
 export function ConcentrationGame({
@@ -291,26 +474,22 @@ export function ConcentrationGame({
       timerRef.current = window.setTimeout(() => failGame("Оранжевый сигнал пропущен"), signalThresholdForLevel(roundLevel));
     } else {
       setReactionStart(null);
-      timerRef.current = window.setTimeout(() => beginSignalPreparation(roundLevel, nextIndex + 1), 520 + Math.min(420, roundLevel * 42));
+      timerRef.current = window.setTimeout(() => beginSignalPreparation(roundLevel, nextIndex + 1), signalFalseDurationForLevel(roundLevel));
     }
   };
 
-  const showSignalResult = (roundLevel: number, nextIndex: number, completedTimes: number[], reaction: number) => {
+  const showSignalResult = (roundLevel: number, completedTimes: number[], reaction: number) => {
     clearTimers();
     setLastReaction(reaction);
     setReactionStart(null);
     setPhase("signal-result");
     playConcentrationResult();
     timerRef.current = window.setTimeout(() => {
-      if (nextIndex >= signalCountForLevel(roundLevel)) {
-        completeRound(roundLevel, {
-          bestReactionMs: Math.min(...completedTimes),
-          averageReactionMs: Math.round(completedTimes.reduce((sum, value) => sum + value, 0) / Math.max(1, completedTimes.length)),
-          stabilityPercent: 100,
-        });
-        return;
-      }
-      beginSignalPreparation(roundLevel, nextIndex);
+      completeRound(roundLevel, {
+        bestReactionMs: Math.min(...completedTimes),
+        averageReactionMs: Math.round(completedTimes.reduce((sum, value) => sum + value, 0) / Math.max(1, completedTimes.length)),
+        stabilityPercent: 100,
+      });
     }, SIGNALS_RESULT_MS);
   };
 
@@ -328,7 +507,7 @@ export function ConcentrationGame({
     timerRef.current = window.setTimeout(() => {
       setRewardFlash(false);
       beginRound(completedLevel + 1);
-    }, 1600);
+    }, 2000);
   };
 
   const handleSignalClick = () => {
@@ -339,20 +518,15 @@ export function ConcentrationGame({
     }
     const reaction = Math.round(performance.now() - reactionStart);
     const threshold = signalThresholdForLevel(level);
-    const currentBest = reactionTimes.length > 0 ? Math.min(...reactionTimes) : reaction;
     if (reaction > threshold) {
       failGame(`Реакция медленнее порога: ${reaction} мс`);
-      return;
-    }
-    if (reactionTimes.length > 0 && reaction > currentBest * 1.15) {
-      failGame(`Потеря стабильности: ${reaction} мс вместо ${currentBest} мс`);
       return;
     }
     const nextTimes = [...reactionTimes, reaction];
     setReactionTimes(nextTimes);
     setLastReaction(reaction);
     playConcentrationCorrect();
-    showSignalResult(level, signalIndex + 1, nextTimes, reaction);
+    showSignalResult(level, nextTimes, reaction);
   };
 
   const handlePreparationClick = () => {
@@ -393,11 +567,11 @@ export function ConcentrationGame({
     mode !== "signals"
       ? undefined
       : phase === "signals"
-        ? signal.isTarget ? "#43210f" : "#102d47"
-        : phase === "signal-result"
-          ? "#163b3e"
-          : phase === "failed"
+        ? undefined
+        : phase === "failed"
             ? "#3b2031"
+            : phase === "success"
+              ? "#4a240d"
             : phase === "preparing"
               ? "#102b46"
               : undefined;
@@ -410,7 +584,6 @@ export function ConcentrationGame({
       style={signalSurface ? { backgroundColor: signalSurface } : undefined}
       data-testid={`concentration-game-${mode}`}
     >
-      <GameInstrumentBackdrop accent={CONCENTRATION_ACCENT} phase={phase} />
       <div className="relative z-10">
       <div className="mb-7 flex items-center justify-between">
         <button type="button" onClick={onBack} className="p-1 text-tertiary" aria-label="Назад" data-testid="button-concentration-back">
@@ -430,18 +603,23 @@ export function ConcentrationGame({
         {phase === "idle" && (
           <StateShell key="idle">
             <motion.div
-              animate={{ y: [0, -4, 0], boxShadow: ["0 0 0 rgba(249,115,22,0)", "0 0 22px rgba(249,115,22,.25)", "0 0 0 rgba(249,115,22,0)"] }}
-              transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
-              className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl border"
-              style={{ borderColor: CONCENTRATION_ACCENT_BORDER, background: CONCENTRATION_ACCENT_SOFT }}
+              className="mb-5 flex h-36 w-36 items-center justify-center"
+              aria-hidden="true"
+              animate={{ y: [0, -3, 0], rotate: [0, -2, 0] }}
+              transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
             >
-              <Trophy size={24} style={{ color: CONCENTRATION_ACCENT }} />
+              <svg viewBox="0 0 24 24" className="h-36 w-36" fill="none" stroke={CONCENTRATION_ACCENT} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M5.67181 13.9095C10 15.9322 14 7.84169 21 11.8869L18 2.78502C13.4239 -0.299918 8.56286 6.85641 3 4.62523L8.00007 22" />
+                <path d="M19 7.00073C13.5 3.00076 9 12.0007 4.5 9.00064" />
+                <path d="M8 4.90476L10.8235 13M13.1765 3L16 10.619" />
+              </svg>
             </motion.div>
-            <p className="title-m text-primary">Готов к уровню {level}?</p>
-            <p className="body-s mt-2 max-w-[280px] text-secondary">{levelHint(mode, level)}. Удерживай внимание до конца серии.</p>
-            <button type="button" onClick={() => beginRound(level)} className="mt-7 min-h-12 rounded-[15px] px-7 text-sm font-semibold text-[#201308]" style={{ background: CONCENTRATION_ACCENT }} data-testid="button-concentration-start">
-              Начать уровень
-            </button>
+            <p className="title-m" style={{ color: CONCENTRATION_ACCENT }}>Готов к уровню {level}?</p>
+            <p className="body-s mt-2 max-w-[280px] text-secondary">
+              {mode === "signals"
+                ? `Жми на оранжевый. Порог ${signalThresholdForLevel(level)} мс. Удерживай концентрацию.`
+                : `${levelHint(mode, level)}. Удерживай внимание до конца серии.`}
+            </p>
           </StateShell>
         )}
 
@@ -450,32 +628,41 @@ export function ConcentrationGame({
             key="preparing"
             type="button"
             onClick={handlePreparationClick}
-            initial={{ opacity: 0, scale: .94 }}
-            animate={{ opacity: 1, scale: 1 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
             className="game-card flex min-h-[330px] w-full flex-col items-center justify-center rounded-[25px] border border-orange-400/40 px-7 text-center outline-none"
             data-testid="concentration-preparing-state"
           >
-            <motion.div
-              animate={{ rotate: [0, -8, 8, 0], scale: [1, 1.08, 1] }}
-              transition={{ duration: 1, ease: "easeInOut" }}
-              className="mb-6 flex h-20 w-20 items-center justify-center rounded-[22px] border border-orange-300/45 bg-[#153653]"
-              style={{ borderColor: "rgba(148,190,224,.48)", background: "#153653" }}
+            <motion.svg
+              viewBox="0 0 256 256"
+              className="mb-7 h-36 w-36"
+              role="img"
+              aria-label="Часы подготовки"
             >
-              <svg viewBox="0 0 36 36" className="h-11 w-11" role="img" aria-label="Часы подготовки">
-                <circle cx="18" cy="18" r="9.5" fill="none" stroke="#F97316" strokeWidth="1.8" />
-                <path d="M18 12.5v5.9l4 2.5" fill="none" stroke="#F97316" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" />
-                <circle cx="18" cy="18" r="1.4" fill="#FDBA74" />
-              </svg>
-            </motion.div>
-            <p className="title-m text-[24px] text-primary">Приготовьтесь</p>
+              <path
+                d="M128,40a96,96,0,1,0,96,96A96.11,96.11,0,0,0,128,40Zm0,176a80,80,0,1,1,80-80A80.09,80.09,0,0,1,128,216Z"
+                fill={CONCENTRATION_ACCENT}
+              />
+              <g className="concentration-timer-hand">
+                <path
+                  d="M173.66,90.34a8,8,0,0,1,0,11.32l-40,40a8,8,0,0,1-11.32-11.32l40-40A8,8,0,0,1,173.66,90.34Z"
+                  fill={CONCENTRATION_ACCENT}
+                />
+              </g>
+              <path
+                d="M96,16a8,8,0,0,1,8-8h48a8,8,0,0,1,0,16H104A8,8,0,0,1,96,16Z"
+                fill={CONCENTRATION_ACCENT}
+              />
+            </motion.svg>
+            <p className="title-m text-[24px]" style={{ color: CONCENTRATION_ACCENT }}>Приготовьтесь</p>
           </motion.button>
         )}
 
         {phase === "signal-result" && (
-          <motion.div key="signal-result" initial={{ opacity: 0, scale: .94 }} animate={{ opacity: 1, scale: 1 }} className="game-card game-card--success flex min-h-[330px] w-full items-center justify-center rounded-[25px] border">
+          <motion.div key="signal-result" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="game-card flex min-h-[330px] w-full items-center justify-center rounded-[25px] border">
             <motion.div
-              initial={{ scale: .75, opacity: .5 }}
-              animate={{ scale: [1, 1.12, 1], opacity: [1, .75, 1] }}
+              initial={{ opacity: .5 }}
+              animate={{ opacity: [1, .75, 1] }}
               transition={{ duration: 1.1, repeat: Infinity, ease: "easeInOut" }}
               className="flex h-[min(42vw,180px)] w-[min(72vw,280px)] items-center justify-center rounded-[28px] border-[3px] border-orange-200/75 bg-orange-500/20 shadow-[0_0_42px_rgba(249,115,22,.32),inset_0_0_28px_rgba(249,115,22,.18)]"
             >
@@ -489,8 +676,8 @@ export function ConcentrationGame({
             key="signals"
             type="button"
             onClick={handleSignalClick}
-            initial={{ opacity: 0, scale: .96 }}
-            animate={{ opacity: 1, scale: 1 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
             className="game-card flex min-h-[330px] w-full items-center justify-center rounded-[25px] border border-orange-400/40 p-0 outline-none"
             data-testid="concentration-signal-hit-area"
           >
@@ -506,37 +693,29 @@ export function ConcentrationGame({
 
         {(phase === "tracking-show" || phase === "tracking-move" || phase === "tracking-input") && (
           <StateShell key="tracking" className="!p-3">
-            <div className="mb-3 flex w-full items-center justify-between px-2">
-              <span className="caption text-tertiary">{phase === "tracking-show" ? "ЗАПОМНИ ЦЕЛИ" : phase === "tracking-move" ? "СЛЕДИ" : "ВЫБЕРИ ЦЕЛИ"}</span>
-              <span className="caption text-secondary">{selectedTracking.length}/{trackingTargets.length}</span>
+            <div className="mb-4 flex w-full flex-col items-center px-2 text-center">
+              <span className={`caption ${phase === "tracking-input" ? "text-orange-200" : "text-tertiary"}`}>
+                {phase === "tracking-show" ? "ЗАПОМНИ ЦЕЛИ" : phase === "tracking-move" ? "ОТСЛЕЖИВАЙ ДВИЖЕНИЕ" : "ВОССТАНОВИ ЦЕЛИ"}
+              </span>
+              <span className="mt-1 text-[11px] text-secondary">
+                {phase === "tracking-show" ? "Запомни оранжевые шарики" : phase === "tracking-move" ? "Не нажимай" : "Нажми на оранжевые шарики"}
+              </span>
+              {phase === "tracking-input" && (
+                <span className="num mt-1 text-xs tabular-nums text-orange-200">{selectedTracking.length}/{trackingTargets.length}</span>
+              )}
             </div>
             <div className="game-instrument relative h-[300px] w-full overflow-hidden rounded-[20px]">
-              {trackingObjects.map((object) => {
-                const isTarget = trackingTargets.includes(object.id);
-                const isSelected = selectedTracking.includes(object.id);
-                return (
-                  <motion.button
-                    type="button"
+                {trackingObjects.map((object) => (
+                  <TrackingBall
                     key={object.id}
-                    onClick={() => handleTrackingObject(object.id)}
-                    animate={phase === "tracking-show" ? { x: 0, y: 0, scale: isTarget ? [1, 1.18, 1] : 1, opacity: isTarget ? [1, .72, 1] : .68 } : { x: [0, object.driftX, -object.driftX, 0], y: [0, object.driftY, -object.driftY, 0], scale: isSelected ? 1.2 : 1 }}
-                    transition={phase === "tracking-show"
-                      ? { duration: 1.1, repeat: isTarget ? Infinity : 0, ease: "easeInOut" }
-                      : { duration: 2.8 + (object.id % 4) * .2, repeat: phase === "tracking-input" ? 0 : Infinity, ease: "easeInOut", delay: object.id * .02 }}
-                    whileTap={{ scale: .78 }}
-                    whileHover={{ scale: 1.25 }}
-                    className="absolute h-5 w-5 -translate-x-1/2 -translate-y-1/2 rounded-full border"
-                    style={{
-                      left: `${object.left}%`,
-                      top: `${object.top}%`,
-                      background: phase === "tracking-show" && isTarget ? "rgba(249,115,22,.88)" : isSelected ? "rgba(249,115,22,.72)" : "rgba(147,197,253,.12)",
-                      borderColor: phase === "tracking-show" && isTarget ? "rgba(255,224,166,.95)" : isSelected ? CONCENTRATION_ACCENT : "rgba(147,197,253,.3)",
-                      boxShadow: phase === "tracking-show" && isTarget ? "0 0 18px rgba(249,115,22,.76)" : isSelected ? "0 0 14px rgba(249,115,22,.58)" : "none",
-                    }}
-                    aria-label={isSelected ? "Выбранный объект" : "Объект"}
+                    object={object}
+                    phase={phase}
+                    moveMs={trackingObjectsForLevel(level).moveMs}
+                    isTarget={trackingTargets.includes(object.id)}
+                    isSelected={selectedTracking.includes(object.id)}
+                    onSelect={() => handleTrackingObject(object.id)}
                   />
-                );
-              })}
+                ))}
             </div>
           </StateShell>
         )}
@@ -584,14 +763,34 @@ export function ConcentrationGame({
               initial={{ scale: .7, rotate: -18 }}
               animate={{ scale: [1, 1.08, 1], rotate: 0 }}
               transition={{ duration: .55, ease: "easeOut" }}
-              className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl border border-orange-300/45 bg-[#25404a]"
+              className="mb-6 mt-7 flex h-20 w-20 translate-y-3 items-center justify-center"
             >
-              <Target size={25} style={{ color: CONCENTRATION_ACCENT }} />
+              <motion.svg viewBox="0 0 24 24" className="h-20 w-20" role="img" aria-label="Уровень пройден" animate={{ scale: [1, 1.08, 1], rotate: [0, 2, 0] }} transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}>
+                <path
+                  d="M4.5 9.5C4.5 13.6421 7.85786 17 12 17C16.1421 17 19.5 13.6421 19.5 9.5C19.5 5.35786 16.1421 2 12 2C7.85786 2 4.5 5.35786 4.5 9.5Z"
+                  fill="none"
+                  stroke={CONCENTRATION_ACCENT}
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                />
+                <motion.path
+                  d="M9 10.1667C9 10.1667 9.75 10.1667 10.5 11.5C10.5 11.5 12.8824 8.16667 15 7.5"
+                  fill="none"
+                  stroke={CONCENTRATION_ACCENT}
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  initial={{ pathLength: 0, opacity: 0 }}
+                  animate={{ pathLength: [0, 1, 1, 0], opacity: [0, 1, 1, 0] }}
+                  transition={{ duration: 2.2, repeat: Infinity, times: [0, .35, .78, 1], ease: "easeInOut" }}
+                />
+                <path d="M16.8825 15L17.5527 18.2099C17.9833 20.2723 18.1986 21.3035 17.7563 21.7923C17.3141 22.281 16.546 21.8606 15.0099 21.0198L12.7364 19.7753C12.3734 19.5766 12.1919 19.4773 12 19.4773C11.8081 19.4773 11.6266 19.5766 11.2636 19.7753L8.99008 21.0198C7.45397 21.8606 6.68592 22.281 6.24365 21.7923C5.80139 21.3035 6.01669 20.2723 6.44731 18.2099L7.11752 15" fill="none" stroke={CONCENTRATION_ACCENT} strokeWidth="1.5" strokeLinejoin="round" />
+              </motion.svg>
             </motion.div>
             {rewardFlash && <div className="absolute top-5 rounded-full border border-orange-300/50 bg-orange-500/15 px-4 py-2 text-sm font-semibold text-orange-200">+10% потенциала дня</div>}
-            <p className="title-m text-primary">Уровень пройден</p>
-            <p className="body-s mt-2 text-secondary">Фокус удержан. Следующий уровень уже готовится.</p>
-            {lastReaction !== null && <p className="num mt-5 text-2xl" style={{ color: CONCENTRATION_ACCENT }}>{lastReaction} мс</p>}
+            <p className="title-m translate-y-3 uppercase text-primary">УРОВЕНЬ ПРОЙДЕН</p>
+            <p className="num mt-5 translate-y-3 text-2xl" style={{ color: "#FFF7ED" }}>
+              {mode === "signals" ? `порог ${signalThresholdForLevel(level + 1)} мс` : levelHint(mode, level + 1)}
+            </p>
           </StateShell>
         )}
 
@@ -600,18 +799,56 @@ export function ConcentrationGame({
             <motion.div
               animate={{ x: [-3, 3, -2, 2, 0], rotate: [-4, 4, -3, 3, 0] }}
               transition={{ duration: .42, ease: "easeOut" }}
-              className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl border border-rose-300/45 bg-[#42253a]"
+              className="mb-5 flex h-20 w-20 items-center justify-center"
             >
-              <Crosshair size={24} className="text-rose-300" />
+              <motion.svg viewBox="0 0 24 24" className="h-20 w-20" role="img" aria-label="Поражение">
+                <path d="M22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12Z" fill="none" stroke="#EF4444" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                <motion.path
+                  d="M8.5 9C8.22386 9 8 8.77614 8 8.5C8 8.22386 8.22386 8 8.5 8C8.77614 8 9 8.22386 9 8.5C9 8.77614 8.77614 9 8.5 9Z"
+                  fill="#EF4444" stroke="#EF4444" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"
+                  animate={{ d: ["M8.5 9C8.22386 9 8 8.77614 8 8.5C8 8.22386 8.22386 8 8.5 8C8.77614 8 9 8.22386 9 8.5C9 8.77614 8.77614 9 8.5 9Z", "M8.5 14C8.22386 14 8 13.7761 8 13.5C8 13.2239 8.22386 13 8.5 13C8.77614 13 9 13.2239 9 13.5C9 13.7761 8.77614 14 8.5 14Z"] }}
+                  transition={{ duration: 2.2, repeat: Infinity, repeatType: "reverse", ease: "easeInOut" }}
+                />
+                <motion.path
+                  d="M15.5 9C15.2239 9 15 8.77614 15 8.5C15 8.22386 15.2239 8 15.5 8C15.7761 8 16 8.22386 16 8.5C16 8.77614 15.7761 9 15.5 9Z"
+                  fill="#EF4444" stroke="#EF4444" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"
+                  animate={{ d: ["M15.5 9C15.2239 9 15 8.77614 15 8.5C15 8.22386 15.2239 8 15.5 8C15.7761 8 16 8.22386 16 8.5C16 8.77614 15.7761 9 15.5 9Z", "M15.5 14C15.2239 14 15 13.7761 15 13.5C15 13.2239 15.2239 13 15.5 13C15.7761 13 16 13.2239 16 13.5C16 13.7761 15.7761 14 15.5 14Z"] }}
+                  transition={{ duration: 2.2, repeat: Infinity, repeatType: "reverse", ease: "easeInOut" }}
+                />
+                <motion.path
+                  d="M9 15H15"
+                  fill="none" stroke="#EF4444" strokeWidth="1.5" strokeLinecap="round"
+                  animate={{ d: ["M9 15H15", "M10 18H14"] }}
+                  transition={{ duration: 2.2, repeat: Infinity, repeatType: "reverse", ease: "easeInOut" }}
+                />
+              </motion.svg>
             </motion.div>
-            <p className="title-m text-primary">Потеря концентрации</p>
-            <p className="body-s mt-2 max-w-[280px] text-secondary">{failureReason || "Ошибка сбрасывает серию на первый уровень."}</p>
-            <button type="button" onClick={() => beginRound(1)} className="mt-8 flex min-h-12 min-w-[178px] items-center justify-center gap-2 rounded-[15px] bg-rose-500 px-6 text-sm font-semibold text-white shadow-[0_0_18px_rgba(244,63,94,.28)]" data-testid="button-concentration-retry">
-              <RotateCcw size={16} /> Начать сначала
-            </button>
+            <p className="title-m uppercase text-primary">{(failureReason || "Потеря концентрации").toUpperCase()}</p>
           </StateShell>
         )}
       </AnimatePresence>
+
+      {phase === "idle" && (
+        <ConcentrationActionCard
+          onClick={() => beginRound(level)}
+          accent="orange"
+          icon={<span className="text-[24px] leading-none">▶</span>}
+          title="Начать уровень"
+          testId="button-concentration-start"
+        />
+      )}
+
+      {phase === "failed" && (
+        <ConcentrationActionCard
+          onClick={() => beginRound(1)}
+          accent="red"
+          icon={<RotateCcw size={21} strokeWidth={2.2} />}
+          eyebrow="ВЕРНИ КОНЦЕНТРАЦИЮ"
+          title="Начать сначала"
+          subtitle="Новая попытка с первого уровня"
+          testId="button-concentration-retry"
+        />
+      )}
 
       {onboardingVisible && <ConcentrationOnboarding mode={mode} onComplete={finishOnboarding} />}
       </div>

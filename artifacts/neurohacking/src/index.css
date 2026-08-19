@@ -174,7 +174,19 @@
   }
 
   .signals-screen {
-    transition: background-color .42s ease;
+    transition: none;
+  }
+
+  .concentration-timer-hand {
+    transform-box: view-box;
+    transform-origin: 128px 128px;
+    animation: concentration-timer-hand-spin 3.6s linear infinite;
+    will-change: transform;
+  }
+
+  @keyframes concentration-timer-hand-spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
   }
 
   .game-card::before {
@@ -198,7 +210,7 @@
     border-radius: inherit;
     background: transparent;
     box-shadow: inset 0 0 0 rgba(102,157,193,0), 0 0 0 rgba(102,157,193,0);
-    animation: game-card-outline 5.2s cubic-bezier(.42,0,.2,1) infinite;
+    opacity: .52;
   }
 
   .game-card > * {
@@ -206,45 +218,9 @@
     z-index: 1;
   }
 
-  @keyframes game-card-outline {
-    0%, 100% {
-      opacity: .38;
-      border-color: rgba(122,169,199,.25);
-      box-shadow: inset 0 0 0 rgba(102,157,193,0), 0 0 0 rgba(102,157,193,0);
-    }
-    48%, 58% {
-      opacity: .96;
-      border-color: rgba(207,231,239,.72);
-      box-shadow: inset 0 0 16px rgba(102,157,193,.08), 0 0 18px rgba(102,157,193,.18);
-    }
-  }
-
   @media (prefers-reduced-motion: reduce) {
-    .game-card::after { animation: none; opacity: .52; }
-  }
-
-  .game-backdrop {
-    position: absolute;
-    inset: 0;
-    z-index: 0;
-    overflow: hidden;
-    pointer-events: none;
-    contain: paint;
-    transform: translate3d(0, 0, 0);
-    backface-visibility: hidden;
-  }
-
-  .game-backdrop-anchor {
-    position: absolute;
-    left: 50%;
-    top: 43%;
-    transform: translate3d(-50%, -50%, 0);
-    transform-style: preserve-3d;
-    backface-visibility: hidden;
-  }
-
-  .game-backdrop svg {
-    overflow: visible;
+    .game-card::after { opacity: .52; }
+    .concentration-timer-hand { animation: none; }
   }
 
   .level-step {
@@ -280,13 +256,11 @@
   }
 
   .game-card--success {
-    background: #172c36;
-    border-color: rgba(249,115,22,.62);
+    background: #9A3F0B;
+    border-color: #F97316;
     box-shadow:
-      0 0 0 1px rgba(249,115,22,.12),
-      0 18px 46px rgba(0,0,0,.38),
-      0 0 28px rgba(249,115,22,.18),
-      inset 0 1px 0 rgba(255,231,190,.18);
+      0 18px 46px rgba(249,115,22,.28),
+      inset 0 1px 0 rgba(255,255,255,.28);
   }
 
   .game-card--failed {

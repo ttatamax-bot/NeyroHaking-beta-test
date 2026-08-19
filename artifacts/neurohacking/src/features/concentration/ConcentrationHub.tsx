@@ -76,7 +76,7 @@ export function ConcentrationHub({
       >
         <div>
           <p className="title-s text-primary">+10% потенциала дня.</p>
-          <p className="body-s mt-1 text-secondary">{rewardAwardedToday ? "Награда уже получена сегодня." : "Пройди уровни 1–5 в любой практике."}</p>
+          <p className="body-s mt-1 text-secondary">{rewardAwardedToday ? "Награда уже получена сегодня." : "Пройди уровни 1–10 в любой практике."}</p>
         </div>
         {celebrateReward && (
           <motion.span
@@ -89,7 +89,7 @@ export function ConcentrationHub({
           </motion.span>
         )}
         <div className="mt-4 flex gap-1.5">
-          {[1, 2, 3, 4, 5].map((step) => (
+          {Array.from({ length: 10 }, (_, index) => index + 1).map((step) => (
             <motion.span
               key={step}
               initial={celebrateReward ? { scaleX: 0, opacity: .35 } : false}

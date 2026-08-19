@@ -116,11 +116,7 @@ function NewsSystemMark() {
             }}
       />
       </motion.div>
-      <div
-        className="pointer-events-none absolute inset-[-31px] z-[1]"
-        style={{ transform: "translate(-30px, -30px)" }}
-      >
-      <motion.div className="absolute inset-0" style={{ rotate: burstRotation }}>
+      <motion.div className="pointer-events-none absolute inset-[-31px] z-[1]" style={{ rotate: burstRotation }}>
       <motion.svg
         className="absolute inset-0 h-full w-full"
         viewBox="0 0 230 230"
@@ -137,9 +133,7 @@ function NewsSystemMark() {
         </g>
       </motion.svg>
       </motion.div>
-      </div>
-      <div className="pointer-events-none absolute inset-[-8px]" style={{ transform: "translate(-30px, -30px)" }}>
-      <motion.div className="absolute inset-0" style={{ rotate: burstRotation }}>
+      <motion.div className="pointer-events-none absolute inset-[-8px]" style={{ rotate: burstRotation }}>
       <motion.span
         className="absolute inset-0 rounded-full"
         style={{
@@ -156,9 +150,7 @@ function NewsSystemMark() {
             }}
       />
       </motion.div>
-      </div>
-      <div className="pointer-events-none absolute inset-[16px]" style={{ transform: "translate(-30px, -30px)" }}>
-      <motion.div className="absolute inset-0" style={{ rotate: burstRotation }}>
+      <motion.div className="pointer-events-none absolute inset-[16px]" style={{ rotate: burstRotation }}>
       <motion.span
         className="absolute inset-0 rounded-full"
         style={{
@@ -175,7 +167,6 @@ function NewsSystemMark() {
             }}
       />
       </motion.div>
-      </div>
       <motion.div
         className="pointer-events-none absolute inset-0 z-[10] origin-center scale-[0.75]"
         initial={{ opacity: 0, y: 8, filter: "blur(16px)" }}

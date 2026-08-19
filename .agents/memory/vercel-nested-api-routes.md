@@ -3,8 +3,8 @@ name: Vercel nested API routes
 description: Production routing behavior for nested Vercel API functions backed by the Express app.
 ---
 
-Vercel can resolve an explicit nested function while a generic catch-all is unavailable or while a nested function receives a path with its directory prefix stripped. Route-sensitive entrypoints should normalize `req.url` to the Express `/api/...` path before delegating to the app, and important production endpoints should have explicit Vercel entrypoints.
+In this project, Vercel did not resolve nested catch-all functions for `/api/me/*`, while many explicit functions exceeded the Hobby deployment limit. Route-sensitive account paths use one `/api/me` function plus a `vercel.json` rewrite that passes the nested suffix in a query parameter; the handler normalizes it to Express `/api/...`.
 
-**Why:** The production completion request returned Vercel `NOT_FOUND` before Express even though the route existed in the shared server router. A dedicated entrypoint made the same request reach Express, where an invalid test token correctly produced Clerk `401`.
+**Why:** Production purchase requests returned Vercel `NOT_FOUND` before Express even though the routes existed in the shared server router. Adding one function per nested route exceeded the Hobby limit; the single rewritten entrypoint reaches Express and an unauthenticated request correctly produces Clerk `401`.
 
-**How to apply:** When adding a nested API route to this project, verify the deployed URL directly with an invalid bearer token: `401` means the function and Express route are reachable; Vercel `NOT_FOUND` means the function mapping is missing.
+**How to apply:** Keep account endpoints behind the shared `/api/me` rewrite. For body-sensitive mutations, include critical discriminators in the rewrite query as well as JSON. Verify deployed URLs directly with no bearer token: `401` means the function and Express route are reachable; Vercel `NOT_FOUND` means the mapping is missing.

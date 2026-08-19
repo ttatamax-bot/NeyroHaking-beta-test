@@ -56,7 +56,7 @@ export function ConcentrationOnboarding({ mode, hub = false, onComplete }: Conce
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="fixed inset-0 z-[60] flex items-end justify-center bg-[#061321]/75 px-4 pb-5 backdrop-blur-sm"
+      className="fixed inset-0 z-[60] flex items-end justify-center bg-[#061321]/75 px-4 pb-5"
       data-testid="concentration-onboarding"
     >
       <motion.div

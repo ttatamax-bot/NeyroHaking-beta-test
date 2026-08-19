@@ -19,18 +19,11 @@ import {
   type MemorySymbolId,
   type MemoryMode,
 } from "./config";
-
-const matrixGridStyle = (size: number) => ({
-  width: size >= 7 ? "min(94vw, 390px)" : "min(92vw, 360px)",
-  gridTemplateColumns: `repeat(${size}, minmax(0, 1fr))`,
-  ...(size >= 7 ? { gridAutoRows: "44px" } : {}),
-});
 import { initMemorySound, playCorrect, playFail, playLevelUp, playReward, playTap } from "./sounds";
 import { MemoryOnboarding } from "./MemoryOnboarding";
 import { MemoryPreview } from "./MemoryPreview";
 import { MemoryModeLogo } from "./MemoryModeLogo";
 import { memorySymbolLabel, MemorySymbol } from "./MemorySymbol";
-import { GameInstrumentBackdrop } from "../shared/GameInstrumentBackdrop";
 
 type GamePhase = "idle" | "showing" | "waiting" | "input" | "success" | "failed";
 
@@ -89,9 +82,9 @@ function LevelRail({ level, bestLevel, phase }: { level: number; bestLevel: numb
           <AnimatePresence mode="popLayout" initial={false}>
             <motion.span
               key={level}
-              initial={{ opacity: 0, y: 12, filter: "blur(4px)" }}
-              animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-              exit={{ opacity: 0, y: -12, filter: "blur(4px)" }}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -12 }}
               transition={{ duration: .24, ease: "easeOut" }}
               className="num inline-block min-w-[2ch] text-center text-[38px] leading-none tabular-nums"
               style={{ color: MEMORY_ACCENT, fontVariantNumeric: "tabular-nums" }}
@@ -208,7 +201,7 @@ function ShowingState({ challenge, level }: { challenge: MemoryChallenge; level:
         </div>
       )}
       {challenge.mode === "matrix" && (
-        <div className="memory-grid grid max-w-full gap-1.5 sm:gap-2" style={matrixGridStyle(challenge.size)} data-testid="memory-matrix-display">
+        <div className="memory-grid grid w-[min(70vw,246px)] gap-2" style={{ gridTemplateColumns: `repeat(${challenge.size}, minmax(0, 1fr))` }} data-testid="memory-matrix-display">
           {Array.from({ length: challenge.size * challenge.size }, (_, index) => (
             <motion.span
               key={index}
@@ -264,9 +257,9 @@ function ReverseInput({ digits, entered, onDigit }: { digits: number[]; entered:
 
 function MatrixInput({ challenge, selected, onCell }: { challenge: MatrixChallenge; selected: number[]; onCell: (cell: number) => void }) {
   return (
-    <div className="game-card flex min-h-[330px] flex-col items-center justify-center rounded-[25px] border border-orange-300/35 px-4 py-6" data-testid="memory-matrix-input">
+    <div className="game-card flex min-h-[330px] flex-col items-center justify-center rounded-[25px] border border-orange-300/35 p-5" data-testid="memory-matrix-input">
       <p className="caption mb-5 text-tertiary">ВОССТАНОВИ КЛЕТКИ · {selected.length}/{challenge.cells.length}</p>
-      <div className="memory-grid grid max-w-full gap-1.5 sm:gap-2" style={matrixGridStyle(challenge.size)}>
+      <div className="memory-grid grid w-[min(70vw,246px)] gap-2" style={{ gridTemplateColumns: `repeat(${challenge.size}, minmax(0, 1fr))` }}>
         {Array.from({ length: challenge.size * challenge.size }, (_, index) => {
           const active = selected.includes(index);
           return (
@@ -278,7 +271,7 @@ function MatrixInput({ challenge, selected, onCell }: { challenge: MatrixChallen
                 whileHover={{ scale: 1.04 }}
                 animate={{ scale: active ? [1, 1.06, 1] : 1 }}
                 transition={{ duration: .24, ease: "easeOut" }}
-                className="game-control min-h-11 rounded-[8px] border transition-none"
+                className="game-control aspect-square rounded-[8px] border transition-none"
               style={{
                 background: active ? MEMORY_ACCENT : "#102b46",
                 borderColor: active ? "rgba(249,115,22,.9)" : "rgba(147,197,253,.12)",
@@ -649,7 +642,6 @@ export function MemoryGame({
 
   return (
     <div className="relative isolate min-h-[100dvh] overflow-y-auto px-4 pb-8 pt-6" data-testid={`memory-game-${mode}`}>
-      <GameInstrumentBackdrop accent={MEMORY_ACCENT} phase={phase} />
       <div className="relative z-10">
       <div className="mb-7 flex items-center justify-between">
         <button type="button" onClick={onBack} className="p-1 text-tertiary" aria-label="Назад" data-testid="button-memory-back">

@@ -18,7 +18,6 @@ const FLY_START_MS = 11640;
 const ZERO_REWARD_CARD_FLY_START_MS = FLY_START_MS;
 const FADE_START_MS = 14520;
 const FINAL_FADE_DURATION_S = 0.82;
-const FINAL_FADE_BLUR_PX = 8;
 
 const PARTICLES = [
   { x: "8%", y: "24%", size: 3, delay: 0, drift: -22 },
@@ -227,27 +226,16 @@ export default function DayCloseCinematic({
       data-testid="overlay-day-close"
       initial={{ opacity: 1 }}
       animate={reducedMotion
-        ? { opacity: phase === "fade" ? 0 : 1, x: 0, filter: "blur(0px)" }
+        ? { opacity: phase === "fade" ? 0 : 1, x: 0 }
         : {
             opacity: phase === "fade" ? 0 : 1,
             x: phase === "surge" ? [0, -2, 2, -1, 0] : 0,
-            filter: phase === "fade" && hasSeriesBonus
-              ? `blur(${FINAL_FADE_BLUR_PX}px)`
-              : phase === "surge"
-                ? "blur(0.18px)"
-                : "blur(0px)",
           }}
       transition={reducedMotion
         ? { duration: phase === "fade" ? finalFadeDurationS : 0, ease: hasSeriesBonus ? "easeInOut" : "easeIn" }
         : {
             opacity: { duration: phase === "fade" ? finalFadeDurationS : 0, ease: hasSeriesBonus ? "easeInOut" : "easeIn" },
             x: { duration: 0.8, ease: [0.16, 1, 0.3, 1] },
-            filter: {
-              duration: phase === "fade"
-                ? (hasSeriesBonus ? FINAL_FADE_DURATION_S : 0.18)
-                : 0.18,
-              ease: phase === "fade" && hasSeriesBonus ? "easeInOut" : "easeOut",
-            },
           }}
     >
       <style>{`
@@ -323,7 +311,6 @@ export default function DayCloseCinematic({
           height: 78%;
           border-radius: 50%;
           background: rgba(249, 115, 22, .22);
-          filter: blur(34px);
           opacity: .72;
           transform: scale(.72);
         }
@@ -331,7 +318,6 @@ export default function DayCloseCinematic({
           width: 120%;
           height: 120%;
           background: rgba(37, 99, 235, .14);
-          filter: blur(42px);
           opacity: .66;
         }
         .close-ring {
@@ -624,7 +610,6 @@ export default function DayCloseCinematic({
            pointer-events: none;
            border-radius: 50%;
            background: radial-gradient(circle, rgba(255, 239, 204, .45) 0%, rgba(249,115,22,.28) 20%, rgba(249,115,22,.08) 44%, transparent 72%);
-           filter: blur(9px);
            will-change: transform, opacity;
          }
           .close-reward-zero-series {
@@ -668,7 +653,7 @@ export default function DayCloseCinematic({
            z-index: 7;
            pointer-events: none;
            background: rgba(5, 11, 24, .08);
-           will-change: opacity, backdrop-filter;
+            will-change: opacity;
          }
         .close-reward-icon {
           display: grid;
@@ -903,7 +888,7 @@ export default function DayCloseCinematic({
                     scaleY: 1,
                     y: 0,
                     height: 64,
-                    filter: "blur(0px) brightness(1)",
+                    filter: "brightness(1)",
                     backgroundColor: "rgba(224,232,237,.58)",
                   }}
                   animate={isActive
@@ -913,7 +898,7 @@ export default function DayCloseCinematic({
                         y: [0, -4, 1, 0],
                         height: [64, activeBarHeight + 8, activeBarHeight - 2, activeBarHeight],
                         backgroundColor: ["rgba(224,232,237,.58)", "#FFB45E", color, color],
-                        filter: ["blur(0px) brightness(1)", "blur(0px) brightness(1.45)", "blur(1px) brightness(1)", "blur(0px) brightness(1.12)"],
+                        filter: ["brightness(1)", "brightness(1.45)", "brightness(1)", "brightness(1.12)"],
                         boxShadow: [`0 0 0 ${color}00`, `0 0 28px ${color}dd`, `0 0 8px ${color}66`],
                       }
                     : {
@@ -921,7 +906,7 @@ export default function DayCloseCinematic({
                         scaleY: 1,
                         y: 0,
                         height: 64,
-                        filter: "blur(0px) brightness(1)",
+                        filter: "brightness(1)",
                         backgroundColor: "rgba(224,232,237,.58)",
                         boxShadow: "0 0 6px rgba(224,232,237,.12)",
                       }}
@@ -1022,10 +1007,10 @@ export default function DayCloseCinematic({
 
        <motion.div
          className="close-backdrop-blur"
-         initial={{ opacity: 0, backdropFilter: "blur(0px)" }}
+         initial={{ opacity: 0 }}
            animate={hasSeriesBonus && (phase === "blur" || phase === "series" || phase === "fade")
-           ? { opacity: 1, backdropFilter: "blur(10px) saturate(1.08)" }
-           : { opacity: 0, backdropFilter: "blur(0px)" }}
+            ? { opacity: 1 }
+            : { opacity: 0 }}
           transition={{
             duration: phase === "fade" && hasSeriesBonus
               ? FINAL_FADE_DURATION_S

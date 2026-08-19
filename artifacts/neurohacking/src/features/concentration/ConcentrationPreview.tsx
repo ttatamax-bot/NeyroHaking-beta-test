@@ -114,7 +114,7 @@ export function ConcentrationPreview({ mode, keysBalance, isPurchasing = false, 
       <div className="mb-6 grid grid-cols-2 gap-2">
         <div className="rounded-[18px] border border-white/[.08] bg-[#0b2037] p-4">
           <p className="caption text-tertiary">ЦИКЛ</p>
-          <p className="title-s mt-2 text-primary">1 → 5</p>
+          <p className="title-s mt-2 text-primary">1 → 10</p>
           <p className="body-s mt-1 text-secondary">для награды</p>
         </div>
         <div className="rounded-[18px] border border-white/[.08] bg-[#0b2037] p-4">
@@ -127,7 +127,7 @@ export function ConcentrationPreview({ mode, keysBalance, isPurchasing = false, 
       <div className="mt-auto rounded-[20px] border p-4" style={{ borderColor: "rgba(249,115,22,.25)", background: "rgba(249,115,22,.07)" }}>
         <div className="flex items-center gap-3">
           <Sparkles size={19} style={{ color: CONCENTRATION_ACCENT }} />
-          <p className="body-s text-primary">Уровень 5 открывает <strong style={{ color: CONCENTRATION_ACCENT }}>+{CONCENTRATION_POTENTIAL_PERCENT}% потенциала дня</strong></p>
+          <p className="body-s text-primary">Уровень 10 открывает <strong style={{ color: CONCENTRATION_ACCENT }}>+{CONCENTRATION_POTENTIAL_PERCENT}% потенциала дня</strong></p>
         </div>
         <div className="mt-4 flex items-center justify-between gap-3">
           <span className="body-s text-secondary">Доступ навсегда</span>

@@ -2,10 +2,11 @@ export type ConcentrationMode = "signals" | "tracking" | "search";
 
 export const CONCENTRATION_TECHNIQUE_ID = "T8";
 export const CONCENTRATION_KEYS_COST = 400;
-export const CONCENTRATION_REWARD_LEVEL = 5;
+export const CONCENTRATION_REWARD_LEVEL = 10;
 export const CONCENTRATION_POTENTIAL_PERCENT = 10;
 export const SIGNALS_PREPARE_MS = 3000;
 export const SIGNALS_RESULT_MS = 1500;
+export const SIGNALS_FALSE_MS = 1500;
 export const CONCENTRATION_ACCENT = "#F97316";
 export const CONCENTRATION_ACCENT_SOFT = "rgba(249,115,22,0.14)";
 export const CONCENTRATION_ACCENT_BORDER = "rgba(249,115,22,0.42)";
@@ -20,7 +21,7 @@ export interface ConcentrationModeMeta {
 }
 
 export const CONCENTRATION_INTRO =
-  "Концентрация — это способность замечать нужный сигнал, удерживать цель и не реагировать на отвлекающие детали. Пройди пять уровней в любой практике.";
+  "Концентрация — это способность замечать нужный сигнал, удерживать цель и не реагировать на отвлекающие детали. Пройди десять уровней в любой практике.";
 
 export const CONCENTRATION_MODES: ConcentrationModeMeta[] = [
   {
@@ -54,25 +55,34 @@ export function concentrationModeMeta(mode: ConcentrationMode): ConcentrationMod
 }
 
 export function signalCountForLevel(level: number): number {
-  return Math.max(10, 10 + Math.min(20, level - 1) * 5);
+  return Math.max(10, 10 + Math.min(9, Math.max(0, level - 1)) * 5);
 }
 
 export function signalThresholdForLevel(level: number): number {
-  if (level <= 3) return 500;
-  if (level === 4) return 450;
-  return Math.max(280, 400 - Math.floor((level - 5) / 2) * 12);
+  if (level <= 1) return 700;
+  if (level <= 10) return Math.round(700 - ((level - 1) / 9) * 200);
+  if (level <= 20) return Math.round(500 - ((level - 10) / 10) * 100);
+  return 400;
 }
 
 export function signalPrepareDurationForLevel(level: number): number {
-  const extraWindow = Math.min(1800, 900 + Math.max(0, level - 1) * 180);
-  return SIGNALS_PREPARE_MS + Math.floor(Math.random() * (extraWindow + 1));
+  const normalizedLevel = Math.min(10, Math.max(1, level));
+  const progress = (normalizedLevel - 1) / 9;
+  const minimum = Math.round((SIGNALS_PREPARE_MS - progress * 1000) / 100) * 100;
+  const maximum = Math.round((3600 + progress * 4400) / 100) * 100;
+  return minimum + Math.floor(Math.random() * (maximum - minimum + 1));
+}
+
+export function signalFalseDurationForLevel(_level: number): number {
+  return SIGNALS_FALSE_MS;
 }
 
 export function trackingObjectsForLevel(level: number): { total: number; targets: number; moveMs: number } {
+  const progress = Math.min(9, Math.max(0, level - 1)) / 9;
   return {
     total: 20 + Math.min(7, Math.max(0, level - 1)) * 5,
     targets: Math.min(12, 3 + Math.max(0, level - 1)),
-    moveMs: Math.max(1100, 2400 - Math.min(7, Math.max(0, level - 1)) * 170),
+    moveMs: Math.round(5000 + progress * 5000),
   };
 }
 
@@ -94,7 +104,7 @@ export function randomUniqueIndexes(total: number, count: number): number[] {
 }
 
 export function levelHint(mode: ConcentrationMode, level: number): string {
-  if (mode === "signals") return `${signalCountForLevel(level)} сигналов · ≤ ${signalThresholdForLevel(level)} мс`;
+  if (mode === "signals") return `1 сигнал · ≤ ${signalThresholdForLevel(level)} мс`;
   if (mode === "tracking") {
     const { total, targets } = trackingObjectsForLevel(level);
     return `${targets} цели · ${total} объектов`;

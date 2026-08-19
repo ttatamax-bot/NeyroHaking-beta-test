@@ -53,7 +53,7 @@ export function MemoryOnboarding({ mode, hub = false, onComplete }: MemoryOnboar
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-[60] flex items-end justify-center bg-[#061321]/75 px-4 pb-5 backdrop-blur-sm"
+        className="fixed inset-0 z-[60] flex items-end justify-center bg-[#061321]/75 px-4 pb-5"
         data-testid="memory-onboarding"
       >
         <motion.div

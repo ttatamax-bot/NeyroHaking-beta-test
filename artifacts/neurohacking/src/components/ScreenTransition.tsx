@@ -26,9 +26,8 @@ export function ScreenTransition({
         x: dir !== 0 ? dir * 20 : 0,
         y: isReveal ? 26 : 0,
         scale: isReveal ? 0.965 : 1,
-        filter: isReveal ? "blur(12px)" : "blur(0px)",
       }}
-      animate={{ opacity: 1, x: 0, y: 0, scale: 1, filter: "blur(0px)" }}
+      animate={{ opacity: 1, x: 0, y: 0, scale: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: isReveal ? 0.58 : 0.12, ease: isReveal ? [0.16, 1, 0.3, 1] : "easeOut" }}
       className={`w-full min-h-[100dvh] ${className}`}

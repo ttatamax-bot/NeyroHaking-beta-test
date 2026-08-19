@@ -48,3 +48,4 @@
 - [Explicit ring startup burst](ring-burst-animation.md) — startup acceleration must be a finite two-turn phase before the original looping ring speed resumes.
 - [Concentration mechanic icons](concentration-mechanic-icons.md) — mode logos should be standalone animated SVGs that depict the real signal, tracking, and search mechanics.
 - [Signals phase pacing](signals-phase-pacing.md) — Signals starts with 3s preparation and shows each successful reaction for 1.5s before the next preparation.
+- [Collision-free tracking trajectories](tracking-trajectories.md) — tracking needs dense separated paths, direct coordinate updates, and explicit movement/selection stage UI.

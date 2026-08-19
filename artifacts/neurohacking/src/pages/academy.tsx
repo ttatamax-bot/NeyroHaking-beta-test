@@ -169,11 +169,7 @@ import { ringRotationTarget, ringRotationTransition, useSmoothRingBurstRotation 
               }}
         />
         </motion.div>
-        <div
-          className="pointer-events-none absolute inset-[-31px] z-[1]"
-          style={{ transform: "translate(-30px, -30px)" }}
-        >
-        <motion.div className="absolute inset-0" style={{ rotate: burstRotation }}>
+        <motion.div className="pointer-events-none absolute inset-[-31px] z-[1]" style={{ rotate: burstRotation }}>
         <motion.svg
           className="absolute inset-0 h-full w-full"
           viewBox="0 0 230 230"
@@ -190,17 +186,15 @@ import { ringRotationTarget, ringRotationTransition, useSmoothRingBurstRotation 
           </g>
         </motion.svg>
         </motion.div>
-        </div>
         {POTENTIAL_RING_STYLES.map((ring, index) => (
-          <div
+          <motion.div
             key={`academy-potential-ring-${index}`}
             className="pointer-events-none absolute rounded-full"
             style={{
               inset: ring.inset,
-              transform: "translate(-30px, -30px)",
+              rotate: burstRotation,
             }}
           >
-          <motion.div className="absolute inset-0" style={{ rotate: burstRotation }}>
           <motion.span
             className="absolute inset-0 rounded-full"
             style={{
@@ -217,7 +211,6 @@ import { ringRotationTarget, ringRotationTransition, useSmoothRingBurstRotation 
                 }}
           />
           </motion.div>
-          </div>
         ))}
         {POTENTIAL_PARTICLES.map((particle, index) => (
           <motion.span
