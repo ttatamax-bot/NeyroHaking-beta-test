@@ -7,9 +7,9 @@ interface GameInstrumentBackdropProps {
 }
 
 const RINGS = [
-  { size: 760, duration: 52, direction: 1, opacity: 0.11, dash: "180 120", extraTurns: 0.14 },
-  { size: 610, duration: 39, direction: -1, opacity: 0.15, dash: "1 18", extraTurns: 0.18 },
-  { size: 470, duration: 29, direction: 1, opacity: 0.1, dash: "240 80 12 120", extraTurns: 0.22 },
+  { size: 760, duration: 52, direction: 1, opacity: 0.18, dash: "180 120", extraTurns: 0.14 },
+  { size: 610, duration: 39, direction: -1, opacity: 0.24, dash: "1 18", extraTurns: 0.18 },
+  { size: 470, duration: 29, direction: 1, opacity: 0.16, dash: "240 80 12 120", extraTurns: 0.22 },
 ];
 
 function BackdropRing({
@@ -39,9 +39,9 @@ function BackdropRing({
           style={{ filter: `drop-shadow(0 0 5px ${accent}55)` }}
           aria-hidden="true"
         >
-          <circle cx="160" cy="160" r="145" fill="none" stroke={accent} strokeOpacity={opacity} strokeWidth="0.9" strokeDasharray={dash} strokeLinecap="round" />
-          <ellipse cx="160" cy="160" rx="76" ry="145" fill="none" stroke={accent} strokeOpacity={opacity * 0.8} strokeWidth="0.8" strokeDasharray="2 14" strokeLinecap="round" transform="rotate(18 160 160)" />
-          <ellipse cx="160" cy="160" rx="42" ry="145" fill="none" stroke={accent} strokeOpacity={opacity * 0.46} strokeWidth="0.65" strokeDasharray="1 24" transform="rotate(-18 160 160)" />
+          <circle cx="160" cy="160" r="145" fill="none" stroke={accent} strokeOpacity={opacity} strokeWidth="1.15" strokeDasharray={dash} strokeLinecap="round" />
+          <ellipse cx="160" cy="160" rx="76" ry="145" fill="none" stroke={accent} strokeOpacity={opacity * 0.82} strokeWidth="1" strokeDasharray="2 14" strokeLinecap="round" transform="rotate(18 160 160)" />
+          <ellipse cx="160" cy="160" rx="42" ry="145" fill="none" stroke={accent} strokeOpacity={opacity * 0.5} strokeWidth="0.8" strokeDasharray="1 24" transform="rotate(-18 160 160)" />
         </motion.svg>
       </motion.div>
     </div>
