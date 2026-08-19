@@ -49,6 +49,7 @@ function TrackingBall({
   phase,
   isTarget,
   isSelected,
+  showFailure,
   moveMs,
   onSelect,
 }: {
@@ -56,6 +57,7 @@ function TrackingBall({
   phase: "tracking-show" | "tracking-move" | "tracking-input";
   isTarget: boolean;
   isSelected: boolean;
+  showFailure?: boolean;
   moveMs: number;
   onSelect: () => void;
 }) {
@@ -74,7 +76,8 @@ function TrackingBall({
     if (phase === "tracking-show") {
       setPosition(object.left, object.top);
     } else if (phase === "tracking-input") {
-      setPosition(object.finalLeft, object.finalTop);
+      // The movement already ended at finalLeft/finalTop. Keep the DOM position
+      // untouched so entering the selection phase cannot make the balls jump.
     } else {
       const startedAt = performance.now();
       const segments = object.pathLeft.length - 1;
@@ -102,11 +105,11 @@ function TrackingBall({
       onClick={onSelect}
       className="absolute h-5 w-5 -translate-x-1/2 -translate-y-1/2 rounded-full border transition-transform active:scale-[.78]"
       style={{
-        left: `${object.left}%`,
-        top: `${object.top}%`,
-        background: phase === "tracking-show" && isTarget ? "#F97316" : isSelected ? "#F97316" : "#52718A",
-        borderColor: phase === "tracking-show" && isTarget ? "#FFD29A" : isSelected ? CONCENTRATION_ACCENT : "#9AB2C4",
-        boxShadow: phase === "tracking-show" && isTarget ? "0 0 12px rgba(249,115,22,.55)" : isSelected ? "0 0 10px rgba(249,115,22,.45)" : "none",
+      left: `${phase === "tracking-show" ? object.left : object.finalLeft}%`,
+      top: `${phase === "tracking-show" ? object.top : object.finalTop}%`,
+      background: showFailure && isTarget ? "#EF4444" : phase === "tracking-show" && isTarget ? "#F97316" : isSelected ? "#F97316" : "#52718A",
+      borderColor: showFailure && isTarget ? "#FDA4AF" : phase === "tracking-show" && isTarget ? "#FFD29A" : isSelected ? CONCENTRATION_ACCENT : "#9AB2C4",
+      boxShadow: showFailure && isTarget ? "0 0 22px rgba(239,68,68,.82)" : phase === "tracking-show" && isTarget ? "0 0 12px rgba(249,115,22,.55)" : isSelected ? "0 0 10px rgba(249,115,22,.45)" : "none",
       }}
       aria-label={isSelected ? "Выбранный объект" : "Объект"}
     />
@@ -841,7 +844,26 @@ export function ConcentrationGame({
           </StateShell>
         )}
 
-        {phase === "failed" && (
+        {phase === "failed" && mode === "tracking" && (
+          <StateShell key="tracking-failed" className="game-card--failed !p-3">
+            <div className="game-instrument relative h-[300px] w-full overflow-hidden rounded-[20px]">
+              {trackingObjects.map((object) => (
+                <TrackingBall
+                  key={object.id}
+                  object={object}
+                  phase="tracking-input"
+                  moveMs={trackingObjectsForLevel(level).moveMs}
+                  isTarget={trackingTargets.includes(object.id)}
+                  isSelected={false}
+                  showFailure
+                  onSelect={() => undefined}
+                />
+              ))}
+            </div>
+          </StateShell>
+        )}
+
+        {phase === "failed" && mode !== "tracking" && (
           <StateShell key="failed" className="game-card--failed">
             <motion.div
               animate={{ x: [-3, 3, -2, 2, 0], rotate: [-4, 4, -3, 3, 0] }}
