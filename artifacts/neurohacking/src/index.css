@@ -161,6 +161,61 @@
       0 1px 0 rgba(96,165,250,0.22) inset;
   }
 
+  .game-card {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    background-image:
+      linear-gradient(135deg, rgba(255,255,255,.035), transparent 36%),
+      radial-gradient(circle at 50% 0%, rgba(249,115,22,.10), transparent 42%),
+      linear-gradient(160deg, rgba(13,34,59,.98), rgba(7,23,40,.98));
+    box-shadow:
+      0 0 0 1px rgba(255,255,255,.025),
+      0 16px 42px rgba(0,0,0,.32),
+      inset 0 1px 0 rgba(255,255,255,.08),
+      inset 0 -24px 42px rgba(2,10,21,.24);
+  }
+
+  .game-card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    opacity: .38;
+    background-image:
+      linear-gradient(rgba(142,203,255,.055) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(142,203,255,.055) 1px, transparent 1px);
+    background-size: 26px 26px;
+    mask-image: linear-gradient(to bottom, rgba(0,0,0,.75), transparent 70%);
+  }
+
+  .game-card::after {
+    content: "";
+    position: absolute;
+    left: 9%;
+    right: 9%;
+    top: 0;
+    height: 1px;
+    z-index: 0;
+    background: linear-gradient(90deg, transparent, rgba(255,220,170,.78), transparent);
+    box-shadow: 0 0 18px rgba(249,115,22,.48);
+    animation: game-card-scan 4.8s ease-in-out infinite;
+  }
+
+  .game-card > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  @keyframes game-card-scan {
+    0%, 100% { opacity: .25; transform: scaleX(.45); }
+    50% { opacity: .9; transform: scaleX(1); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .game-card::after { animation: none; opacity: .45; }
+  }
+
   .ritual-surface {
     background:
       linear-gradient(145deg, rgba(26, 62, 88, 0.84), rgba(10, 30, 49, 0.96));

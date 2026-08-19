@@ -18,6 +18,7 @@ import {
 import { ConcentrationModeLogo } from "./ConcentrationModeLogo";
 import { ConcentrationOnboarding } from "./ConcentrationOnboarding";
 import { ConcentrationPreview } from "./ConcentrationPreview";
+import { GameAtmosphere } from "../shared/GameAtmosphere";
 
 type GamePhase = "idle" | "signals" | "tracking-show" | "tracking-move" | "tracking-input" | "search" | "success" | "failed";
 type SignalName = "orange" | "red" | "green" | "blue" | "yellow";
@@ -134,7 +135,7 @@ function StepDots({ level, phase }: { level: number; phase: GamePhase }) {
 }
 
 function StateShell({ children, className = "" }: { children: React.ReactNode; className?: string }) {
-  return <motion.div initial={{ opacity: 0, scale: .98 }} animate={{ opacity: 1, scale: 1 }} className={`flex min-h-[330px] flex-col items-center justify-center rounded-[25px] border border-orange-400/20 bg-[#0a1c31] px-5 text-center ${className}`}>{children}</motion.div>;
+  return <motion.div initial={{ opacity: 0, scale: .98 }} animate={{ opacity: 1, scale: 1 }} className={`game-card flex min-h-[330px] flex-col items-center justify-center rounded-[25px] border border-orange-400/25 px-5 text-center ${className}`}>{children}</motion.div>;
 }
 
 export function ConcentrationGame({
@@ -343,7 +344,9 @@ export function ConcentrationGame({
   };
 
   return (
-    <div className="relative min-h-[100dvh] overflow-y-auto px-4 pb-8 pt-6" data-testid={`concentration-game-${mode}`}>
+    <div className="relative isolate min-h-[100dvh] overflow-y-auto px-4 pb-8 pt-6" data-testid={`concentration-game-${mode}`}>
+      <GameAtmosphere accent={CONCENTRATION_ACCENT} phase={phase} />
+      <div className="relative z-10">
       <div className="mb-7 flex items-center justify-between">
         <button type="button" onClick={onBack} className="p-1 text-tertiary" aria-label="Назад" data-testid="button-concentration-back">
           <ChevronLeft size={28} />
@@ -478,6 +481,7 @@ export function ConcentrationGame({
       </AnimatePresence>
 
       {onboardingVisible && <ConcentrationOnboarding mode={mode} onComplete={finishOnboarding} />}
+      </div>
     </div>
   );
 }
