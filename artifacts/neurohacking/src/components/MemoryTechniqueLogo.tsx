@@ -6,7 +6,30 @@ const assetBase = import.meta.env.BASE_URL.endsWith("/")
   : `${import.meta.env.BASE_URL}/`;
 const memoryLogoUrl = `${assetBase}memory-logo.png`;
 const loadingLogoUrl = `${assetBase}memory-logo-transparent.png?v=2`;
-const appIconUrl = `${assetBase}icon-512x512.png`;
+
+function MemoryLogoFallback({ size }: { size: number }) {
+  return (
+    <svg
+      viewBox="0 0 100 100"
+      className="absolute inset-0 h-full w-full"
+      style={{ padding: size * 0.16 }}
+      aria-hidden="true"
+      focusable="false"
+    >
+      <defs>
+        <radialGradient id="memory-logo-fallback-core" cx="50%" cy="45%" r="58%">
+          <stop offset="0%" stopColor="#FFE2A1" />
+          <stop offset="32%" stopColor="#F97316" />
+          <stop offset="100%" stopColor="#7C2D12" stopOpacity=".2" />
+        </radialGradient>
+      </defs>
+      <circle cx="50" cy="50" r="28" fill="url(#memory-logo-fallback-core)" />
+      <path d="M50 20v60M20 50h60" stroke="#FFD29A" strokeWidth="2" strokeLinecap="round" opacity=".8" />
+      <circle cx="50" cy="50" r="22" fill="none" stroke="#FFE7B3" strokeWidth="1.5" opacity=".8" />
+      <circle cx="50" cy="50" r="7" fill="#FFF7CC" />
+    </svg>
+  );
+}
 
 interface MemoryTechniqueLogoProps {
   size?: number;
@@ -64,19 +87,12 @@ export function MemoryTechniqueLogo({ size = 76, loading = false, className = ""
         }}
       />
 
-      {imageFailed && !loading ? (
-        <motion.img
-          src={appIconUrl}
-          alt=""
-          className="absolute inset-0 h-full w-full object-contain"
-          aria-hidden="true"
-        />
-      ) : (
+      {imageFailed ? <MemoryLogoFallback size={size} /> : (
         <motion.img
           src={loading ? loadingLogoUrl : memoryLogoUrl}
           alt=""
           className="absolute inset-0 h-full w-full object-contain"
-          onError={loading ? undefined : () => setImageFailed(true)}
+          onError={() => setImageFailed(true)}
           animate={{ filter: ["saturate(1.08) brightness(1.05) drop-shadow(0 0 8px rgba(249,115,22,.55))", "saturate(1.28) brightness(1.2) drop-shadow(0 0 18px rgba(255,196,72,.9))", "saturate(1.08) brightness(1.05) drop-shadow(0 0 8px rgba(249,115,22,.55))"] }}
           transition={{ duration: loading ? 2 : 3, repeat: Infinity, ease: "easeInOut" }}
           style={{
