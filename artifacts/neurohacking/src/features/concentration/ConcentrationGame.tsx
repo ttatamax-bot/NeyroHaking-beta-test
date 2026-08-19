@@ -18,7 +18,6 @@ import {
 import { ConcentrationModeLogo } from "./ConcentrationModeLogo";
 import { ConcentrationOnboarding } from "./ConcentrationOnboarding";
 import { ConcentrationPreview } from "./ConcentrationPreview";
-import { GameAtmosphere } from "../shared/GameAtmosphere";
 
 type GamePhase = "idle" | "signals" | "tracking-show" | "tracking-move" | "tracking-input" | "search" | "success" | "failed";
 type SignalName = "orange" | "red" | "green" | "blue" | "yellow";
@@ -135,7 +134,7 @@ function StepDots({ level, phase }: { level: number; phase: GamePhase }) {
 }
 
 function StateShell({ children, className = "" }: { children: React.ReactNode; className?: string }) {
-  return <motion.div initial={{ opacity: 0, scale: .98 }} animate={{ opacity: 1, scale: 1 }} className={`game-card flex min-h-[330px] flex-col items-center justify-center rounded-[25px] border border-orange-400/25 px-5 text-center ${className}`}>{children}</motion.div>;
+  return <motion.div initial={{ opacity: 0, scale: .98 }} animate={{ opacity: 1, scale: 1 }} className={`game-card flex min-h-[330px] flex-col items-center justify-center rounded-[25px] border border-orange-400/40 px-5 text-center ${className}`}>{children}</motion.div>;
 }
 
 export function ConcentrationGame({
@@ -345,7 +344,6 @@ export function ConcentrationGame({
 
   return (
     <div className="relative isolate min-h-[100dvh] overflow-y-auto px-4 pb-8 pt-6" data-testid={`concentration-game-${mode}`}>
-      <GameAtmosphere accent={CONCENTRATION_ACCENT} phase={phase} />
       <div className="relative z-10">
       <div className="mb-7 flex items-center justify-between">
         <button type="button" onClick={onBack} className="p-1 text-tertiary" aria-label="Назад" data-testid="button-concentration-back">
@@ -364,9 +362,14 @@ export function ConcentrationGame({
       <AnimatePresence mode="wait">
         {phase === "idle" && (
           <StateShell key="idle">
-            <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-full border" style={{ borderColor: CONCENTRATION_ACCENT_BORDER, background: CONCENTRATION_ACCENT_SOFT }}>
+            <motion.div
+              animate={{ y: [0, -4, 0], boxShadow: ["0 0 0 rgba(249,115,22,0)", "0 0 22px rgba(249,115,22,.25)", "0 0 0 rgba(249,115,22,0)"] }}
+              transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
+              className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl border"
+              style={{ borderColor: CONCENTRATION_ACCENT_BORDER, background: CONCENTRATION_ACCENT_SOFT }}
+            >
               <Trophy size={24} style={{ color: CONCENTRATION_ACCENT }} />
-            </div>
+            </motion.div>
             <p className="title-m text-primary">Готов к уровню {level}?</p>
             <p className="body-s mt-2 max-w-[280px] text-secondary">{levelHint(mode, level)}. Удерживай внимание до конца серии.</p>
             <button type="button" onClick={() => beginRound(level)} className="mt-7 min-h-12 rounded-[15px] px-7 text-sm font-semibold text-[#201308]" style={{ background: CONCENTRATION_ACCENT }} data-testid="button-concentration-start">
@@ -379,12 +382,21 @@ export function ConcentrationGame({
           <StateShell key="signals" className="cursor-pointer">
             <button type="button" onClick={handleSignalClick} className="flex min-h-[330px] w-full flex-col items-center justify-center outline-none">
               <p className="caption text-tertiary">СИГНАЛ {Math.min(signalIndex + 1, signalCountForLevel(level))} / {signalCountForLevel(level)}</p>
-              <motion.span
-                animate={{ scale: signal.isTarget ? [1, 1.06, 1] : [1, .98, 1] }}
-                transition={{ duration: signal.isTarget ? .7 : 1.1, repeat: Infinity, ease: "easeInOut" }}
-                className="mt-8 h-32 w-32 rounded-full border-[3px]"
-                style={{ background: `${signal.color}28`, borderColor: `${signal.color}dd`, boxShadow: `0 0 44px ${signal.color}66, inset 0 0 28px ${signal.color}22` }}
-              />
+              <span className="relative mt-8 flex h-32 w-32 items-center justify-center">
+                <motion.span
+                  animate={{ scale: signal.isTarget ? [1, 1.06, 1] : [1, .98, 1], opacity: signal.isTarget ? [0.78, 1, .78] : 1 }}
+                  transition={{ duration: signal.isTarget ? .7 : 1.1, repeat: Infinity, ease: "easeInOut" }}
+                  className="absolute inset-0 rounded-full border-[3px]"
+                  style={{ background: `${signal.color}28`, borderColor: `${signal.color}dd`, boxShadow: `0 0 44px ${signal.color}66, inset 0 0 28px ${signal.color}22` }}
+                />
+                <motion.span
+                  animate={{ rotate: signal.isTarget ? [0, 360] : 0 }}
+                  transition={{ duration: 3.2, repeat: Infinity, ease: "linear" }}
+                  className="absolute inset-[-9px] rounded-full border border-dashed"
+                  style={{ borderColor: `${signal.color}80` }}
+                />
+                <span className="relative h-2 w-2 rounded-full" style={{ background: signal.color, boxShadow: `0 0 12px ${signal.color}` }} />
+              </span>
               <p className="title-m mt-7 text-primary">{signal.isTarget ? "НАЖМИ" : "НЕ НАЖИМАЙ"}</p>
               <p className="body-s mt-2 text-secondary">{lastReaction ? `${lastReaction} мс` : `порог ≤ ${signalThresholdForLevel(level)} мс`}</p>
             </button>
@@ -397,7 +409,7 @@ export function ConcentrationGame({
               <span className="caption text-tertiary">{phase === "tracking-show" ? "ЗАПОМНИ ЦЕЛИ" : phase === "tracking-move" ? "СЛЕДИ" : "ВЫБЕРИ ЦЕЛИ"}</span>
               <span className="caption text-secondary">{selectedTracking.length}/{trackingTargets.length}</span>
             </div>
-            <div className="relative h-[300px] w-full overflow-hidden rounded-[20px] border border-orange-400/15 bg-[#08182a]">
+            <div className="game-instrument relative h-[300px] w-full overflow-hidden rounded-[20px]">
               {trackingObjects.map((object) => {
                 const isTarget = trackingTargets.includes(object.id);
                 const isSelected = selectedTracking.includes(object.id);
@@ -410,6 +422,8 @@ export function ConcentrationGame({
                     transition={phase === "tracking-show"
                       ? { duration: 1.1, repeat: isTarget ? Infinity : 0, ease: "easeInOut" }
                       : { duration: 2.8 + (object.id % 4) * .2, repeat: phase === "tracking-input" ? 0 : Infinity, ease: "easeInOut", delay: object.id * .02 }}
+                    whileTap={{ scale: .78 }}
+                    whileHover={{ scale: 1.25 }}
                     className="absolute h-5 w-5 -translate-x-1/2 -translate-y-1/2 rounded-full border"
                     style={{
                       left: `${object.left}%`,
@@ -432,13 +446,22 @@ export function ConcentrationGame({
               <span className="caption text-tertiary">НАЙДИ ЦЕЛЬ</span>
               <span className="num text-sm tabular-nums" style={{ color: searchRemaining < 1000 ? "#FB7185" : CONCENTRATION_ACCENT }}>{(searchRemaining / 1000).toFixed(1)} с</span>
             </div>
-            <div className="grid w-full grid-cols-10 gap-1.5 rounded-[18px] border border-orange-400/15 bg-[#08182a] p-2">
+            <div className="game-instrument relative grid w-full grid-cols-10 gap-1.5 rounded-[18px] p-2">
+              <motion.span
+                aria-hidden="true"
+                initial={{ x: "-100%" }}
+                animate={{ x: "1000%" }}
+                transition={{ duration: 2.4, repeat: Infinity, ease: "linear" }}
+                className="pointer-events-none absolute bottom-1 left-0 top-1 z-10 w-0.5 bg-orange-300 shadow-[0_0_12px_rgba(249,115,22,.85)]"
+              />
               {searchShapes.map((shape, index) => (
-                <button
+                <motion.button
                   type="button"
                   key={index}
                   onClick={() => handleSearchObject(index)}
-                  className="flex aspect-square items-center justify-center rounded-[5px] border text-[12px] transition-none"
+                  whileTap={{ scale: .82 }}
+                  whileHover={{ scale: 1.08, borderColor: "rgba(249,115,22,.65)" }}
+                  className="game-control flex aspect-square items-center justify-center rounded-[5px] text-[12px] transition-none"
                   style={{
                     color: "rgba(183,206,228,.72)",
                     background: "rgba(147,197,253,.055)",
@@ -447,7 +470,7 @@ export function ConcentrationGame({
                   aria-label="Объект поиска"
                 >
                   {shape}
-                </button>
+                </motion.button>
               ))}
             </div>
             <p className="body-s mt-4 text-secondary">Один объект отличается от остальных.</p>
@@ -455,10 +478,15 @@ export function ConcentrationGame({
         )}
 
         {phase === "success" && (
-          <StateShell key="success" className="border-orange-300/55 bg-orange-500/[.08] shadow-[0_0_30px_rgba(249,115,22,.32),inset_0_0_28px_rgba(249,115,22,.08)]">
-            <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-full border border-orange-300/45 bg-orange-500/15">
+          <StateShell key="success" className="game-card--success">
+            <motion.div
+              initial={{ scale: .7, rotate: -18 }}
+              animate={{ scale: [1, 1.08, 1], rotate: 0 }}
+              transition={{ duration: .55, ease: "easeOut" }}
+              className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl border border-orange-300/45 bg-[#25404a]"
+            >
               <Target size={25} style={{ color: CONCENTRATION_ACCENT }} />
-            </div>
+            </motion.div>
             {rewardFlash && <div className="absolute top-5 rounded-full border border-orange-300/50 bg-orange-500/15 px-4 py-2 text-sm font-semibold text-orange-200">+10% потенциала дня</div>}
             <p className="title-m text-primary">Уровень пройден</p>
             <p className="body-s mt-2 text-secondary">Фокус удержан. Следующий уровень уже готовится.</p>
@@ -467,10 +495,14 @@ export function ConcentrationGame({
         )}
 
         {phase === "failed" && (
-          <StateShell key="failed" className="border-rose-400/45 bg-rose-500/[.06]">
-            <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-full border border-rose-300/45 bg-rose-500/15">
+          <StateShell key="failed" className="game-card--failed">
+            <motion.div
+              animate={{ x: [-3, 3, -2, 2, 0], rotate: [-4, 4, -3, 3, 0] }}
+              transition={{ duration: .42, ease: "easeOut" }}
+              className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl border border-rose-300/45 bg-[#42253a]"
+            >
               <Crosshair size={24} className="text-rose-300" />
-            </div>
+            </motion.div>
             <p className="title-m text-primary">Потеря концентрации</p>
             <p className="body-s mt-2 max-w-[280px] text-secondary">{failureReason || "Ошибка сбрасывает серию на первый уровень."}</p>
             <button type="button" onClick={() => beginRound(1)} className="mt-8 flex min-h-12 min-w-[178px] items-center justify-center gap-2 rounded-[15px] bg-rose-500 px-6 text-sm font-semibold text-white shadow-[0_0_18px_rgba(244,63,94,.28)]" data-testid="button-concentration-retry">
