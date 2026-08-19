@@ -10,7 +10,6 @@ import {
   levelHint,
   randomUniqueIndexes,
   searchGridSizeForLevel,
-  searchObjectCountForLevel,
   searchTimeForLevel,
   signalPrepareDurationForLevel,
   signalCountForLevel,
@@ -248,18 +247,16 @@ function createTrackingObjects(level: number): { objects: TrackingObject[]; targ
 
 const SEARCH_TARGET_PREVIEW_MS = 1800;
 
-function createSearchShapes(level: number, target: MemorySymbolId): { targetIndex: number; shapes: Array<MemorySymbolId | null> } {
+function createSearchShapes(level: number, target: MemorySymbolId): { targetIndex: number; shapes: MemorySymbolId[] } {
   const shapeCount = searchGridSizeForLevel(level) ** 2;
-  const objectCount = Math.min(shapeCount, searchObjectCountForLevel(level));
-  const occupiedIndexes = randomUniqueIndexes(shapeCount, objectCount);
-  const targetIndex = occupiedIndexes[Math.floor(Math.random() * occupiedIndexes.length)] ?? 0;
+  const targetIndex = Math.floor(Math.random() * shapeCount);
   const distractors = (["dot", "triangle", "star", "diamond", "square", "sparkle", "hexagon", "half"] as MemorySymbolId[])
     .filter((shape) => shape !== target);
-  const shapes: Array<MemorySymbolId | null> = Array.from({ length: shapeCount }, () => null);
-  for (const index of occupiedIndexes) {
+  const shapes: MemorySymbolId[] = Array.from({ length: shapeCount }, (_, index) => {
+    if (index === targetIndex) return target;
     const distractorIndex = Math.floor(Math.random() * distractors.length);
-    shapes[index] = index === targetIndex ? target : distractors[distractorIndex] ?? "dot";
-  }
+    return distractors[distractorIndex] ?? "dot";
+  });
   return {
     targetIndex,
     shapes,
@@ -392,7 +389,7 @@ export function ConcentrationGame({
   const [trackingObjects, setTrackingObjects] = useState<TrackingObject[]>([]);
   const [trackingTargets, setTrackingTargets] = useState<number[]>([]);
   const [selectedTracking, setSelectedTracking] = useState<number[]>([]);
-  const [searchShapes, setSearchShapes] = useState<Array<MemorySymbolId | null>>([]);
+  const [searchShapes, setSearchShapes] = useState<MemorySymbolId[]>([]);
   const [searchTarget, setSearchTarget] = useState<number | null>(null);
   const [searchTargetShape, setSearchTargetShape] = useState<MemorySymbolId>("triangle");
   const [searchRemaining, setSearchRemaining] = useState(0);
@@ -766,18 +763,15 @@ export function ConcentrationGame({
 
         {phase === "search-preview" && (
           <StateShell key="search-preview" className="!p-3">
-            <div className="flex min-h-[330px] w-full flex-col items-center justify-center text-center">
-              <span className="caption text-tertiary">ЗАПОМНИ ФИГУРУ</span>
+            <div className="flex min-h-[330px] w-full items-center justify-center">
               <motion.div
-                className="mt-8 flex h-28 w-28 items-center justify-center text-orange-200"
+                className="flex h-40 w-40 items-center justify-center text-orange-200"
                 initial={{ opacity: 0, scale: .7, rotate: -12 }}
                 animate={{ opacity: 1, scale: [1, 1.08, 1], rotate: 0 }}
                 transition={{ duration: .55, ease: "easeOut" }}
               >
-                <MemorySymbol symbol={searchTargetShape} className="h-24 w-24" />
+                <MemorySymbol symbol={searchTargetShape} className="h-32 w-32" />
               </motion.div>
-              <p className="title-m mt-7" style={{ color: CONCENTRATION_ACCENT }}>Найди именно её</p>
-              <p className="body-s mt-2 max-w-[270px] text-secondary">После показа фигура появится среди разных объектов.</p>
             </div>
           </StateShell>
         )}
@@ -799,11 +793,10 @@ export function ConcentrationGame({
                   onClick={() => handleSearchObject(index)}
                   whileTap={{ scale: .82 }}
                   whileHover={{ scale: 1.12 }}
-                  disabled={shape === null}
-                  className="flex aspect-square items-center justify-center rounded-full text-[#b7cee4]/75 outline-none transition-transform focus-visible:ring-2 focus-visible:ring-orange-400/70 disabled:pointer-events-none"
+                  className="flex aspect-square items-center justify-center rounded-full text-[#b7cee4]/75 outline-none transition-transform focus-visible:ring-2 focus-visible:ring-orange-400/70"
                   aria-label="Объект поиска"
                 >
-                  {shape && <MemorySymbol symbol={shape} className="h-[min(8vw,32px)] w-[min(8vw,32px)]" />}
+                  <MemorySymbol symbol={shape} className="h-[min(8vw,32px)] w-[min(8vw,32px)]" />
                 </motion.button>
               ))}
             </div>
