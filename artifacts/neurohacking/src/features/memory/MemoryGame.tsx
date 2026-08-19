@@ -7,7 +7,7 @@ import {
   MEMORY_ACCENT,
   MEMORY_ACCENT_BORDER,
   MEMORY_ACCENT_SOFT,
-  MEMORY_REVERSE_PAUSE_MS,
+  MEMORY_PRE_INPUT_PAUSE_MS,
   MEMORY_REWARD_LEVEL,
   MEMORY_SHOW_MS,
   memoryModeMeta,
@@ -86,7 +86,9 @@ function LevelRail({ level, bestLevel, phase }: { level: number; bestLevel: numb
         <p className="caption text-tertiary">ЛУЧШИЙ</p>
         <p className="num mt-1 min-w-[2ch] text-center text-lg tabular-nums text-primary" style={{ fontVariantNumeric: "tabular-nums" }} data-testid="text-memory-best-level">{bestLevel}</p>
       </div>
-      <span className="sr-only" aria-live="polite">{phase === "showing" ? "Запомни" : phase === "input" ? "Твой ход" : ""}</span>
+      <span className="sr-only" aria-live="polite">
+        {phase === "showing" ? "Запомни" : phase === "waiting" ? "Приготовься" : phase === "input" ? "Твой ход" : ""}
+      </span>
     </div>
   );
 }
@@ -109,14 +111,14 @@ function StepDots({ level, phase }: { level: number; phase: GamePhase }) {
   );
 }
 
-function ReversePauseState() {
+function MemoryPauseState() {
   return (
     <motion.div
       key="waiting"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       className="flex min-h-[330px] flex-col items-center justify-center rounded-[25px] border border-orange-400/15 bg-[#0a1c31] px-7 text-center"
-      data-testid="memory-reverse-pause"
+      data-testid="memory-pre-input-pause"
     >
       <Clock3 size={22} style={{ color: MEMORY_ACCENT }} />
       <p className="title-m mt-4 text-primary">Приготовься</p>
@@ -446,12 +448,8 @@ export function MemoryGame({
     setErrorIndex(null);
     setPhase("showing");
     timerRef.current = window.setTimeout(() => {
-      if (mode !== "reverse") {
-        setPhase("input");
-        return;
-      }
       setPhase("waiting");
-      timerRef.current = window.setTimeout(() => setPhase("input"), MEMORY_REVERSE_PAUSE_MS);
+      timerRef.current = window.setTimeout(() => setPhase("input"), MEMORY_PRE_INPUT_PAUSE_MS);
     }, MEMORY_SHOW_MS);
   };
 
@@ -581,7 +579,7 @@ export function MemoryGame({
           </motion.div>
         )}
         {phase === "showing" && <ShowingState challenge={challenge} level={level} />}
-        {phase === "waiting" && <ReversePauseState />}
+        {phase === "waiting" && <MemoryPauseState />}
         {phase === "input" && challenge.mode === "reverse" && <ReverseInput digits={challenge.digits} entered={enteredDigits} onDigit={handleDigit} />}
         {phase === "input" && challenge.mode === "matrix" && <MatrixInput challenge={challenge} selected={selectedCells} onCell={handleCell} />}
         {phase === "input" && challenge.mode === "symbols" && <SymbolsInput challenge={challenge} entered={enteredSymbols} onSymbol={handleSymbol} />}
