@@ -319,7 +319,7 @@ import { isArticleRequirementSatisfied } from "@/content/article-access";
     const priceLabel = !isUnlocked && cost === 400 ? "400 ключей" : null;
 
     return (
-      <div className="ml-auto flex min-w-[88px] shrink-0 flex-col items-end text-right">
+      <div className="ml-0 flex min-w-[88px] shrink-0 flex-col items-end text-right">
         <motion.div
           className="relative flex h-8 w-8 items-center justify-center"
           style={{
@@ -612,7 +612,7 @@ import { isArticleRequirementSatisfied } from "@/content/article-access";
                     opacity={ringStyle.fine.opacity}
                   />
                 </motion.svg>
-                 <div className="relative z-10 flex min-h-[42px] items-start justify-between gap-3">
+                  <div className="relative z-10 flex w-full min-h-[42px] items-start justify-between gap-3 self-stretch">
                   <ArticleIcon Icon={visual.Icon} color={visual.color} glow={visual.glow} unread={showUnreadDot} />
                    <ArticleAccessMark
                      isUnlocked={isUnlocked}
