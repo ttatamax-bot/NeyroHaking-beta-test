@@ -133,7 +133,7 @@ function NewsSystemMark() {
         </g>
       </motion.svg>
       </motion.div>
-      <motion.div className="pointer-events-none absolute inset-[-8px]" style={{ rotate: burstRotation }}>
+      <motion.div className="pointer-events-none absolute inset-[-8px]" style={{ rotate: burstRotation, x: -30, y: -30 }}>
       <motion.span
         className="absolute inset-0 rounded-full"
         style={{
@@ -150,7 +150,7 @@ function NewsSystemMark() {
             }}
       />
       </motion.div>
-      <motion.div className="pointer-events-none absolute inset-[16px]" style={{ rotate: burstRotation }}>
+      <motion.div className="pointer-events-none absolute inset-[16px]" style={{ rotate: burstRotation, x: -30, y: -30 }}>
       <motion.span
         className="absolute inset-0 rounded-full"
         style={{

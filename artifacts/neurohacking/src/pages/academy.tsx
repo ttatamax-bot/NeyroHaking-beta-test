@@ -193,6 +193,8 @@ import { ringRotationTarget, ringRotationTransition, useSmoothRingBurstRotation 
             style={{
               inset: ring.inset,
               rotate: burstRotation,
+              x: -30,
+              y: -30,
             }}
           >
           <motion.span
