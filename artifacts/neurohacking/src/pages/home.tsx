@@ -481,7 +481,10 @@ export function PotentialScale({
           transition={{ duration: 3.2 * speedFactor, repeat: Infinity, ease: 'easeInOut' }}
         />
       )}
-      <motion.div className="pointer-events-none absolute inset-0" style={{ rotate: burstRotation }}>
+      <motion.div
+        className="pointer-events-none absolute inset-0"
+        style={{ rotate: burstRotation, transformOrigin: "50% 120px" }}
+      >
       <div
         className="absolute left-1/2 top-[120px] z-0 h-0 w-0"
         style={{ opacity: .18 + ringProgress * .82, transform: "translate(-50%, -50%)" }}
@@ -1055,10 +1058,13 @@ export default function Home() {
                     transition={{ type: "spring", stiffness: 420, damping: 25, mass: 0.65 }}
                   >
                     <NewsCardVisualMotion newsIdx={i} stackProgress={newsStackProgress}>
-                       <motion.div className="pointer-events-none absolute inset-0" style={{ rotate: burstRotation }}>
+                       <motion.div
+                         className="pointer-events-none absolute -right-16 -top-16 h-48 w-48"
+                         style={{ rotate: burstRotation }}
+                       >
                       <motion.div
                         aria-hidden="true"
-                        className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full border"
+                         className="h-full w-full rounded-full border"
                         style={{
                           borderColor: 'rgba(255,224,166,.24)',
                           boxShadow: '0 0 32px rgba(249,115,22,.16)',
@@ -1066,9 +1072,14 @@ export default function Home() {
                         animate={{ rotate: ringRotationTarget(1, 22 + i * 3, ringBurst), opacity: [0.24, 0.48, 0.24] }}
                          transition={{ rotate: ringRotationTransition(22 + i * 3, ringBurst), opacity: { duration: 4.2, repeat: Infinity, ease: "easeInOut" } }}
                       />
+                       </motion.div>
+                       <motion.div
+                         className="pointer-events-none absolute -right-10 -top-10 h-36 w-36"
+                         style={{ rotate: burstRotation }}
+                       >
                       <motion.div
                         aria-hidden="true"
-                        className="pointer-events-none absolute -right-10 -top-10 h-36 w-36 rounded-full"
+                         className="h-full w-full rounded-full"
                         style={{
                           background: 'repeating-conic-gradient(from 12deg, rgba(255,237,170,.42) 0deg 1.4deg, transparent 1.4deg 15deg)',
                           maskImage: 'radial-gradient(circle, transparent 76%, #000 78%, #000 82%, transparent 84%)',

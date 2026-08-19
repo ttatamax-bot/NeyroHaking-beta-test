@@ -212,7 +212,10 @@ function TechniqueAtmosphere() {
           background: "radial-gradient(ellipse 68% 42% at 50% 42%, transparent 0%, transparent 54%, rgba(8,19,32,.36) 88%, rgba(8,19,32,.72) 100%)",
         }}
       />
-      <motion.div className="absolute inset-0" style={{ rotate: burstRotation }}>
+      <motion.div
+        className="absolute inset-0"
+        style={{ rotate: burstRotation, transformOrigin: "50% 42%" }}
+      >
       <div
         className="absolute left-1/2 top-[42%] h-0 w-0"
         style={{ transform: "translate(-50%, -50%)" }}
@@ -395,6 +398,7 @@ function InstrumentGear({
 }) {
   const reducedMotion = useReducedMotion();
   const ringBurst = false;
+  const burstRotation = useSmoothRingBurstRotation(!reducedMotion);
   const animate = reducedMotion ? { rotate: 0, opacity: 0.28 } : { rotate: ringRotationTarget(direction, duration, ringBurst), opacity: [0.16, 0.38, 0.16] };
   const transition = reducedMotion
     ? { duration: 0 }
@@ -409,6 +413,7 @@ function InstrumentGear({
       className="pointer-events-none absolute z-0 rounded-full"
       style={{ left, top, width: size, height: size, transform: "translate(-50%, -50%)" }}
     >
+      <motion.div className="absolute inset-0" style={{ rotate: burstRotation }}>
       <motion.div
         className="absolute inset-0 rounded-full"
         animate={animate}
@@ -439,6 +444,7 @@ function InstrumentGear({
           WebkitMaskImage: "radial-gradient(circle, transparent 86%, #000 87%, #000 91%, transparent 92%)",
         }}
       />
+      </motion.div>
     </div>
   );
 }
@@ -482,7 +488,10 @@ function MainLikeInstrumentAtmosphere() {
         ].join(", "),
       }}
     >
-      <motion.div className="absolute inset-0" style={{ rotate: burstRotation }}>
+      <motion.div
+        className="absolute inset-0"
+        style={{ rotate: burstRotation, transformOrigin: "50% 42%" }}
+      >
       <div
         className="technique-atmosphere-rings pointer-events-none absolute left-1/2 top-[42%] h-0 w-0"
         style={{
@@ -612,12 +621,12 @@ function MainLikeInstrumentAtmosphere() {
       </div>
       </motion.div>
 
-      <motion.div className="absolute inset-0" style={{ rotate: burstRotation }}>
+      <div className="absolute inset-0">
       <InstrumentGear left="calc(17% - 50px)" top="calc(27% + 50px)" size="min(96vw, 464px)" duration={22} direction={-1} accent="rgba(218,226,230,.5)" />
       <InstrumentGear left="84%" top="27%" size="min(88vw, 426px)" duration={19} direction={1} accent="rgba(255,224,166,.54)" />
       <InstrumentGear left="14%" top="73%" size="min(88vw, 426px)" duration={25} direction={1} accent="rgba(249,115,22,.48)" />
       <InstrumentGear left="84%" top="73%" size="min(88vw, 426px)" duration={27} direction={1} accent="rgba(255,224,166,.54)" />
-      </motion.div>
+      </div>
 
       {particles.map((particle, index) => (
         <motion.span

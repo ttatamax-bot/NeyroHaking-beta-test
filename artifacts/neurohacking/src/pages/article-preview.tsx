@@ -146,10 +146,6 @@ function ArticleInstrumentPreview({ articleId }: { articleId: string }) {
         }}
       />
 
-      <motion.div
-        className="pointer-events-none absolute inset-0"
-        style={{ rotate: burstRotation }}
-      >
       {visual.rings.map((ring, ringIndex) => {
         const ringOpacity = ring.opacity * 0.45;
         return (
@@ -166,6 +162,7 @@ function ArticleInstrumentPreview({ articleId }: { articleId: string }) {
             filter: `drop-shadow(0 0 14px ${visual.color}3d)`,
           }}
         >
+          <motion.div className="h-full w-full" style={{ rotate: burstRotation }}>
           <motion.svg
             className="h-full w-full"
             viewBox="0 0 100 100"
@@ -190,10 +187,10 @@ function ArticleInstrumentPreview({ articleId }: { articleId: string }) {
               strokeLinecap="round"
             />
           </motion.svg>
+          </motion.div>
         </div>
         );
       })}
-      </motion.div>
 
       <motion.div
         aria-hidden="true"
