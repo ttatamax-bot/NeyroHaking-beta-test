@@ -29,15 +29,22 @@
 - [Supabase connector authentication](supabase-connector-auth.md) — an added connection can still return 401 without an authenticated client; never mutate beta data until access is verified.
 - [Referral schema provisioning](referral-schema-provisioning.md) — new persistent tables require the idempotent schema bootstrap before route checks or production enablement.
 - [Preview static assets](preview-static-assets.md) — loading visuals should use BASE_URL-aware public assets, not root-relative Vite source imports.
+- [Edge-to-edge mobile overlays](edge-to-edge-mobile-overlays.md) — fixed and themed screens must cover iOS safe areas and the full viewport, not a centered 390px shell.
 - [Trusted economy responses](trusted-economy-responses.md) — apply balances and unlocks from successful purchase/grant responses before any optional profile refresh.
 - [Mobile memory audio](mobile-memory-audio.md) — Web Audio needs a user-gesture unlock and resume handling for mobile practice sounds.
 - [iOS game interaction](ios-game-interaction.md) — memory boards need explicit selection and touch-callout suppression on iPhone.
 - [Techniques icon wells](techniques-icon-wells.md) — on the techniques tab only the outer card backgrounds are removed; colored filled/bordered squares around animated icons remain.
 - [Segmented gauge rendering](segmented-gauge-rendering.md) — render active SVG gauge segments as direct colored paths; reserve dash masks for a partial segment.
 - [Techniques instrument backdrop](techniques-instrument-backdrop.md) — the Techniques background must reuse the main PotentialScale metallic gauge language, not orbital/cosmic decoration.
-- [Techniques Safari gauge](techniques-safari-gauge.md) — critical technique rings should use visible SVG strokes rather than CSS mask gradients for iPhone reliability.
+- [Game panel motion](game-panel-motion.md) — gameplay cards should be opaque instrument panels; keep motion inside the exercise, not in decorative orbital backgrounds.
 - [Preview data readiness](preview-data-readiness.md) — unauthenticated DEV must not wait for Clerk hydration before rendering local app data.
 - [Stable app context](stable-app-context.md) — keep the React app context outside the hot-reloaded store module to prevent HMR consumer/provider mismatches.
 - [Day-close glow lock](day-close-glow-lock.md) — the central flash must hold peak brightness from 99.5% through the 100% potential milestone.
 - [Beta Vercel source sync](beta-vercel-source-sync.md) — GitHub API tree updates must preserve the complete frontend source tree before triggering Vercel.
 - [Academy card animation](academy-card-animation.md) — mobile Safari needs one transform owner; scroll targets need a separate short transition from entrance timing.
+- [Article atmosphere ownership](article-atmosphere-ownership.md) — the article screen owns the full dynamic atmosphere; Academy cards stay compact with only right-aligned lock/price UI.
+- [Article unlock conditions](article-unlock-conditions.md) — A2–A4 unlock from first-time behavior; A5/A6 remain 400-key purchases.
+- [Technique navigation](technique-navigation.md) — route-backed technique cards must not swallow clicks because of preview or completion-state guards.
+- [Explicit ring startup burst](ring-burst-animation.md) — startup acceleration must be a finite two-turn phase before the original looping ring speed resumes.
+- [Concentration mechanic icons](concentration-mechanic-icons.md) — mode logos should be standalone animated SVGs that depict the real signal, tracking, and search mechanics.
+- [Signals phase pacing](signals-phase-pacing.md) — Signals starts with 3s preparation and shows each successful reaction for 1.5s before the next preparation.

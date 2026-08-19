@@ -6,6 +6,8 @@ import {
   CONCENTRATION_ACCENT_BORDER,
   CONCENTRATION_ACCENT_SOFT,
   CONCENTRATION_REWARD_LEVEL,
+  SIGNALS_PREPARE_MS,
+  SIGNALS_RESULT_MS,
   concentrationModeMeta,
   levelHint,
   randomUniqueIndexes,
@@ -19,8 +21,9 @@ import { ConcentrationModeLogo } from "./ConcentrationModeLogo";
 import { ConcentrationOnboarding } from "./ConcentrationOnboarding";
 import { ConcentrationPreview } from "./ConcentrationPreview";
 import { GameInstrumentBackdrop } from "../shared/GameInstrumentBackdrop";
+import { initConcentrationSound, playConcentrationCorrect, playConcentrationFail, playConcentrationPrepare, playConcentrationResult, playConcentrationSignal } from "./sounds";
 
-type GamePhase = "idle" | "signals" | "tracking-show" | "tracking-move" | "tracking-input" | "search" | "success" | "failed";
+type GamePhase = "idle" | "preparing" | "signal-result" | "signals" | "tracking-show" | "tracking-move" | "tracking-input" | "search" | "success" | "failed";
 type SignalName = "orange" | "red" | "green" | "blue" | "yellow";
 
 interface Signal {
@@ -122,7 +125,7 @@ function LevelRail({ level, bestLevel, phase }: { level: number; bestLevel: numb
         <p className="num mt-1 min-w-[2ch] text-center text-lg tabular-nums text-primary">{bestLevel}</p>
       </div>
       <span className="sr-only" aria-live="polite">
-        {phase === "signals" ? "Нажми только оранжевый" : phase === "tracking-show" ? "Запомни цели" : phase === "tracking-input" ? "Выбери цели" : ""}
+        {phase === "preparing" ? "Приготовься" : phase === "signal-result" ? "Результат прошлого попадания" : phase === "signals" ? "Нажми только оранжевый" : phase === "tracking-show" ? "Запомни цели" : phase === "tracking-input" ? "Выбери цели" : ""}
       </span>
     </div>
   );
@@ -216,12 +219,23 @@ export function ConcentrationGame({
 
   const failGame = (reason: string) => {
     clearTimers();
+    if (mode === "signals") playConcentrationFail();
     setFailureReason(reason);
     setPhase("failed");
   };
 
+  const beginSignalPreparation = (roundLevel: number, nextIndex: number) => {
+    clearTimers();
+    setSignalIndex(nextIndex);
+    setReactionStart(null);
+    setPhase("preparing");
+    playConcentrationPrepare();
+    timerRef.current = window.setTimeout(() => showSignal(roundLevel, nextIndex), SIGNALS_PREPARE_MS);
+  };
+
   const beginRound = (nextLevel: number) => {
     clearTimers();
+    if (mode === "signals") initConcentrationSound();
     onStartMode?.(mode);
     setLevel(nextLevel);
     setReactionTimes([]);
@@ -229,18 +243,7 @@ export function ConcentrationGame({
     setSelectedTracking([]);
     setFailureReason("");
     if (mode === "signals") {
-      setPhase("signals");
-      const nextSignal = createSignal(nextLevel, 0);
-      setSignal(nextSignal);
-      setSignalIndex(0);
-      if (nextSignal.isTarget) {
-        const started = performance.now();
-        setReactionStart(started);
-        timerRef.current = window.setTimeout(() => failGame("Оранжевый сигнал пропущен"), signalThresholdForLevel(nextLevel));
-      } else {
-        setReactionStart(null);
-        timerRef.current = window.setTimeout(() => showSignal(nextLevel, 1), 600);
-      }
+      beginSignalPreparation(nextLevel, 0);
     } else if (mode === "tracking") {
       const next = createTrackingObjects(nextLevel);
       setTrackingObjects(next.objects);
@@ -267,6 +270,8 @@ export function ConcentrationGame({
 
   const showSignal = (roundLevel: number, nextIndex: number, completedTimes = reactionTimes) => {
     clearTimers();
+    playConcentrationSignal();
+    setPhase("signals");
     if (nextIndex >= signalCountForLevel(roundLevel)) {
       completeRound(roundLevel, {
         bestReactionMs: Math.min(...completedTimes),
@@ -286,6 +291,25 @@ export function ConcentrationGame({
       setReactionStart(null);
       timerRef.current = window.setTimeout(() => showSignal(roundLevel, nextIndex + 1), 520 + Math.min(420, roundLevel * 42));
     }
+  };
+
+  const showSignalResult = (roundLevel: number, nextIndex: number, completedTimes: number[], reaction: number) => {
+    clearTimers();
+    setLastReaction(reaction);
+    setReactionStart(null);
+    setPhase("signal-result");
+    playConcentrationResult();
+    timerRef.current = window.setTimeout(() => {
+      if (nextIndex >= signalCountForLevel(roundLevel)) {
+        completeRound(roundLevel, {
+          bestReactionMs: Math.min(...completedTimes),
+          averageReactionMs: Math.round(completedTimes.reduce((sum, value) => sum + value, 0) / Math.max(1, completedTimes.length)),
+          stabilityPercent: 100,
+        });
+        return;
+      }
+      beginSignalPreparation(roundLevel, nextIndex);
+    }, SIGNALS_RESULT_MS);
   };
 
   const completeRound = (completedLevel: number, stats: ConcentrationStats = {}) => {
@@ -325,7 +349,8 @@ export function ConcentrationGame({
     const nextTimes = [...reactionTimes, reaction];
     setReactionTimes(nextTimes);
     setLastReaction(reaction);
-    showSignal(level, signalIndex + 1, nextTimes);
+    playConcentrationCorrect();
+    showSignalResult(level, signalIndex + 1, nextTimes, reaction);
   };
 
   const handleTrackingObject = (id: number) => {
@@ -392,6 +417,45 @@ export function ConcentrationGame({
             <button type="button" onClick={() => beginRound(level)} className="mt-7 min-h-12 rounded-[15px] px-7 text-sm font-semibold text-[#201308]" style={{ background: CONCENTRATION_ACCENT }} data-testid="button-concentration-start">
               Начать уровень
             </button>
+          </StateShell>
+        )}
+
+        {phase === "preparing" && (
+          <StateShell key="preparing">
+            <motion.div
+              animate={{ scale: [1, 1.08, 1], opacity: [.65, 1, .65] }}
+              transition={{ duration: 1.2, repeat: Infinity, ease: "easeInOut" }}
+              className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl border"
+              style={{ borderColor: CONCENTRATION_ACCENT_BORDER, background: CONCENTRATION_ACCENT_SOFT }}
+            >
+              <span className="h-3 w-3 rounded-full bg-orange-300 shadow-[0_0_18px_rgba(253,186,116,.9)]" />
+            </motion.div>
+            <p className="title-m text-primary">Приготовьтесь</p>
+            <p className="body-s mt-2 max-w-[280px] text-secondary">Следующий сигнал появится через несколько секунд.</p>
+            <div className="mt-6 h-1.5 w-44 overflow-hidden rounded-full bg-blue-200/10">
+              <motion.div
+                className="h-full origin-left rounded-full bg-orange-400"
+                initial={{ scaleX: 0 }}
+                animate={{ scaleX: 1 }}
+                transition={{ duration: SIGNALS_PREPARE_MS / 1000, ease: "linear" }}
+              />
+            </div>
+          </StateShell>
+        )}
+
+        {phase === "signal-result" && (
+          <StateShell key="signal-result" className="game-card--success">
+            <motion.div
+              initial={{ scale: .7, opacity: .4 }}
+              animate={{ scale: [1, 1.08, 1], opacity: [1, .75, 1] }}
+              transition={{ duration: 1.1, repeat: Infinity, ease: "easeInOut" }}
+              className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl border border-orange-300/45 bg-orange-500/15"
+            >
+              <span className="h-3 w-3 rounded-full bg-orange-300 shadow-[0_0_18px_rgba(253,186,116,.95)]" />
+            </motion.div>
+            <p className="title-m text-primary">Попадание</p>
+            <p className="num mt-4 text-3xl" style={{ color: CONCENTRATION_ACCENT }}>{lastReaction ?? 0} мс</p>
+            <p className="body-s mt-2 text-secondary">Результат сохранён. Следующая фаза готовится.</p>
           </StateShell>
         )}
 
