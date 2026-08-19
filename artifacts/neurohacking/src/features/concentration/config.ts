@@ -97,17 +97,27 @@ export function trackingObjectsForLevel(level: number): { total: number; targets
 }
 
 export function searchGridSizeForLevel(level: number): number {
-  if (level <= 2) return 8;
+  if (level <= 1) return 6;
+  if (level <= 2) return 7;
+  if (level <= 3) return 8;
   if (level <= 4) return 9;
   return 10;
 }
 
 export function searchTimeForLevel(level: number): number {
-  if (level <= 1) return 6500;
-  if (level === 2) return 5500;
-  if (level === 3) return 4000;
-  if (level === 4) return 2500;
-  return Math.max(1200, 2000 - Math.max(0, level - 5) * 90);
+  if (level <= 1) return 8500;
+  if (level === 2) return 8200;
+  if (level === 3) return 7900;
+  if (level === 4) return 7600;
+  return Math.max(6500, 7300 - Math.max(0, level - 5) * 120);
+}
+
+export function searchObjectCountForLevel(level: number): number {
+  if (level <= 1) return 18;
+  if (level === 2) return 26;
+  if (level === 3) return 36;
+  if (level === 4) return 48;
+  return Math.min(72, 58 + Math.max(0, level - 5) * 4);
 }
 
 export function randomUniqueIndexes(total: number, count: number): number[] {
@@ -126,5 +136,5 @@ export function levelHint(mode: ConcentrationMode, level: number): string {
     return `${targets} цели · ${total} объектов`;
   }
   const gridSize = searchGridSizeForLevel(level);
-  return `${gridSize}×${gridSize} · ${Math.round(searchTimeForLevel(level) / 100) / 10} с`;
+  return `${searchObjectCountForLevel(level)} объектов · ${gridSize}×${gridSize} · ${Math.round(searchTimeForLevel(level) / 100) / 10} с`;
 }

@@ -10,6 +10,7 @@ import {
   levelHint,
   randomUniqueIndexes,
   searchGridSizeForLevel,
+  searchObjectCountForLevel,
   searchTimeForLevel,
   signalPrepareDurationForLevel,
   signalCountForLevel,
@@ -21,9 +22,11 @@ import {
 import { ConcentrationModeLogo } from "./ConcentrationModeLogo";
 import { ConcentrationOnboarding } from "./ConcentrationOnboarding";
 import { ConcentrationPreview } from "./ConcentrationPreview";
+import { MemorySymbol } from "../memory/MemorySymbol";
+import type { MemorySymbolId } from "../memory/config";
 import { initConcentrationSound, playConcentrationCorrect, playConcentrationFail, playConcentrationLevelSuccess, playConcentrationPrepare, playConcentrationResult, playConcentrationSignal } from "./sounds";
 
-type GamePhase = "idle" | "preparing" | "signal-result" | "signals" | "tracking-show" | "tracking-move" | "tracking-input" | "search" | "success" | "failed";
+type GamePhase = "idle" | "preparing" | "signal-result" | "signals" | "tracking-show" | "tracking-move" | "tracking-input" | "search-preview" | "search" | "success" | "failed";
 type SignalName = "orange" | "red" | "green" | "blue" | "yellow";
 
 interface Signal {
@@ -243,15 +246,29 @@ function createTrackingObjects(level: number): { objects: TrackingObject[]; targ
   return { objects, targets: randomUniqueIndexes(total, targets) };
 }
 
-function createSearchShapes(level: number): { targetIndex: number; shapes: string[] } {
+const SEARCH_TARGET_PREVIEW_MS = 1800;
+
+function createSearchShapes(level: number, target: MemorySymbolId): { targetIndex: number; shapes: Array<MemorySymbolId | null> } {
   const shapeCount = searchGridSizeForLevel(level) ** 2;
-  const targetIndex = Math.floor(Math.random() * shapeCount);
-  const distractor = level === 1 ? "○" : level === 2 ? "□" : level === 3 ? "◇" : level === 4 ? "◉" : "⬡";
-  const target = level === 1 ? "△" : level === 2 ? "◇" : level === 3 ? "◈" : level === 4 ? "◌" : "⬢";
+  const objectCount = Math.min(shapeCount, searchObjectCountForLevel(level));
+  const occupiedIndexes = randomUniqueIndexes(shapeCount, objectCount);
+  const targetIndex = occupiedIndexes[Math.floor(Math.random() * occupiedIndexes.length)] ?? 0;
+  const distractors = (["dot", "triangle", "star", "diamond", "square", "sparkle", "hexagon", "half"] as MemorySymbolId[])
+    .filter((shape) => shape !== target);
+  const shapes: Array<MemorySymbolId | null> = Array.from({ length: shapeCount }, () => null);
+  for (const index of occupiedIndexes) {
+    const distractorIndex = Math.floor(Math.random() * distractors.length);
+    shapes[index] = index === targetIndex ? target : distractors[distractorIndex] ?? "dot";
+  }
   return {
     targetIndex,
-    shapes: Array.from({ length: shapeCount }, (_, index) => index === targetIndex ? target : distractor),
+    shapes,
   };
+}
+
+function searchTargetForLevel(level: number): MemorySymbolId {
+  const targets: MemorySymbolId[] = ["triangle", "diamond", "star", "sparkle", "hexagon"];
+  return targets[Math.min(targets.length - 1, Math.max(0, level - 1))] ?? "triangle";
 }
 
 function LevelRail({ level, bestLevel, phase }: { level: number; bestLevel: number; phase: GamePhase }) {
@@ -375,8 +392,9 @@ export function ConcentrationGame({
   const [trackingObjects, setTrackingObjects] = useState<TrackingObject[]>([]);
   const [trackingTargets, setTrackingTargets] = useState<number[]>([]);
   const [selectedTracking, setSelectedTracking] = useState<number[]>([]);
-  const [searchShapes, setSearchShapes] = useState<string[]>([]);
+  const [searchShapes, setSearchShapes] = useState<Array<MemorySymbolId | null>>([]);
   const [searchTarget, setSearchTarget] = useState<number | null>(null);
+  const [searchTargetShape, setSearchTargetShape] = useState<MemorySymbolId>("triangle");
   const [searchRemaining, setSearchRemaining] = useState(0);
   const [failureReason, setFailureReason] = useState("");
   const [rewardFlash, setRewardFlash] = useState(false);
@@ -453,17 +471,23 @@ export function ConcentrationGame({
         timerRef.current = window.setTimeout(() => setPhase("tracking-input"), trackingObjectsForLevel(nextLevel).moveMs);
       }, 1050);
     } else {
-      const next = createSearchShapes(nextLevel);
-      setSearchShapes(next.shapes);
-      setSearchTarget(next.targetIndex);
-      setSearchRemaining(searchTimeForLevel(nextLevel));
-      setPhase("search");
-      searchDeadlineRef.current = performance.now() + searchTimeForLevel(nextLevel);
-      intervalRef.current = window.setInterval(() => {
-        const remaining = Math.max(0, searchDeadlineRef.current - performance.now());
-        setSearchRemaining(remaining);
-        if (remaining <= 0) failGame("Время поиска закончилось");
-      }, 50);
+      const targetShape = searchTargetForLevel(nextLevel);
+      setSearchTargetShape(targetShape);
+      setPhase("search-preview");
+      playConcentrationPrepare();
+      timerRef.current = window.setTimeout(() => {
+        const next = createSearchShapes(nextLevel, targetShape);
+        setSearchShapes(next.shapes);
+        setSearchTarget(next.targetIndex);
+        setSearchRemaining(searchTimeForLevel(nextLevel));
+        setPhase("search");
+        searchDeadlineRef.current = performance.now() + searchTimeForLevel(nextLevel);
+        intervalRef.current = window.setInterval(() => {
+          const remaining = Math.max(0, searchDeadlineRef.current - performance.now());
+          setSearchRemaining(remaining);
+          if (remaining <= 0) failGame("Время поиска закончилось");
+        }, 50);
+      }, SEARCH_TARGET_PREVIEW_MS);
     }
   };
 
@@ -740,6 +764,24 @@ export function ConcentrationGame({
           </StateShell>
         )}
 
+        {phase === "search-preview" && (
+          <StateShell key="search-preview" className="!p-3">
+            <div className="flex min-h-[330px] w-full flex-col items-center justify-center text-center">
+              <span className="caption text-tertiary">ЗАПОМНИ ФИГУРУ</span>
+              <motion.div
+                className="mt-8 flex h-28 w-28 items-center justify-center text-orange-200"
+                initial={{ opacity: 0, scale: .7, rotate: -12 }}
+                animate={{ opacity: 1, scale: [1, 1.08, 1], rotate: 0 }}
+                transition={{ duration: .55, ease: "easeOut" }}
+              >
+                <MemorySymbol symbol={searchTargetShape} className="h-24 w-24" />
+              </motion.div>
+              <p className="title-m mt-7" style={{ color: CONCENTRATION_ACCENT }}>Найди именно её</p>
+              <p className="body-s mt-2 max-w-[270px] text-secondary">После показа фигура появится среди разных объектов.</p>
+            </div>
+          </StateShell>
+        )}
+
         {phase === "search" && (
           <StateShell key="search" className="!p-3">
             <div className="mb-3 flex w-full items-center justify-between px-2">
@@ -750,33 +792,22 @@ export function ConcentrationGame({
               className="game-instrument relative grid w-full gap-1.5 rounded-[18px] p-2"
               style={{ gridTemplateColumns: `repeat(${searchGridSizeForLevel(level)}, minmax(0, 1fr))` }}
             >
-              <motion.span
-                aria-hidden="true"
-                initial={{ x: "-100%" }}
-                animate={{ x: "1000%" }}
-                transition={{ duration: 2.4, repeat: Infinity, ease: "linear" }}
-                className="pointer-events-none absolute bottom-1 left-0 top-1 z-10 w-0.5 bg-orange-300 shadow-[0_0_12px_rgba(249,115,22,.85)]"
-              />
               {searchShapes.map((shape, index) => (
                 <motion.button
                   type="button"
                   key={index}
                   onClick={() => handleSearchObject(index)}
                   whileTap={{ scale: .82 }}
-                  whileHover={{ scale: 1.08, borderColor: "rgba(249,115,22,.65)" }}
-                  className="game-control flex aspect-square items-center justify-center rounded-[5px] text-[12px] transition-none"
-                  style={{
-                    color: "rgba(183,206,228,.72)",
-                    background: "rgba(147,197,253,.055)",
-                    borderColor: "rgba(147,197,253,.12)",
-                  }}
+                  whileHover={{ scale: 1.12 }}
+                  disabled={shape === null}
+                  className="flex aspect-square items-center justify-center rounded-full text-[#b7cee4]/75 outline-none transition-transform focus-visible:ring-2 focus-visible:ring-orange-400/70 disabled:pointer-events-none"
                   aria-label="Объект поиска"
                 >
-                  {shape}
+                  {shape && <MemorySymbol symbol={shape} className="h-[min(8vw,32px)] w-[min(8vw,32px)]" />}
                 </motion.button>
               ))}
             </div>
-            <p className="body-s mt-4 text-secondary">Один объект отличается от остальных.</p>
+            <p className="body-s mt-4 text-secondary">Найди фигуру, которую запомнил перед началом.</p>
           </StateShell>
         )}
 
