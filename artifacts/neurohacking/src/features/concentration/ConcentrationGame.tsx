@@ -459,12 +459,13 @@ export function ConcentrationGame({
               animate={{ rotate: [0, -8, 8, 0], scale: [1, 1.08, 1] }}
               transition={{ duration: 1, ease: "easeInOut" }}
               className="mb-6 flex h-20 w-20 items-center justify-center rounded-[22px] border border-orange-300/45 bg-[#153653]"
-              style={{ borderColor: CONCENTRATION_ACCENT_BORDER, background: CONCENTRATION_ACCENT_SOFT }}
+              style={{ borderColor: "rgba(148,190,224,.48)", background: "#153653" }}
             >
-              <span className="relative flex h-11 w-11 items-center justify-center rounded-full border-2 border-orange-300/90">
-                <span className="h-2.5 w-2.5 rounded-full bg-orange-300 shadow-[0_0_18px_rgba(253,186,116,.9)]" />
-                <span className="absolute h-14 w-14 rounded-full border border-orange-300/25" />
-              </span>
+              <svg viewBox="0 0 36 36" className="h-11 w-11" role="img" aria-label="Часы подготовки">
+                <circle cx="18" cy="18" r="9.5" fill="none" stroke="#F97316" strokeWidth="1.8" />
+                <path d="M18 12.5v5.9l4 2.5" fill="none" stroke="#F97316" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" />
+                <circle cx="18" cy="18" r="1.4" fill="#FDBA74" />
+              </svg>
             </motion.div>
             <p className="title-m text-[24px] text-primary">Приготовьтесь</p>
           </motion.button>
