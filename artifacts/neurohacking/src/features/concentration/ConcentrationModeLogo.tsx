@@ -5,44 +5,36 @@ import { CONCENTRATION_ACCENT } from "./config";
 const INK = CONCENTRATION_ACCENT;
 const SOFT = "rgba(249,115,22,.42)";
 const STEEL = "rgba(163,195,217,.46)";
+const SIGNAL_COLORS = ["#F97316", "#EF4444", "#22C55E", "#3B82F6", "#EAB308"];
 
 function SignalsMark({ large }: { large: boolean }) {
   return (
-    <svg viewBox="0 0 72 72" className={large ? "h-[72px] w-[72px]" : "h-[48px] w-[48px]"} role="img" aria-label="Импульсный сигнал">
-      <motion.path
-        d="M7 37h10l5-15 8 30 8-38 8 25h19"
-        fill="none"
-        stroke={INK}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth="2.6"
-        initial={{ pathLength: .35, opacity: .55 }}
-        animate={{ pathLength: [0.35, 1, .35], opacity: [.55, 1, .55] }}
-        transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
-      />
-      <motion.circle
-        cx="57"
-        cy="37"
-        r="4"
-        fill={INK}
-        animate={{ r: [3, 5, 3], opacity: [.55, 1, .55] }}
-        transition={{ duration: 1.4, repeat: Infinity, ease: "easeInOut" }}
-      />
-      <motion.circle cx="57" cy="37" r="9" fill="none" stroke={SOFT} strokeWidth="1" animate={{ scale: [0.7, 1.35], opacity: [0.7, 0] }} transition={{ duration: 1.8, repeat: Infinity, ease: "easeOut" }} />
-      <path d="M8 52h56" stroke={STEEL} strokeDasharray="1 5" strokeLinecap="round" strokeWidth="1" />
+    <svg viewBox="0 0 72 72" className={large ? "h-[86px] w-[86px]" : "h-[58px] w-[58px]"} role="img" aria-label="Разноцветные сигналы, среди которых только один оранжевый">
+      {SIGNAL_COLORS.map((color, index) => {
+        const cx = 10 + index * 13;
+        const cy = index % 2 === 0 ? 36 : 32;
+        const isTarget = index === 0;
+        return (
+          <motion.g key={color} animate={{ y: isTarget ? [0, -2, 0] : [0, index % 2 ? 1.5 : -1.5, 0], opacity: isTarget ? [1, .72, 1] : [.48, .8, .48] }} transition={{ duration: isTarget ? 1.1 : 1.8 + index * .12, repeat: Infinity, ease: "easeInOut", delay: index * .08 }}>
+            <circle cx={cx} cy={cy} r={isTarget ? 6 : 4.7} fill={color} fillOpacity={isTarget ? .95 : .38} />
+            <circle cx={cx} cy={cy} r={isTarget ? 9 : 6.5} fill="none" stroke={color} strokeOpacity={isTarget ? .7 : .22} strokeWidth="1" />
+          </motion.g>
+        );
+      })}
+      <motion.circle cx="10" cy="36" r="13" fill="none" stroke={INK} strokeWidth="1" animate={{ scale: [.72, 1.18], opacity: [.7, 0] }} transition={{ duration: 1.5, repeat: Infinity, ease: "easeOut" }} />
     </svg>
   );
 }
 
 function TrackingMark({ large }: { large: boolean }) {
   return (
-    <svg viewBox="0 0 72 72" className={large ? "h-[72px] w-[72px]" : "h-[48px] w-[48px]"} role="img" aria-label="Отслеживание движущихся объектов">
-      <path d="M8 52C18 18 28 56 38 25S54 15 65 35" fill="none" stroke={STEEL} strokeDasharray="2 5" strokeLinecap="round" strokeWidth="1.4" />
-      <path d="M8 52C18 18 28 56 38 25S54 15 65 35" fill="none" stroke={SOFT} strokeLinecap="round" strokeWidth="1" opacity=".8" />
-      <motion.circle cx="14" cy="43" r="5.5" fill={INK} animate={{ cx: [14, 25, 38, 51, 63], cy: [43, 42, 25, 22, 35], opacity: [1, .65, 1, .65, 1] }} transition={{ duration: 3.4, repeat: Infinity, ease: "easeInOut" }} />
-      <motion.circle cx="38" cy="25" r="3.5" fill="none" stroke={INK} strokeWidth="1.4" animate={{ r: [3.5, 6, 3.5], opacity: [1, .45, 1] }} transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut", delay: .2 }} />
-      <circle cx="60" cy="35" r="3" fill="none" stroke={STEEL} strokeWidth="1.2" />
-      <path d="M34 25h8M38 21v8" stroke="#ffe0a6" strokeLinecap="round" strokeWidth="1" />
+    <svg viewBox="0 0 72 72" className={large ? "h-[86px] w-[86px]" : "h-[58px] w-[58px]"} role="img" aria-label="Летающие объекты, среди которых одна оранжевая цель">
+      <motion.circle cx="13" cy="50" r="4" fill={STEEL} animate={{ cx: [13, 26, 43, 58, 13], cy: [50, 17, 48, 23, 50], opacity: [.35, .7, .35] }} transition={{ duration: 4.2, repeat: Infinity, ease: "easeInOut" }} />
+      <motion.circle cx="25" cy="18" r="5" fill={STEEL} animate={{ cx: [25, 40, 57, 29, 25], cy: [18, 43, 19, 55, 18], opacity: [.45, .75, .45] }} transition={{ duration: 3.7, repeat: Infinity, ease: "easeInOut", delay: .2 }} />
+      <motion.circle cx="55" cy="51" r="3.7" fill={STEEL} animate={{ cx: [55, 42, 17, 51, 55], cy: [51, 27, 34, 12, 51], opacity: [.35, .7, .35] }} transition={{ duration: 4.5, repeat: Infinity, ease: "easeInOut", delay: .45 }} />
+      <motion.circle cx="48" cy="24" r="4.2" fill={STEEL} animate={{ cx: [48, 18, 36, 60, 48], cy: [24, 38, 15, 44, 24], opacity: [.4, .7, .4] }} transition={{ duration: 3.9, repeat: Infinity, ease: "easeInOut", delay: .65 }} />
+      <motion.circle cx="34" cy="38" r="6" fill={INK} animate={{ cx: [34, 50, 22, 40, 34], cy: [38, 52, 23, 12, 38], scale: [1, 1.18, 1] }} transition={{ duration: 3.2, repeat: Infinity, ease: "easeInOut" }} />
+      <motion.circle cx="34" cy="38" r="10" fill="none" stroke={SOFT} strokeWidth="1" animate={{ scale: [.7, 1.25], opacity: [.6, 0] }} transition={{ duration: 1.8, repeat: Infinity, ease: "easeOut" }} />
     </svg>
   );
 }
@@ -56,9 +48,9 @@ function SearchMark({ large }: { large: boolean }) {
   ];
 
   return (
-    <svg viewBox="0 0 72 72" className={large ? "h-[72px] w-[72px]" : "h-[48px] w-[48px]"} role="img" aria-label="Поиск цели среди объектов">
+    <svg viewBox="0 0 72 72" className={large ? "h-[86px] w-[86px]" : "h-[58px] w-[58px]"} role="img" aria-label="Поиск цели среди объектов">
       <g fill={STEEL}>
-        {points.map(([cx, cy], index) => <circle key={`${cx}-${cy}`} cx={cx} cy={cy} r="1.8" opacity={index % 5 === 0 ? .7 : .38} />)}
+        {points.map(([cx, cy], index) => <circle key={`${cx}-${cy}`} cx={cx} cy={cy} r="2.2" opacity={index % 5 === 0 ? .7 : .38} />)}
       </g>
       <motion.path
         d="M9 10v52"
@@ -72,7 +64,6 @@ function SearchMark({ large }: { large: boolean }) {
         <path d="m53 39 8 8-8 8-8-8 8-8Z" fill="none" stroke={INK} strokeWidth="1.8" />
         <circle cx="53" cy="47" r="2" fill={INK} />
       </motion.g>
-      <path d="M8 64h56" stroke={SOFT} strokeDasharray="1 5" strokeLinecap="round" strokeWidth="1" />
     </svg>
   );
 }
