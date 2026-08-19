@@ -291,7 +291,7 @@ export function ConcentrationGame({
       timerRef.current = window.setTimeout(() => failGame("Оранжевый сигнал пропущен"), signalThresholdForLevel(roundLevel));
     } else {
       setReactionStart(null);
-      timerRef.current = window.setTimeout(() => showSignal(roundLevel, nextIndex + 1), 520 + Math.min(420, roundLevel * 42));
+      timerRef.current = window.setTimeout(() => beginSignalPreparation(roundLevel, nextIndex + 1), 520 + Math.min(420, roundLevel * 42));
     }
   };
 
