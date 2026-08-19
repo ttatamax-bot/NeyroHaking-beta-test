@@ -5,7 +5,7 @@ import { motion, useReducedMotion } from "framer-motion";
 import { useEffect, useRef, useState, type ReactNode, type UIEvent } from "react";
 import { HABIT_GUIDE_TITLE } from "@/content/habit-guide";
 import { isArticleRequirementSatisfied } from "@/content/article-access";
-import { ringRotationTarget, ringRotationTransition, useRingBurst } from "@/lib/ring-burst";
+import { ringRotationTarget, ringRotationTransition, useRingBurst, useSmoothRingBurstRotation } from "@/lib/ring-burst";
 
   const ARTICLES = [
     {
@@ -121,6 +121,7 @@ import { ringRotationTarget, ringRotationTransition, useRingBurst } from "@/lib/
   function KnowledgeBaseMark() {
     const reduced = useReducedMotion();
     const ringBurst = useRingBurst();
+    const burstRotation = useSmoothRingBurstRotation(!reduced);
     const ringTickAngles = Array.from({ length: 24 }, (_, index) => index * 15);
 
     return (
@@ -131,6 +132,10 @@ import { ringRotationTarget, ringRotationTransition, useRingBurst } from "@/lib/
         transition={{ duration: 0.9, ease: EASE }}
         aria-hidden="true"
       >
+        <motion.div
+          className="pointer-events-none absolute inset-0"
+          style={{ rotate: burstRotation }}
+        >
         <motion.span
           className="pointer-events-none absolute inset-[-20px] rounded-full"
           style={{ background: 'radial-gradient(circle, rgba(245,158,11,.34), rgba(249,115,22,.18) 38%, transparent 72%)' }}
@@ -145,7 +150,7 @@ import { ringRotationTarget, ringRotationTransition, useRingBurst } from "@/lib/
             WebkitMaskImage: "radial-gradient(circle, transparent 76%, #000 77.5%, #000 79%, transparent 80.5%)",
             filter: "drop-shadow(0 0 4px rgba(255,215,145,.24))",
           }}
-           animate={reduced ? { rotate: 0, opacity: 0.38 } : { rotate: ringRotationTarget(-1, ringBurst), opacity: [.24, .42, .24] }}
+           animate={reduced ? { rotate: 0, opacity: 0.38 } : { rotate: ringRotationTarget(-1, 17, ringBurst), opacity: [.24, .42, .24] }}
           transition={reduced
             ? { duration: 0.4 }
             : {
@@ -156,7 +161,7 @@ import { ringRotationTarget, ringRotationTransition, useRingBurst } from "@/lib/
         <motion.span
           className="pointer-events-none absolute inset-[2px] rounded-full border"
           style={{ borderColor: "rgba(249,115,22,.42)" }}
-           animate={reduced ? { opacity: 0.48, rotate: 0 } : { opacity: [.32, .72, .32], rotate: ringRotationTarget(-1, ringBurst) }}
+           animate={reduced ? { opacity: 0.48, rotate: 0 } : { opacity: [.32, .72, .32], rotate: ringRotationTarget(-1, 16, ringBurst) }}
           transition={reduced
             ? { duration: 0.4 }
             : {
@@ -169,7 +174,7 @@ import { ringRotationTarget, ringRotationTransition, useRingBurst } from "@/lib/
           viewBox="0 0 230 230"
           fill="none"
           aria-hidden="true"
-           animate={reduced ? { rotate: 0 } : { rotate: ringRotationTarget(1, ringBurst) }}
+           animate={reduced ? { rotate: 0 } : { rotate: ringRotationTarget(1, 22, ringBurst) }}
            transition={reduced ? { duration: 0.4 } : ringRotationTransition(22, ringBurst)}
           style={{ filter: "drop-shadow(0 0 5px rgba(255,210,125,.24))" }}
         >
@@ -189,7 +194,7 @@ import { ringRotationTarget, ringRotationTransition, useRingBurst } from "@/lib/
               maskImage: "radial-gradient(circle, transparent 78%, #000 79.5%, #000 82%, transparent 83.5%)",
               WebkitMaskImage: "radial-gradient(circle, transparent 78%, #000 79.5%, #000 82%, transparent 83.5%)",
             }}
-             animate={reduced ? { rotate: 0, opacity: ring.opacity } : { rotate: ringRotationTarget(ring.direction, ringBurst), opacity: [ring.opacity * 0.65, ring.opacity, ring.opacity * 0.65] }}
+             animate={reduced ? { rotate: 0, opacity: ring.opacity } : { rotate: ringRotationTarget(ring.direction, ring.duration, ringBurst), opacity: [ring.opacity * 0.65, ring.opacity, ring.opacity * 0.65] }}
             transition={reduced
               ? { duration: 0.4 }
               : {
@@ -198,6 +203,7 @@ import { ringRotationTarget, ringRotationTransition, useRingBurst } from "@/lib/
                 }}
           />
         ))}
+        </motion.div>
         {POTENTIAL_PARTICLES.map((particle, index) => (
           <motion.span
             key={`academy-potential-particle-${index}`}
@@ -541,7 +547,7 @@ import { ringRotationTarget, ringRotationTransition, useRingBurst } from "@/lib/
                   }}
                   animate={reducedMotion
                     ? { rotate: 0, opacity: 0.55 }
-                     : { rotate: ringRotationTarget(1, ringBurst), opacity: [0.45, 0.72, 0.45] }}
+                     : { rotate: ringRotationTarget(1, ringStyle.outer.duration, ringBurst), opacity: [0.45, 0.72, 0.45] }}
                   transition={reducedMotion
                     ? { duration: 0.3 }
                     : {
@@ -565,7 +571,7 @@ import { ringRotationTarget, ringRotationTransition, useRingBurst } from "@/lib/
                   }}
                   animate={reducedMotion
                     ? { rotate: 0, opacity: 0.3 }
-                     : { rotate: ringRotationTarget(ringStyle.dash.direction, ringBurst), opacity: [0.28, 0.48, 0.28] }}
+                     : { rotate: ringRotationTarget(ringStyle.dash.direction, ringStyle.dash.duration, ringBurst), opacity: [0.28, 0.48, 0.28] }}
                   transition={reducedMotion
                     ? { duration: 0.3 }
                     : {
@@ -599,7 +605,7 @@ import { ringRotationTarget, ringRotationTransition, useRingBurst } from "@/lib/
                   }}
                   animate={reducedMotion
                     ? { rotate: 0, opacity: 0.3 }
-                     : { rotate: ringRotationTarget(ringStyle.fine.direction, ringBurst), opacity: [0.26, 0.42, 0.26] }}
+                     : { rotate: ringRotationTarget(ringStyle.fine.direction, ringStyle.fine.duration, ringBurst), opacity: [0.26, 0.42, 0.26] }}
                   transition={reducedMotion
                     ? { duration: 0.3 }
                     : {

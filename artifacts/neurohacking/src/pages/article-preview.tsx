@@ -8,7 +8,7 @@ import { CalendarDays, Brain, Lightbulb, MoonStar, Repeat2, Target, type LucideI
 import { motion } from "framer-motion";
 import { HABIT_GUIDE_TITLE } from "@/content/habit-guide";
 import { getArticleUnlockInstruction, isArticleRequirementSatisfied } from "@/content/article-access";
-import { ringRotationTarget, ringRotationTransition, useRingBurst } from "@/lib/ring-burst";
+import { ringRotationTarget, ringRotationTransition, useRingBurst, useSmoothRingBurstRotation } from "@/lib/ring-burst";
 
 const ARTICLES_DATA: Record<string, {
   title: string; desc: string; content: string; cost: number;
@@ -120,6 +120,7 @@ function ArticleInstrumentPreview({ articleId }: { articleId: string }) {
   const visual = ARTICLE_VISUALS[articleId] ?? ARTICLE_VISUALS.A1;
   const { Icon } = visual;
   const ringBurst = useRingBurst();
+  const burstRotation = useSmoothRingBurstRotation();
 
   return (
     <div
@@ -145,6 +146,10 @@ function ArticleInstrumentPreview({ articleId }: { articleId: string }) {
         }}
       />
 
+      <motion.div
+        className="pointer-events-none absolute inset-0"
+        style={{ rotate: burstRotation }}
+      >
       {visual.rings.map((ring, ringIndex) => {
         const ringOpacity = ring.opacity * 0.45;
         return (
@@ -165,7 +170,7 @@ function ArticleInstrumentPreview({ articleId }: { articleId: string }) {
             className="h-full w-full"
             viewBox="0 0 100 100"
             animate={{
-              rotate: ringRotationTarget(ring.direction, ringBurst),
+              rotate: ringRotationTarget(ring.direction, ring.duration, ringBurst),
               opacity: [ringOpacity * 0.72, ringOpacity, ringOpacity * 0.72],
             }}
             transition={{
@@ -188,6 +193,7 @@ function ArticleInstrumentPreview({ articleId }: { articleId: string }) {
         </div>
         );
       })}
+      </motion.div>
 
       <motion.div
         aria-hidden="true"

@@ -4,7 +4,7 @@ import { useAppStore } from "@/lib/store";
 import { motion, useReducedMotion } from "framer-motion";
 import { Check } from "lucide-react";
 import { TechniqueArtwork, type TechniqueArtworkKind } from "@/components/TechniqueArtwork";
-import { ringRotationTarget, ringRotationTransition, useRingBurst } from "@/lib/ring-burst";
+import { ringRotationTarget, ringRotationTransition, useRingBurst, useSmoothRingBurstRotation } from "@/lib/ring-burst";
 
 type Technique = {
   id: string;
@@ -192,6 +192,7 @@ function TechniqueCardVisualMotion({
 function TechniqueAtmosphere() {
   const reducedMotion = useReducedMotion();
   const ringBurst = useRingBurst();
+  const burstRotation = useSmoothRingBurstRotation(!reducedMotion);
 
   return (
     <div
@@ -211,9 +212,9 @@ function TechniqueAtmosphere() {
           background: "radial-gradient(ellipse 68% 42% at 50% 42%, transparent 0%, transparent 54%, rgba(8,19,32,.36) 88%, rgba(8,19,32,.72) 100%)",
         }}
       />
-      <div
-        className="absolute left-1/2 top-[42%] h-0 w-0"
-        style={{ transform: "translate(-50%, -50%)" }}
+      <motion.div
+        className="absolute left-1/2 top-[42%] h-0 w-0 -translate-x-1/2 -translate-y-1/2"
+        style={{ rotate: burstRotation }}
       >
         {TECHNIQUE_RINGS.map((ring, index) => {
           const isArc = index % 3 === 1;
@@ -234,7 +235,7 @@ function TechniqueAtmosphere() {
                 animate={reducedMotion
                   ? { rotate: 0, scale: 1, opacity: ring.opacity }
                   : {
-                      rotate: ringRotationTarget(ring.direction, ringBurst),
+                      rotate: ringRotationTarget(ring.direction, ring.duration, ringBurst),
                       scale: ring.scale,
                       opacity: [ring.opacity * 0.68, ring.opacity, ring.opacity * 0.68],
                     }}
@@ -275,7 +276,7 @@ function TechniqueAtmosphere() {
             initial={{ rotate: 0, opacity: 0.42 }}
             animate={reducedMotion
               ? { rotate: 0, opacity: 0.42 }
-              : { rotate: ringRotationTarget(1, ringBurst), opacity: [0.42, 0.76, 0.42] }}
+              : { rotate: ringRotationTarget(1, 36, ringBurst), opacity: [0.42, 0.76, 0.42] }}
             transition={reducedMotion
               ? { duration: 0 }
               : {
@@ -302,7 +303,7 @@ function TechniqueAtmosphere() {
             initial={{ rotate: 0, opacity: 0.24 }}
             animate={reducedMotion
               ? { rotate: 0, opacity: 0.24 }
-              : { rotate: ringRotationTarget(-1, ringBurst), opacity: [0.18, 0.34, 0.18] }}
+              : { rotate: ringRotationTarget(-1, 26, ringBurst), opacity: [0.18, 0.34, 0.18] }}
             transition={reducedMotion
               ? { duration: 0 }
               : {
@@ -331,7 +332,7 @@ function TechniqueAtmosphere() {
               initial={{ rotate: tickRing.start, opacity: tickRing.opacity }}
               animate={reducedMotion
                 ? { rotate: tickRing.start, opacity: tickRing.opacity }
-                : { rotate: ringRotationTarget(tickRing.direction, ringBurst, tickRing.start), opacity: [tickRing.opacity * 0.7, tickRing.opacity, tickRing.opacity * 0.7] }}
+                : { rotate: ringRotationTarget(tickRing.direction, tickRing.duration, ringBurst, tickRing.start), opacity: [tickRing.opacity * 0.7, tickRing.opacity, tickRing.opacity * 0.7] }}
               transition={reducedMotion
                 ? { duration: 0 }
                 : {
@@ -347,7 +348,7 @@ function TechniqueAtmosphere() {
             </motion.div>
           </div>
         ))}
-      </div>
+      </motion.div>
 
       {TECHNIQUE_PARTICLES.map((particle, index) => (
         <motion.span
@@ -392,7 +393,7 @@ function InstrumentGear({
 }) {
   const reducedMotion = useReducedMotion();
   const ringBurst = useRingBurst();
-  const animate = reducedMotion ? { rotate: 0, opacity: 0.28 } : { rotate: ringRotationTarget(direction, ringBurst), opacity: [0.16, 0.38, 0.16] };
+  const animate = reducedMotion ? { rotate: 0, opacity: 0.28 } : { rotate: ringRotationTarget(direction, duration, ringBurst), opacity: [0.16, 0.38, 0.16] };
   const transition = reducedMotion
     ? { duration: 0 }
     : {
@@ -418,7 +419,7 @@ function InstrumentGear({
       />
       <motion.div
         className="absolute inset-[8%] rounded-full"
-         animate={reducedMotion ? { rotate: 0 } : { rotate: ringRotationTarget(direction === 1 ? -1 : 1, ringBurst) }}
+         animate={reducedMotion ? { rotate: 0 } : { rotate: ringRotationTarget(direction === 1 ? -1 : 1, duration * 1.34, ringBurst) }}
          transition={reducedMotion ? { duration: 0 } : ringRotationTransition(duration * 1.34, ringBurst)}
         style={{
           background: `conic-gradient(from 18deg, ${accent} 0deg 24deg, transparent 24deg 76deg, rgba(249,115,22,.35) 76deg 98deg, transparent 98deg 188deg, ${accent} 188deg 206deg, transparent 206deg 360deg)`,
@@ -428,7 +429,7 @@ function InstrumentGear({
       />
       <motion.div
         className="absolute inset-[17%] rounded-full"
-         animate={reducedMotion ? { rotate: 0 } : { rotate: ringRotationTarget(direction, ringBurst) }}
+         animate={reducedMotion ? { rotate: 0 } : { rotate: ringRotationTarget(direction, duration * 0.72, ringBurst) }}
          transition={reducedMotion ? { duration: 0 } : ringRotationTransition(duration * 0.72, ringBurst)}
         style={{
           background: "repeating-conic-gradient(from 3deg, rgba(224,232,237,.5) 0deg 2.4deg, transparent 2.4deg 20deg)",
@@ -443,6 +444,7 @@ function InstrumentGear({
 function MainLikeInstrumentAtmosphere() {
   const reducedMotion = useReducedMotion();
   const ringBurst = useRingBurst();
+  const burstRotation = useSmoothRingBurstRotation(!reducedMotion);
   const particles = [
     { left: "4%", top: "13%", size: 4, color: "#EF4444", delay: 0 },
     { left: "96%", top: "18%", size: 5, color: "#F97316", delay: 0.8 },
@@ -456,7 +458,7 @@ function MainLikeInstrumentAtmosphere() {
 
   const spin = (duration: number, direction: 1 | -1 = 1) => reducedMotion
     ? { rotate: 0, opacity: 0.28 }
-    : { rotate: ringRotationTarget(direction, ringBurst), opacity: [0.16, 0.42, 0.16] };
+    : { rotate: ringRotationTarget(direction, duration, ringBurst), opacity: [0.16, 0.42, 0.16] };
   const transition = (duration: number) => reducedMotion
     ? { duration: 0 }
     : {
@@ -487,6 +489,10 @@ function MainLikeInstrumentAtmosphere() {
           WebkitBackfaceVisibility: "hidden",
         }}
       >
+        <motion.div
+          className="absolute inset-0"
+          style={{ rotate: burstRotation }}
+        >
         <motion.div
           className="absolute left-1/2 top-1/2 h-[640px] w-[640px] -translate-x-1/2 -translate-y-1/2 rounded-full"
           animate={reducedMotion ? { opacity: 0.2, scale: 1 } : { opacity: [0.12, 0.28, 0.12], scale: [0.96, 1.03, 0.96] }}
@@ -604,12 +610,15 @@ function MainLikeInstrumentAtmosphere() {
             borderLeftColor: "rgba(255,224,166,.34)",
           }}
         />
+        </motion.div>
       </div>
 
+      <motion.div className="absolute inset-0" style={{ rotate: burstRotation }}>
       <InstrumentGear left="calc(17% - 50px)" top="calc(27% + 50px)" size="min(96vw, 464px)" duration={22} direction={-1} accent="rgba(218,226,230,.5)" />
       <InstrumentGear left="84%" top="27%" size="min(88vw, 426px)" duration={19} direction={1} accent="rgba(255,224,166,.54)" />
       <InstrumentGear left="14%" top="73%" size="min(88vw, 426px)" duration={25} direction={1} accent="rgba(249,115,22,.48)" />
       <InstrumentGear left="84%" top="73%" size="min(88vw, 426px)" duration={27} direction={1} accent="rgba(255,224,166,.54)" />
+      </motion.div>
 
       {particles.map((particle, index) => (
         <motion.span

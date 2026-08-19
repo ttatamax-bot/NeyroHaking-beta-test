@@ -7,7 +7,7 @@ import { DataLoadingScreen } from "@/components/DataLoadingScreen";
 import { DEV_POTENTIAL_EVENT, getDevPotential } from "@/lib/dev-potential";
 import { hasDeveloperTools } from "@/lib/developer-mode";
 import { useAuthInfo } from "@/lib/clerk";
-import { ringRotationTarget, ringRotationTransition, useRingBurst } from "@/lib/ring-burst";
+import { ringRotationTarget, ringRotationTransition, useRingBurst, useSmoothRingBurstRotation } from "@/lib/ring-burst";
 
 const NEWS_ITEMS = [
   { id: '1', title: "Новая техника нейровизуализации", description: "Обновлён алгоритм прохождения техники T2 — визуализация теперь более структурированная и точная.", date: "28.05.2026" },
@@ -42,6 +42,7 @@ function getTodayLabels() {
 function NewsSystemMark() {
   const reduced = useReducedMotion();
   const ringBurst = useRingBurst();
+  const burstRotation = useSmoothRingBurstRotation(!reduced);
   const ringTickAngles = Array.from({ length: 24 }, (_, index) => index * 15);
 
   return (
@@ -52,6 +53,10 @@ function NewsSystemMark() {
       transition={{ duration: 0.9, ease: NEWS_EASE }}
       aria-hidden="true"
     >
+      <motion.div
+        className="pointer-events-none absolute inset-0"
+        style={{ rotate: burstRotation }}
+      >
       <motion.span
         className="pointer-events-none absolute inset-[-34px] z-0 rounded-full"
         style={{
@@ -92,7 +97,7 @@ function NewsSystemMark() {
       <motion.span
         className="pointer-events-none absolute inset-[-18px] rounded-full border"
         style={{ borderColor: "rgba(255,210,125,.16)", boxShadow: "0 0 14px rgba(249,115,22,.08)" }}
-         animate={reduced ? { opacity: 0.22, rotate: 0 } : { opacity: [.12, .26, .12], rotate: ringRotationTarget(1, ringBurst) }}
+         animate={reduced ? { opacity: 0.22, rotate: 0 } : { opacity: [.12, .26, .12], rotate: ringRotationTarget(1, 24, ringBurst) }}
         transition={reduced
           ? { duration: 0.4 }
           : {
@@ -103,7 +108,7 @@ function NewsSystemMark() {
       <motion.span
         className="pointer-events-none absolute inset-[2px] rounded-full border"
         style={{ borderColor: "rgba(249,115,22,.2)" }}
-         animate={reduced ? { opacity: 0.26, rotate: 0 } : { opacity: [.16, .34, .16], rotate: ringRotationTarget(-1, ringBurst) }}
+         animate={reduced ? { opacity: 0.26, rotate: 0 } : { opacity: [.16, .34, .16], rotate: ringRotationTarget(-1, 16, ringBurst) }}
         transition={reduced
           ? { duration: 0.4 }
           : {
@@ -116,7 +121,7 @@ function NewsSystemMark() {
         viewBox="0 0 230 230"
         fill="none"
         aria-hidden="true"
-         animate={reduced ? { rotate: 0 } : { rotate: ringRotationTarget(1, ringBurst) }}
+         animate={reduced ? { rotate: 0 } : { rotate: ringRotationTarget(1, 22, ringBurst) }}
          transition={reduced ? { duration: 0.4 } : ringRotationTransition(22, ringBurst)}
         style={{ filter: "drop-shadow(0 0 3px rgba(255,210,125,.12))" }}
       >
@@ -133,7 +138,7 @@ function NewsSystemMark() {
           maskImage: "radial-gradient(circle, transparent 78%, #000 79.5%, #000 82%, transparent 83.5%)",
           WebkitMaskImage: "radial-gradient(circle, transparent 78%, #000 79.5%, #000 82%, transparent 83.5%)",
         }}
-         animate={reduced ? { rotate: 0, opacity: .28 } : { rotate: ringRotationTarget(1, ringBurst), opacity: [.22, .38, .22] }}
+         animate={reduced ? { rotate: 0, opacity: .28 } : { rotate: ringRotationTarget(1, 17, ringBurst), opacity: [.22, .38, .22] }}
         transition={reduced
           ? { duration: 0.4 }
           : {
@@ -148,7 +153,7 @@ function NewsSystemMark() {
           maskImage: "radial-gradient(circle, transparent 78%, #000 79.5%, #000 82%, transparent 83.5%)",
           WebkitMaskImage: "radial-gradient(circle, transparent 78%, #000 79.5%, #000 82%, transparent 83.5%)",
         }}
-         animate={reduced ? { rotate: 0, opacity: .18 } : { rotate: ringRotationTarget(-1, ringBurst), opacity: [.12, .26, .12] }}
+         animate={reduced ? { rotate: 0, opacity: .18 } : { rotate: ringRotationTarget(-1, 13, ringBurst), opacity: [.12, .26, .12] }}
         transition={reduced
           ? { duration: 0.4 }
           : {
@@ -156,6 +161,7 @@ function NewsSystemMark() {
               opacity: { duration: 7, repeat: Infinity, ease: "easeInOut" },
             }}
       />
+      </motion.div>
       <motion.div
         className="pointer-events-none absolute inset-0 z-[10] origin-center scale-[0.75]"
         initial={{ opacity: 0, y: 8, filter: "blur(16px)" }}
@@ -411,6 +417,7 @@ export function PotentialScale({
   const highProgress = Math.max(0, (visualValue - 70) / 30);
   const speedFactor = 1 - highProgress * .55;
   const ringBurst = useRingBurst();
+  const burstRotation = useSmoothRingBurstRotation();
   useEffect(() => {
     const duration = 3200;
     const startedAt = performance.now();
@@ -478,6 +485,7 @@ export function PotentialScale({
         className="pointer-events-none absolute left-1/2 top-[120px] z-0 h-0 w-0 -translate-x-1/2 -translate-y-1/2"
         style={{ opacity: .18 + ringProgress * .82 }}
       >
+        <motion.div className="absolute inset-0" style={{ rotate: burstRotation }}>
         <motion.div
           className="absolute left-1/2 top-1/2 h-[390px] w-[390px] -translate-x-1/2 -translate-y-1/2 rounded-full"
           animate={{ opacity: [.34, .7, .34], scale: [.92, 1.05, .92] }}
@@ -489,7 +497,7 @@ export function PotentialScale({
         />
         <motion.div
           className="absolute left-1/2 top-1/2 h-[360px] w-[360px] -translate-x-1/2 -translate-y-1/2 rounded-full border"
-           animate={{ rotate: ringRotationTarget(1, ringBurst) }}
+           animate={{ rotate: ringRotationTarget(1, 16 * speedFactor, ringBurst) }}
            transition={ringRotationTransition(16 * speedFactor, ringBurst)}
           style={{
             borderColor: 'rgba(249,115,22,.08)',
@@ -502,7 +510,7 @@ export function PotentialScale({
         {visualValue >= 15 && (
           <motion.div
             className="absolute left-1/2 top-1/2 h-[344px] w-[344px] -translate-x-1/2 -translate-y-1/2 rounded-full border-[0.5px]"
-             animate={{ rotate: ringRotationTarget(-1, ringBurst), opacity: [.24, .48, .24] }}
+             animate={{ rotate: ringRotationTarget(-1, 20 * speedFactor, ringBurst), opacity: [.24, .48, .24] }}
             transition={{
                rotate: ringRotationTransition(20 * speedFactor, ringBurst),
               opacity: { duration: 5.2 * speedFactor, repeat: Infinity, ease: 'easeInOut' },
@@ -516,7 +524,7 @@ export function PotentialScale({
         )}
         <motion.div
           className="absolute left-1/2 top-1/2 h-[320px] w-[320px] -translate-x-1/2 -translate-y-1/2 rounded-full"
-           animate={{ rotate: ringRotationTarget(-1, ringBurst) }}
+           animate={{ rotate: ringRotationTarget(-1, 22 * speedFactor, ringBurst) }}
            transition={ringRotationTransition(22 * speedFactor, ringBurst)}
           style={{
             background: 'conic-gradient(from 20deg, transparent 0deg, rgba(255,237,170,.42) 40deg, transparent 78deg, transparent 174deg, rgba(249,115,22,.3) 218deg, transparent 266deg)',
@@ -527,7 +535,7 @@ export function PotentialScale({
         {visualValue >= 30 && (
           <motion.div
             className="absolute left-1/2 top-1/2 h-[302px] w-[302px] -translate-x-1/2 -translate-y-1/2 rounded-full border-[0.5px]"
-             animate={{ rotate: ringRotationTarget(1, ringBurst), opacity: [.2, .42, .2] }}
+             animate={{ rotate: ringRotationTarget(1, 14 * speedFactor, ringBurst), opacity: [.2, .42, .2] }}
             transition={{
                rotate: ringRotationTransition(14 * speedFactor, ringBurst),
               opacity: { duration: 4.4 * speedFactor, repeat: Infinity, ease: 'easeInOut' },
@@ -542,7 +550,7 @@ export function PotentialScale({
         {visualValue >= 80 && (
           <motion.div
             className="absolute left-1/2 top-1/2 h-[288px] w-[288px] -translate-x-1/2 -translate-y-1/2 rounded-full border-[0.5px]"
-             animate={{ rotate: ringRotationTarget(-1, ringBurst), opacity: [.16, .36, .16] }}
+             animate={{ rotate: ringRotationTarget(-1, 12 * speedFactor, ringBurst), opacity: [.16, .36, .16] }}
             transition={{
                rotate: ringRotationTransition(12 * speedFactor, ringBurst),
               opacity: { duration: 3.6 * speedFactor, repeat: Infinity, ease: 'easeInOut' },
@@ -557,7 +565,7 @@ export function PotentialScale({
         {visualValue >= 90 && (
           <motion.div
             className="absolute left-1/2 top-1/2 h-[246px] w-[246px] -translate-x-1/2 -translate-y-1/2 rounded-full border-[0.5px]"
-             animate={{ rotate: ringRotationTarget(1, ringBurst), opacity: [.15, .34, .15] }}
+             animate={{ rotate: ringRotationTarget(1, 10 * speedFactor, ringBurst), opacity: [.15, .34, .15] }}
             transition={{
                rotate: ringRotationTransition(10 * speedFactor, ringBurst),
               opacity: { duration: 3.2 * speedFactor, repeat: Infinity, ease: 'easeInOut' },
@@ -572,7 +580,7 @@ export function PotentialScale({
         {visualValue >= 100 && (
           <motion.div
             className="absolute left-1/2 top-1/2 h-[206px] w-[206px] -translate-x-1/2 -translate-y-1/2 rounded-full border-[0.5px]"
-             animate={{ rotate: ringRotationTarget(-1, ringBurst), opacity: [.14, .32, .14] }}
+             animate={{ rotate: ringRotationTarget(-1, 8 * speedFactor, ringBurst), opacity: [.14, .32, .14] }}
             transition={{
                rotate: ringRotationTransition(8 * speedFactor, ringBurst),
               opacity: { duration: 2.8 * speedFactor, repeat: Infinity, ease: 'easeInOut' },
@@ -587,7 +595,7 @@ export function PotentialScale({
         {visualValue >= 100 && (
           <motion.div
             className="absolute left-1/2 top-1/2 h-[184px] w-[184px] -translate-x-1/2 -translate-y-1/2 rounded-full border-[0.5px]"
-            animate={{ rotate: ringRotationTarget(1, ringBurst), opacity: [.18, .42, .18] }}
+            animate={{ rotate: ringRotationTarget(1, 6.2 * speedFactor, ringBurst), opacity: [.18, .42, .18] }}
             transition={{
               rotate: ringRotationTransition(6.2 * speedFactor, ringBurst),
               opacity: { duration: 2.2 * speedFactor, repeat: Infinity, ease: 'easeInOut' },
@@ -602,7 +610,7 @@ export function PotentialScale({
         {visualValue >= 100 && (
           <motion.div
             className="absolute left-1/2 top-1/2 h-[160px] w-[160px] -translate-x-1/2 -translate-y-1/2 rounded-full border-[0.5px]"
-            animate={{ rotate: ringRotationTarget(-1, ringBurst), opacity: [.16, .38, .16] }}
+            animate={{ rotate: ringRotationTarget(-1, 4.8 * speedFactor, ringBurst), opacity: [.16, .38, .16] }}
             transition={{
               rotate: ringRotationTransition(4.8 * speedFactor, ringBurst),
               opacity: { duration: 1.9 * speedFactor, repeat: Infinity, ease: 'easeInOut' },
@@ -617,7 +625,7 @@ export function PotentialScale({
         {visualValue >= 40 && (
           <motion.div
             className="absolute left-1/2 top-1/2 h-[276px] w-[276px] -translate-x-1/2 -translate-y-1/2 rounded-full"
-            animate={{ rotate: ringRotationTarget(1, ringBurst), opacity: [.154, .385, .154] }}
+            animate={{ rotate: ringRotationTarget(1, 11 * speedFactor, ringBurst), opacity: [.154, .385, .154] }}
             transition={{
               rotate: ringRotationTransition(11 * speedFactor, ringBurst),
               opacity: { duration: 3.8 * speedFactor, repeat: Infinity, ease: 'easeInOut' },
@@ -632,7 +640,7 @@ export function PotentialScale({
         {visualValue >= 50 && (
           <motion.div
             className="absolute left-1/2 top-1/2 h-[270px] w-[270px] -translate-x-1/2 -translate-y-1/2 rounded-full"
-            animate={{ rotate: ringRotationTarget(-1, ringBurst), opacity: [.18, .38, .18] }}
+            animate={{ rotate: ringRotationTarget(-1, 17 * speedFactor, ringBurst), opacity: [.18, .38, .18] }}
             transition={{
               rotate: ringRotationTransition(17 * speedFactor, ringBurst),
               opacity: { duration: 4.8 * speedFactor, repeat: Infinity, ease: 'easeInOut' },
@@ -647,7 +655,7 @@ export function PotentialScale({
         {visualValue >= 60 && (
           <motion.div
             className="absolute left-1/2 top-1/2 h-[236px] w-[236px] -translate-x-1/2 -translate-y-1/2 rounded-full border-[0.5px]"
-            animate={{ rotate: ringRotationTarget(-1, ringBurst), opacity: [.2, .5, .2] }}
+            animate={{ rotate: ringRotationTarget(-1, 14 * speedFactor, ringBurst), opacity: [.2, .5, .2] }}
             transition={{
               rotate: ringRotationTransition(14 * speedFactor, ringBurst),
               opacity: { duration: 4.2 * speedFactor, repeat: Infinity, ease: 'easeInOut' },
@@ -664,7 +672,7 @@ export function PotentialScale({
         {visualValue > 0 && (
           <motion.div
             className="absolute left-1/2 top-1/2 h-[360px] w-[360px] -translate-x-1/2 -translate-y-1/2"
-            animate={{ rotate: ringRotationTarget(1, ringBurst) }}
+            animate={{ rotate: ringRotationTarget(1, 19 * speedFactor, ringBurst) }}
             transition={ringRotationTransition(19 * speedFactor, ringBurst)}
           >
             <span className="absolute left-1/2 top-0 h-[5px] w-[5px] -translate-x-1/2 rounded-full" style={{ background: '#FFD29A', boxShadow: '0 0 14px 5px rgba(249,115,22,.72)' }} />
@@ -672,6 +680,7 @@ export function PotentialScale({
             <span className="absolute bottom-[16%] left-[8%] h-[4px] w-[4px] rounded-full" style={{ background: '#FFE4B5', boxShadow: '0 0 12px 4px rgba(255,224,166,.55)' }} />
           </motion.div>
         )}
+        </motion.div>
       </div>
       {particles.slice(0, particleCount).map((particle, index) => (
         <motion.span
@@ -814,6 +823,7 @@ export default function Home() {
   const [devPotential, setDevPotentialState] = useState(() => getDevPotential());
   const [newsStackProgress, setNewsStackProgress] = useState(0);
   const ringBurst = useRingBurst();
+  const burstRotation = useSmoothRingBurstRotation();
   const newsScrollFrame = useRef<number | null>(null);
 
   const waitingForAccount =
@@ -1045,6 +1055,7 @@ export default function Home() {
                     transition={{ type: "spring", stiffness: 420, damping: 25, mass: 0.65 }}
                   >
                     <NewsCardVisualMotion newsIdx={i} stackProgress={newsStackProgress}>
+                       <motion.div className="pointer-events-none absolute inset-0" style={{ rotate: burstRotation }}>
                       <motion.div
                         aria-hidden="true"
                         className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full border"
@@ -1052,7 +1063,7 @@ export default function Home() {
                           borderColor: 'rgba(255,224,166,.24)',
                           boxShadow: '0 0 32px rgba(249,115,22,.16)',
                         }}
-                        animate={{ rotate: ringRotationTarget(1, ringBurst), opacity: [0.24, 0.48, 0.24] }}
+                        animate={{ rotate: ringRotationTarget(1, 22 + i * 3, ringBurst), opacity: [0.24, 0.48, 0.24] }}
                          transition={{ rotate: ringRotationTransition(22 + i * 3, ringBurst), opacity: { duration: 4.2, repeat: Infinity, ease: "easeInOut" } }}
                       />
                       <motion.div
@@ -1063,9 +1074,10 @@ export default function Home() {
                           maskImage: 'radial-gradient(circle, transparent 76%, #000 78%, #000 82%, transparent 84%)',
                           WebkitMaskImage: 'radial-gradient(circle, transparent 76%, #000 78%, #000 82%, transparent 84%)',
                         }}
-                        animate={{ rotate: ringRotationTarget(-1, ringBurst), opacity: [0.18, 0.42, 0.18] }}
+                        animate={{ rotate: ringRotationTarget(-1, 16 + i * 2, ringBurst), opacity: [0.18, 0.42, 0.18] }}
                          transition={{ rotate: ringRotationTransition(16 + i * 2, ringBurst) }}
-                      />
+                       />
+                       </motion.div>
                       <div className="relative z-10 flex items-start justify-between gap-3 pr-20">
                         <h3 className="title-s min-w-0 flex-1 text-primary leading-snug">
                           {item.title}
