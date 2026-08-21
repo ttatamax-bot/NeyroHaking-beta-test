@@ -1,6 +1,6 @@
 import { useLocation } from "wouter";
 import { useAppStore } from "@/lib/store";
-import { CalendarDays, Brain, Lightbulb, Lock, MoonStar, Repeat2, Target, Unlock, type LucideIcon } from "lucide-react";
+import { CalendarDays, Brain, KeyRound, Lightbulb, Lock, MoonStar, Repeat2, Target, Unlock, type LucideIcon } from "lucide-react";
 import { motion, useReducedMotion } from "framer-motion";
 import { useEffect, useRef, useState, type ReactNode, type UIEvent } from "react";
 import { HABIT_GUIDE_TITLE } from "@/content/habit-guide";
@@ -118,7 +118,7 @@ import { ringRotationTarget, ringRotationTransition, useSmoothRingBurstRotation 
     return n >= 1000 ? `${(n / 1000).toFixed(0)}к` : `${n}`;
   }
 
-  function KnowledgeBaseMark() {
+  export function KnowledgeBaseMark({ icon, showStar = true, emphasizeRings = false }: { icon?: ReactNode; showStar?: boolean; emphasizeRings?: boolean } = {}) {
     const reduced = useReducedMotion();
     const ringBurst = false;
     const burstRotation = useSmoothRingBurstRotation(!reduced);
@@ -126,7 +126,7 @@ import { ringRotationTarget, ringRotationTransition, useSmoothRingBurstRotation 
 
     return (
       <motion.div
-        className="relative flex h-[168px] w-[168px] shrink-0 items-center justify-center"
+        className="relative flex h-[168px] w-[168px] shrink-0 items-center justify-center overflow-visible"
         initial={{ opacity: 0, scale: 0.72, y: 12 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         transition={{ duration: 0.9, ease: EASE }}
@@ -236,7 +236,21 @@ import { ringRotationTarget, ringRotationTransition, useSmoothRingBurstRotation 
           animate={reduced ? { opacity: 0.45 } : { opacity: [.2, .62, .2] }}
           transition={reduced ? { duration: 0.4 } : { duration: 3.6, repeat: Infinity, ease: "easeInOut" }}
         />
-        <div
+        {emphasizeRings && (
+          <>
+            <motion.span
+              className="pointer-events-none absolute inset-[7px] rounded-full border-[1.5px] border-orange-400/70"
+              animate={reduced ? { opacity: 0.7, rotate: 0 } : { opacity: [0.35, 0.9, 0.35], rotate: [0, 360] }}
+              transition={reduced ? { duration: 0.4 } : { opacity: { duration: 2.8, repeat: Infinity, ease: "easeInOut" }, rotate: { duration: 16, repeat: Infinity, ease: "linear" } }}
+            />
+            <motion.span
+              className="pointer-events-none absolute inset-[14px] rounded-full border border-dashed border-amber-200/60"
+              animate={reduced ? { opacity: 0.55, rotate: 0 } : { opacity: [0.25, 0.7, 0.25], rotate: [360, 0] }}
+              transition={reduced ? { duration: 0.4 } : { opacity: { duration: 3.2, repeat: Infinity, ease: "easeInOut" }, rotate: { duration: 11, repeat: Infinity, ease: "linear" } }}
+            />
+          </>
+        )}
+        {showStar && <div
           className="academy-star-motion pointer-events-none absolute z-[12] h-[108px] w-[108px]"
           style={{ left: 30, top: 30 }}
           aria-hidden="true"
@@ -255,11 +269,9 @@ import { ringRotationTarget, ringRotationTransition, useSmoothRingBurstRotation 
           >
             <path d="M18.5 2.9375V4.5M18.5 4.5V6.0625M18.5 4.5H17.25M18.5 4.5H19.75M21 4.5L19.9156 4.13852C19.4179 3.97263 19.0274 3.58211 18.8615 3.08443L18.5 2L18.1385 3.08443C17.9726 3.58211 17.5821 3.97263 17.0844 4.13852L16 4.5L17.0844 4.86148C17.5821 5.02737 17.9726 5.41789 18.1385 5.91557L18.5 7L18.8615 5.91557C19.0274 5.41789 19.4179 5.02763 19.9156 4.86148L21 4.5Z" />
           </svg>
-        </div>
-        <div
-          className="academy-book-motion relative z-10 h-[108px] w-[108px]"
-        >
-          <svg
+        </div>}
+        <div className="academy-book-motion relative z-10 h-[108px] w-[108px]">
+          {icon ?? <svg
             width="108"
             height="108"
             viewBox="0 0 24 24"
@@ -274,7 +286,7 @@ import { ringRotationTarget, ringRotationTransition, useSmoothRingBurstRotation 
             <path d="M8 2V18" />
             <path d="M20 22H6C4.89543 22 4 21.1046 4 20M4 20C4 18.8954 4.89543 18 6 18H20V10M4 20V8C4 5.17157 4 3.75736 4.87868 2.87868C5.75736 2 7.17157 2 10 2H13" />
             <path d="M19.5 18C19.5 18 18.5 18.7628 18.5 20C18.5 21.2372 19.5 22 19.5 22" />
-          </svg>
+          </svg>}
         </div>
       </motion.div>
     );
@@ -363,7 +375,7 @@ import { ringRotationTarget, ringRotationTransition, useSmoothRingBurstRotation 
         </motion.div>
         {priceLabel && (
           <span
-            className="label mt-0.5 block whitespace-nowrap leading-tight"
+            className="label mt-0.5 flex items-center justify-end gap-1 whitespace-nowrap leading-tight"
             style={{
               color: canAfford ? ACADEMY_ACCENT : "var(--text-tertiary)",
               fontSize: cost === 400 ? 14 : 10,
@@ -371,7 +383,8 @@ import { ringRotationTarget, ringRotationTransition, useSmoothRingBurstRotation 
               letterSpacing: "0.01em",
             }}
           >
-            {priceLabel}
+            <KeyRound size={cost === 400 ? 14 : 11} strokeWidth={1.8} aria-hidden="true" />
+            <span>{cost}</span>
           </span>
         )}
       </div>
@@ -456,9 +469,21 @@ import { ringRotationTarget, ringRotationTransition, useSmoothRingBurstRotation 
     const isOnboarding = userState === 'onboarding';
     const hasHL       = isOnboarding && onboardingHighlight.length > 0;
     const dimArticles = hasHL && !onboardingHighlight.includes('ACAD_articles');
+    const academyScrollRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
+      const resetScroll = () => {
+        const node = academyScrollRef.current;
+        if (!node) return;
+        node.scrollTop = 0;
+        node.scrollLeft = 0;
+      };
+      resetScroll();
+      const frame = requestAnimationFrame(resetScroll);
+      const timer = window.setTimeout(resetScroll, 0);
       return () => {
+        cancelAnimationFrame(frame);
+        window.clearTimeout(timer);
         if (scrollFrame.current !== null) {
           cancelAnimationFrame(scrollFrame.current);
         }
@@ -478,7 +503,9 @@ import { ringRotationTarget, ringRotationTransition, useSmoothRingBurstRotation 
 
     return (
       <div
-        className="h-[calc(100dvh-60px)] overflow-y-auto overscroll-contain px-4 pb-20"
+        ref={academyScrollRef}
+        data-testid="academy-scroll-container"
+        className="h-[calc(100dvh-60px)] overflow-y-auto overscroll-none px-4 pb-20"
         onScroll={handleScroll}
       >
         <motion.div
