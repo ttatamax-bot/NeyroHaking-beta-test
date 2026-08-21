@@ -8,6 +8,7 @@ export type MemoryMode = "reverse" | "matrix" | "symbols";
 export const MEMORY_TECHNIQUE_ID = "T7";
 export const MEMORY_KEYS_COST = 400;
 export const MEMORY_SHOW_MS = 2000;
+export const MEMORY_SYMBOLS_SHOW_MS = 4000;
 export const MEMORY_PRE_INPUT_PAUSE_MS = 1000;
 export const MEMORY_REWARD_LEVEL = 5;
 export const MEMORY_POTENTIAL_PERCENT = 10;
@@ -63,11 +64,15 @@ export function memoryModeMeta(mode: MemoryMode): MemoryModeMeta {
 }
 
 export function digitsForLevel(level: number): number {
-  return Math.max(3, level + 2);
+  return Math.max(3, Math.round((level + 2) * 0.7));
 }
 
 export function symbolsForLevel(level: number): number {
-  return Math.max(3, level + 2);
+  return Math.max(3, Math.round((level + 2) * 0.7));
+}
+
+export function memoryShowDurationForMode(mode: MemoryMode): number {
+  return mode === "symbols" ? MEMORY_SYMBOLS_SHOW_MS : MEMORY_SHOW_MS;
 }
 
 export interface MatrixLevel {
