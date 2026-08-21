@@ -110,3 +110,22 @@ export function playConcentrationLevelSuccess(): void {
 export function playConcentrationFail(): void {
   tone(220, 0.22, 0, 0.12, "sawtooth", 110);
 }
+
+export function playTrackingTargets(): void {
+  tone(392, 0.12, 0, 0.1, "triangle");
+  tone(523, 0.14, 0.13, 0.11, "triangle");
+}
+
+export function playTrackingMove(): void {
+  tone(330, 0.18, 0, 0.08, "sine", 520);
+  tone(440, 0.2, 0.08, 0.07, "sine", 660);
+}
+
+export function playTrackingReady(): void {
+  tone(740, 0.08, 0, 0.12, "triangle");
+  tone(880, 0.12, 0.1, 0.13, "triangle");
+}
+
+export function playTrackingSelect(): void {
+  tone(960, 0.07, 0, 0.11, "sine");
+}
