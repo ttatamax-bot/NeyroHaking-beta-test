@@ -1,4 +1,4 @@
-import { ChevronLeft, Clock3, RotateCcw, Trophy } from "lucide-react";
+import { ChevronLeft, Clock3, Play, RotateCcw, Trophy } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -9,7 +9,7 @@ import {
   MEMORY_ACCENT_SOFT,
   MEMORY_PRE_INPUT_PAUSE_MS,
   MEMORY_REWARD_LEVEL,
-  MEMORY_SHOW_MS,
+  memoryShowDurationForMode,
   memoryModeMeta,
   randomCells,
   randomDigits,
@@ -24,8 +24,14 @@ import { MemoryOnboarding } from "./MemoryOnboarding";
 import { MemoryPreview } from "./MemoryPreview";
 import { MemoryModeLogo } from "./MemoryModeLogo";
 import { memorySymbolLabel, MemorySymbol } from "./MemorySymbol";
+import {
+  DEV_REWARD_PREVIEW_EVENT,
+  TechniqueRewardCinematic,
+  type TechniqueCompletionReceipt,
+} from "@/components/TechniqueRewardCinematic";
+import { Leaderboard } from "@/components/Leaderboard";
 
-type GamePhase = "idle" | "showing" | "waiting" | "input" | "success" | "failed";
+type GamePhase = "idle" | "showing" | "waiting" | "input" | "success" | "failed" | "paused";
 
 interface ReverseChallenge {
   mode: "reverse";
@@ -51,16 +57,18 @@ export interface MemoryGameProps {
   purchased?: boolean;
   bestLevel?: number;
   keysBalance?: number;
-  rewardAwardedToday?: boolean;
   showOnboarding?: boolean;
   isPurchasing?: boolean;
   onPurchase?: (mode: MemoryMode) => void;
   onStartMode?: (mode: MemoryMode) => void;
   onBack?: () => void;
-  onBestLevelUpdate?: (mode: MemoryMode, bestLevel: number) => void;
-  onReward?: (mode: MemoryMode) => void;
-  onLevelFiveComplete?: (mode: MemoryMode) => void;
+  onBestLevelUpdate?: (
+    mode: MemoryMode,
+    bestLevel: number,
+  ) => Promise<TechniqueCompletionReceipt | void> | TechniqueCompletionReceipt | void;
   onOnboardingComplete?: (mode: MemoryMode) => void;
+  isSignedIn?: boolean;
+  leaderboardRefreshKey?: number;
 }
 
 function createChallenge(mode: MemoryMode, level: number): MemoryChallenge {
@@ -137,13 +145,9 @@ function MemoryPauseState() {
       className="game-card flex min-h-[330px] flex-col items-center justify-center rounded-[25px] border border-orange-400/40 px-7 text-center"
       data-testid="memory-pre-input-pause"
     >
-      <motion.div
-        animate={{ rotate: [0, -8, 8, 0], scale: [1, 1.08, 1] }}
-        transition={{ duration: 1, ease: "easeInOut" }}
-        className="flex h-14 w-14 items-center justify-center rounded-2xl border border-orange-300/45 bg-[#153653]"
-      >
+      <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-orange-300/45 bg-[#153653]">
         <Clock3 size={22} style={{ color: MEMORY_ACCENT }} />
-      </motion.div>
+      </div>
       <p className="title-m mt-4 text-primary">Приготовься</p>
       <div className="mt-5 h-1 w-32 overflow-hidden rounded-full bg-[#183957]">
         <motion.span
@@ -158,7 +162,36 @@ function MemoryPauseState() {
   );
 }
 
-function ShowingState({ challenge, level }: { challenge: MemoryChallenge; level: number }) {
+function MemoryRewardPauseState({ level, onResume }: { level: number; onResume: () => void }) {
+  return (
+    <div
+      className="fixed inset-0 z-[1000] flex min-h-[100dvh] items-center justify-center bg-[#061321] px-5 py-8"
+      data-testid="memory-reward-pause"
+    >
+      <div className="game-card flex w-full max-w-[360px] flex-col items-center rounded-[25px] border border-orange-400/45 px-7 py-9 text-center shadow-[0_0_50px_rgba(249,115,22,.14)]">
+        <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-orange-300/45 bg-[#153653]">
+          <Clock3 size={28} style={{ color: MEMORY_ACCENT }} />
+        </div>
+        <p className="title-m mt-5 text-primary">Пауза</p>
+        <p className="body-s mt-2 max-w-[270px] text-secondary">
+          Награда получена. Когда будешь готов, продолжи с уровня {level}.
+        </p>
+        <button
+          type="button"
+          onClick={onResume}
+          className="mt-7 flex min-h-12 items-center gap-2 rounded-[15px] px-7 text-sm font-semibold text-[#201308]"
+          style={{ background: MEMORY_ACCENT }}
+          data-testid="button-memory-reward-resume"
+        >
+          <Play size={17} fill="currentColor" />
+          Продолжить
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ShowingState({ challenge, level, showDurationMs }: { challenge: MemoryChallenge; level: number; showDurationMs: number }) {
   return (
     <motion.div
       key={`show-${level}`}
@@ -169,7 +202,7 @@ function ShowingState({ challenge, level }: { challenge: MemoryChallenge; level:
     >
       <div className="mb-7 flex items-center gap-2 text-xs text-secondary">
         <Clock3 size={14} style={{ color: MEMORY_ACCENT }} />
-        <span>Запомни за 2 секунды</span>
+        <span>Запомни за {showDurationMs / 1000} секунды</span>
       </div>
       {challenge.mode === "reverse" && (
         <div className="num flex flex-wrap justify-center gap-2 text-[34px] text-primary" data-testid="memory-sequence-display">
@@ -325,13 +358,11 @@ function SuccessGlowState({
   enteredDigits,
   enteredSymbols,
   selectedCells,
-  rewardFlash,
 }: {
   challenge: MemoryChallenge;
   enteredDigits: number[];
   enteredSymbols: MemorySymbolId[];
   selectedCells: number[];
-  rewardFlash: boolean;
 }) {
   return (
     <motion.div
@@ -342,16 +373,6 @@ function SuccessGlowState({
       className="game-card game-card--success relative flex min-h-[330px] flex-col items-center justify-center rounded-[25px] border"
       data-testid="memory-success-state"
     >
-      {rewardFlash && (
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="absolute top-5 rounded-full border border-orange-300/50 bg-orange-500/15 px-4 py-2 text-sm font-semibold text-orange-200"
-          data-testid="text-memory-reward"
-        >
-          +10% потенциала дня
-        </motion.div>
-      )}
       {challenge.mode === "matrix" ? (
         <div className="grid w-[min(70vw,246px)] gap-2" style={{ gridTemplateColumns: `repeat(${challenge.size}, minmax(0, 1fr))` }}>
           {Array.from({ length: challenge.size * challenge.size }, (_, index) => {
@@ -488,16 +509,15 @@ export function MemoryGame({
   purchased = true,
   bestLevel = 1,
   keysBalance,
-  rewardAwardedToday = false,
   showOnboarding = false,
   isPurchasing = false,
   onPurchase,
   onStartMode,
   onBack,
   onBestLevelUpdate,
-  onReward,
-  onLevelFiveComplete,
   onOnboardingComplete,
+  isSignedIn = false,
+  leaderboardRefreshKey = 0,
 }: MemoryGameProps) {
   const meta = memoryModeMeta(mode);
   const [phase, setPhase] = useState<GamePhase>("idle");
@@ -507,9 +527,12 @@ export function MemoryGame({
   const [enteredSymbols, setEnteredSymbols] = useState<MemorySymbolId[]>([]);
   const [selectedCells, setSelectedCells] = useState<number[]>([]);
   const [onboardingVisible, setOnboardingVisible] = useState(showOnboarding);
-  const [rewardFlash, setRewardFlash] = useState(false);
+  const [rewardCinematic, setRewardCinematic] = useState<{
+    receipt: TechniqueCompletionReceipt;
+    completedLevel: number;
+  } | null>(null);
+  const [pausedNextLevel, setPausedNextLevel] = useState<number | null>(null);
   const timerRef = useRef<number | null>(null);
-  const rewardSentRef = useRef(false);
 
   useEffect(() => {
     setChallenge(createChallenge(mode, 1));
@@ -519,12 +542,27 @@ export function MemoryGame({
     setEnteredSymbols([]);
     setSelectedCells([]);
     setOnboardingVisible(showOnboarding);
-    setRewardFlash(false);
-    rewardSentRef.current = false;
+    setRewardCinematic(null);
+    setPausedNextLevel(null);
     return () => {
       if (timerRef.current !== null) window.clearTimeout(timerRef.current);
     };
   }, [mode, showOnboarding]);
+
+  useEffect(() => {
+    if (!import.meta.env.DEV) return undefined;
+    const previewReward = () => {
+      if (timerRef.current !== null) window.clearTimeout(timerRef.current);
+      timerRef.current = null;
+      setPhase("success");
+      setRewardCinematic({
+        receipt: { potential: 10, totalPotential: 20 },
+        completedLevel: level,
+      });
+    };
+    window.addEventListener(DEV_REWARD_PREVIEW_EVENT, previewReward);
+    return () => window.removeEventListener(DEV_REWARD_PREVIEW_EVENT, previewReward);
+  }, [level]);
 
   const clearGameTimer = () => {
     if (timerRef.current !== null) {
@@ -544,34 +582,40 @@ export function MemoryGame({
     setEnteredSymbols([]);
     setSelectedCells([]);
     setPhase("showing");
+    const showDurationMs = memoryShowDurationForMode(mode);
     timerRef.current = window.setTimeout(() => {
       setPhase("waiting");
       timerRef.current = window.setTimeout(() => setPhase("input"), MEMORY_PRE_INPUT_PAUSE_MS);
-    }, MEMORY_SHOW_MS);
+    }, showDurationMs);
   };
 
   const success = () => {
     clearGameTimer();
     const completedLevel = level;
-    if (completedLevel >= bestLevel) onBestLevelUpdate?.(mode, completedLevel);
-    const showReward = completedLevel === MEMORY_REWARD_LEVEL && !rewardAwardedToday && !rewardSentRef.current;
-    if (completedLevel === MEMORY_REWARD_LEVEL) {
-      playReward();
-      if (showReward) {
-        rewardSentRef.current = true;
-        setRewardFlash(true);
-        onReward?.(mode);
-        onLevelFiveComplete?.(mode);
-      }
-    } else {
-      playCorrect();
-      playLevelUp();
-    }
+    const shouldPersist = Boolean(onBestLevelUpdate);
+    const completion = onBestLevelUpdate?.(mode, completedLevel);
+    playCorrect();
+    playLevelUp();
     setPhase("success");
-    timerRef.current = window.setTimeout(() => {
-      setRewardFlash(false);
-      beginRound(completedLevel + 1);
-    }, 1800);
+    void Promise.resolve(completion)
+      .catch(() => undefined)
+      .then((receipt) => {
+        if (
+          completedLevel === MEMORY_REWARD_LEVEL &&
+          receipt &&
+          receipt.potential > 0 &&
+          (!receipt.alreadyCompleted || receipt.recovered)
+        ) {
+          playReward();
+          setRewardCinematic({ receipt, completedLevel });
+          return;
+        }
+        if (shouldPersist && !receipt) {
+          timerRef.current = window.setTimeout(() => beginRound(completedLevel), 1800);
+          return;
+        }
+        timerRef.current = window.setTimeout(() => beginRound(completedLevel + 1), 1800);
+      });
   };
 
   const fail = () => {
@@ -641,7 +685,11 @@ export function MemoryGame({
   };
 
   return (
-    <div className="relative isolate min-h-[100dvh] overflow-y-auto px-4 pb-8 pt-6" data-testid={`memory-game-${mode}`}>
+    <div
+      className="relative isolate h-[100dvh] overflow-x-hidden overflow-y-scroll overscroll-y-contain px-4 pb-8 pt-6 touch-pan-y"
+      style={{ filter: "none", backdropFilter: "none", WebkitBackdropFilter: "none" }}
+      data-testid={`memory-game-${mode}`}
+    >
       <div className="relative z-10">
       <div className="mb-7 flex items-center justify-between">
         <button type="button" onClick={onBack} className="p-1 text-tertiary" aria-label="Назад" data-testid="button-memory-back">
@@ -658,6 +706,16 @@ export function MemoryGame({
         </div>
         <span className="w-8" />
       </div>
+      {import.meta.env.DEV && (
+        <button
+          type="button"
+          onClick={() => window.dispatchEvent(new Event(DEV_REWARD_PREVIEW_EVENT))}
+          className="fixed bottom-3 right-3 z-20 rounded-lg border border-orange-300/40 bg-[#0d2139]/90 px-2 py-1 text-[10px] font-semibold uppercase tracking-[.08em] text-orange-200"
+          data-testid="button-dev-reward-preview-memory"
+        >
+          DEV: награда
+        </button>
+      )}
 
       <LevelRail level={level} bestLevel={Math.max(1, bestLevel)} phase={phase} />
       <div className="my-5"><StepDots level={level} phase={phase} /></div>
@@ -669,13 +727,22 @@ export function MemoryGame({
               <Trophy size={24} style={{ color: MEMORY_ACCENT }} />
             </div>
             <p className="title-m text-primary">Готов к уровню {level}?</p>
-            <p className="body-s mt-2 max-w-[270px] text-secondary">На экране будет ровно две секунды информации. Затем повтори её без спешки.</p>
+            <p className="body-s mt-2 max-w-[270px] text-secondary">
+              На экране будет ровно {memoryShowDurationForMode(mode) / 1000} секунды информации. Затем повтори её без спешки.
+            </p>
             <motion.button type="button" onClick={() => beginRound(level)} whileTap={{ scale: .96 }} whileHover={{ y: -2 }} className="mt-7 min-h-12 rounded-[15px] px-7 text-sm font-semibold text-[#201308]" style={{ background: MEMORY_ACCENT }} data-testid="button-memory-start">
               Начать уровень
             </motion.button>
-          </motion.div>
+           </motion.div>
+           
         )}
-        {phase === "showing" && <ShowingState challenge={challenge} level={level} />}
+        {phase === "showing" && (
+          <ShowingState
+            challenge={challenge}
+            level={level}
+            showDurationMs={memoryShowDurationForMode(mode)}
+          />
+        )}
         {phase === "waiting" && <MemoryPauseState />}
         {phase === "input" && challenge.mode === "reverse" && <ReverseInput digits={challenge.digits} entered={enteredDigits} onDigit={handleDigit} />}
         {phase === "input" && challenge.mode === "matrix" && <MatrixInput challenge={challenge} selected={selectedCells} onCell={handleCell} />}
@@ -686,14 +753,50 @@ export function MemoryGame({
             enteredDigits={enteredDigits}
             enteredSymbols={enteredSymbols}
             selectedCells={selectedCells}
-            rewardFlash={rewardFlash}
           />
         )}
         {phase === "failed" && <FailedGlowState challenge={challenge} />}
       </AnimatePresence>
+      {phase === "idle" && (
+        <Leaderboard
+          mode={mode}
+          practiceTitle={meta.shortTitle}
+          enabled={isSignedIn}
+          accent={MEMORY_ACCENT}
+          border={MEMORY_ACCENT_BORDER}
+          soft={MEMORY_ACCENT_SOFT}
+          refreshKey={leaderboardRefreshKey}
+        />
+      )}
       {phase === "failed" && <RetryBonusCard onRetry={() => beginRound(1)} />}
 
       {onboardingVisible && <MemoryOnboarding mode={mode} onComplete={finishOnboarding} />}
+      {phase === "paused" && pausedNextLevel !== null && (
+        <MemoryRewardPauseState
+          level={pausedNextLevel}
+          onResume={() => {
+            const nextLevel = pausedNextLevel;
+            setPausedNextLevel(null);
+            beginRound(nextLevel);
+          }}
+        />
+      )}
+      <AnimatePresence>
+        {rewardCinematic && (
+          <TechniqueRewardCinematic
+            technique="memory"
+            mode={mode}
+            amount={rewardCinematic.receipt.potential}
+            totalPotential={rewardCinematic.receipt.totalPotential}
+            onComplete={() => {
+              const nextLevel = rewardCinematic.completedLevel + 1;
+              setRewardCinematic(null);
+              setPausedNextLevel(nextLevel);
+              setPhase("paused");
+            }}
+          />
+        )}
+      </AnimatePresence>
       </div>
     </div>
   );
