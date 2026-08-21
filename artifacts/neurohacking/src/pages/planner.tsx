@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import { useAppStore, getTodayKeysFromSource } from "@/lib/store";
 import { applyLocalCompletion } from "@/lib/store";
 import { TechniqueIntroPanel } from "@/components/TechniqueIntroPanel";
+import { TechniqueGameHeader } from "@/components/TechniqueGameHeader";
 import { MaximInfoModal } from "@/components/MaximInfoModal";
 import { ScreenTransition } from "@/components/ScreenTransition";
 import { BackButton } from "@/components/BackButton";
@@ -428,8 +429,13 @@ export default function Planner() {
 
   return (
     <ScreenTransition className="pt-[56px] px-4 pb-24">
-      <BackButton />
-      <h1 className="title-l text-primary mt-4 mb-1">Планер</h1>
+      <TechniqueGameHeader
+        title="Планер"
+        kind="planner"
+        color="#F59E0B"
+        onBack={() => setLocation('/techniques')}
+        backTestId="button-planner-back"
+      />
       <p className="body-s text-secondary mb-6">Активных задач: {activeTasks.length}/{MAX_ACTIVE_TASKS}</p>
       {activeGoals.length === 0 ? (
         <div className="bg-surface-1 border border-border rounded-[16px] p-8 text-center">

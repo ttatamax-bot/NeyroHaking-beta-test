@@ -28,8 +28,6 @@ export function MemoryHubPage() {
     isSignedIn,
     isAccountReady,
     memory,
-    memoryHubOnboardingSeen,
-    updateState,
   } = useAppStore();
 
   if (!import.meta.env.DEV && isSignedIn && !isAccountReady) {
@@ -45,15 +43,15 @@ export function MemoryHubPage() {
   };
 
   return (
-    <div className="relative">
+    <div className="relative h-full min-h-0 min-w-0 overflow-x-hidden">
       <MemoryHub
         purchasedModes={memory.purchasedModes}
+        bestLevels={memory.bestLevels}
         rewardAwardedToday={memory.rewardDay === currentMemoryDay()}
         onBack={() => setLocation('/techniques')}
         onOpenMode={(mode) => setLocation(`/technique/memory/${mode}`)}
         onPurchase={openMemoryPreview}
-        showOnboarding={!memoryHubOnboardingSeen}
-        onOnboardingComplete={() => updateState({ memoryHubOnboardingSeen: true })}
+        showOnboarding={false}
       />
     </div>
   );
@@ -75,13 +73,8 @@ export function MemoryModePage() {
   } = useAppStore();
   const [error, setError] = useState<string | null>(null);
   const [isPurchasing, setIsPurchasing] = useState(false);
-  const returnToMemoryHub = () => {
-    if (window.sessionStorage.getItem('memory-reward-pending') === '1') {
-      window.sessionStorage.removeItem('memory-reward-pending');
-      window.sessionStorage.setItem('memory-reward-flight', '1');
-    }
-    setLocation('/technique/memory');
-  };
+  const [leaderboardRefreshKey, setLeaderboardRefreshKey] = useState(0);
+  const returnToMemoryHub = () => setLocation('/technique/memory');
   const previewKeys = previewMode && !isSignedIn ? (keys > 0 ? keys : 5000) : isSignedIn ? keys : undefined;
 
   if (!import.meta.env.DEV && isSignedIn && !isAccountReady) {
@@ -94,12 +87,15 @@ export function MemoryModePage() {
   const saveMemoryLevel = async (completedMode: MemoryMode, level: number) => {
     setError(null);
     try {
-      await completeTechnique('T7', {
+      const result = await completeTechnique('T7', {
         mode: completedMode,
         level,
       });
+      setLeaderboardRefreshKey((value) => value + 1);
+      return result;
     } catch {
       setError('Не удалось сохранить этот уровень. Проверь соединение и повтори попытку.');
+      return undefined;
     }
   };
 
@@ -110,7 +106,6 @@ export function MemoryModePage() {
         purchased={purchased}
         bestLevel={bestLevel}
         keysBalance={previewKeys}
-        rewardAwardedToday={memory.rewardDay === currentMemoryDay()}
         showOnboarding={false}
         onPurchase={async (selectedMode) => {
           if (previewMode && !isSignedIn) {
@@ -152,12 +147,9 @@ export function MemoryModePage() {
         }}
         isPurchasing={isPurchasing}
         onBack={returnToMemoryHub}
-        onLevelFiveComplete={() => {
-          window.sessionStorage.setItem('memory-reward-pending', '1');
-        }}
-        onBestLevelUpdate={(completedMode, level) => {
-          void saveMemoryLevel(completedMode, level);
-        }}
+        onBestLevelUpdate={saveMemoryLevel}
+        isSignedIn={isSignedIn}
+        leaderboardRefreshKey={leaderboardRefreshKey}
       />
       {error && (
         <div className="fixed bottom-5 left-4 right-4 z-40 mx-auto max-w-[358px] rounded-[14px] border border-rose-300/25 bg-[#3b1820] px-4 py-3 text-sm text-rose-100" role="alert">

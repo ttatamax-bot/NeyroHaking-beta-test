@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import { useAppStore, getTodayKeysFromSource } from "@/lib/store";
 import { applyLocalCompletion } from "@/lib/store";
 import { TechniqueIntroPanel } from "@/components/TechniqueIntroPanel";
+import { TechniqueGameHeader } from "@/components/TechniqueGameHeader";
 import { MaximInfoModal } from "@/components/MaximInfoModal";
 import { motion, AnimatePresence } from "framer-motion";
 import { Textarea } from "@/components/ui/textarea";
@@ -289,9 +290,13 @@ export default function Visualization() {
     return (
       <div className="flex flex-col h-[100dvh] items-center justify-center relative overflow-hidden p-8">
         <div className="relative z-10 text-center">
-          <button onClick={() => setLocation('/techniques')} className="text-tertiary mb-4 inline-flex">
-            <ChevronLeft size={24} />
-          </button>
+          <TechniqueGameHeader
+            title="Визуализация"
+            kind="visualization"
+            color="#C084FC"
+            onBack={() => setLocation('/techniques')}
+            backTestId="button-visualization-back"
+          />
           <p className="body text-secondary mb-6">Сначала создай цель в разделе Путь — тогда техника нейровизуализации станет доступна.</p>
           <button onClick={() => setLocation('/goals')}
             className="h-[52px] px-8 rounded-[14px] btn-grad btn-shimmer text-white title-s">
@@ -306,12 +311,13 @@ export default function Visualization() {
     return (
       <div className="flex flex-col h-[100dvh] relative overflow-hidden">
         <div className="relative z-10 flex flex-col h-full p-6">
-          <div className="flex items-center pt-2 pb-6">
-            <button onClick={() => setLocation('/techniques')} className="p-1 text-tertiary mr-3">
-              <ChevronLeft size={28} />
-            </button>
-            <h1 className="title-l text-primary">Визуализация</h1>
-          </div>
+          <TechniqueGameHeader
+            title="Визуализация"
+            kind="visualization"
+            color="#C084FC"
+            onBack={() => setLocation('/techniques')}
+            backTestId="button-visualization-back"
+          />
           <p className="body text-secondary mb-8">Выбери цель для визуализации:</p>
           <div className="space-y-3">
             {activeGoals.map(goal => (

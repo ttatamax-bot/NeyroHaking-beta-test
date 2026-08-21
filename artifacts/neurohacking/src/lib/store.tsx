@@ -322,6 +322,28 @@ function sameStateValue(left: unknown, right: unknown): boolean {
   }
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function sameCompletionMetadata(left: unknown, right: unknown): boolean {
+  if (Object.is(left, right)) return true;
+  if (Array.isArray(left) || Array.isArray(right)) {
+    return Array.isArray(left) &&
+      Array.isArray(right) &&
+      left.length === right.length &&
+      left.every((value, index) => sameCompletionMetadata(value, right[index]));
+  }
+  if (!isRecord(left) || !isRecord(right)) return false;
+  const leftKeys = Object.keys(left).sort();
+  const rightKeys = Object.keys(right).sort();
+  return leftKeys.length === rightKeys.length &&
+    leftKeys.every((key, index) => (
+      key === rightKeys[index] &&
+      sameCompletionMetadata(left[key], right[key])
+    ));
+}
+
 function sameServerProfile(left: ServerProfile | null | undefined, right: ServerProfile | null | undefined): boolean {
   if (!left || !right) return left === right;
   for (const key of [
@@ -449,6 +471,25 @@ function completionActivityType(techniqueId: string): ActivityEntry['type'] {
                   : 'concentration';
 }
 
+/**
+ * Finds the completion that a client can safely reconcile after a transport
+ * failure. The server owns the app-day, so a matching row is proof that this
+ * exact level was committed even when the POST response never reached us.
+ */
+export function findRecoveredCompletion(
+  completions: ServerCompletion[],
+  techniqueId: string,
+  metadata: Record<string, unknown>,
+  now: Date = new Date(),
+): ServerCompletion | undefined {
+  const appDay = getServerAppDayKey(now);
+  return completions.find((completion) => (
+    completion.techniqueId === techniqueId &&
+    completion.appDay === appDay &&
+    sameCompletionMetadata(completion.metadata, metadata)
+  ));
+}
+
 export function applyServerCompletions(prev: AppState, completions: ServerCompletion[]): AppState {
   const rows = completions.filter(row => row && Number.isFinite(row.id));
   if (rows.length === 0) return prev;
@@ -465,6 +506,8 @@ export function applyServerCompletions(prev: AppState, completions: ServerComple
   const activityLog = [...prev.activityLog];
   const keysHistory = [...prev.keysHistory];
   const potentialHistory = [...prev.potentialHistory];
+  let memory = prev.memory;
+  let concentration = prev.concentration;
   for (const row of rows) {
     const completedAt = new Date(row.completedAt);
     const dateMs = completedAt.getTime();
@@ -472,6 +515,41 @@ export function applyServerCompletions(prev: AppState, completions: ServerComple
     const metadata = row.metadata && typeof row.metadata === 'object'
       ? row.metadata
       : {};
+    const level = Number(metadata.level);
+    if (
+      row.techniqueId === 'T7' &&
+      (metadata.mode === 'reverse' || metadata.mode === 'matrix' || metadata.mode === 'symbols') &&
+      Number.isFinite(level)
+    ) {
+      const mode = metadata.mode;
+      memory = {
+        ...memory,
+        bestLevels: {
+          ...memory.bestLevels,
+          [mode]: Math.max(memory.bestLevels[mode] ?? 1, level),
+        },
+        ...(row.potentialAwarded > 0 && row.appDay >= (memory.rewardDay ?? '')
+          ? { rewardDay: row.appDay }
+          : {}),
+      };
+    }
+    if (
+      row.techniqueId === 'T8' &&
+      (metadata.mode === 'signals' || metadata.mode === 'tracking' || metadata.mode === 'search') &&
+      Number.isFinite(level)
+    ) {
+      const mode = metadata.mode;
+      concentration = {
+        ...concentration,
+        bestLevels: {
+          ...concentration.bestLevels,
+          [mode]: Math.max(concentration.bestLevels[mode] ?? 1, level),
+        },
+        ...(row.potentialAwarded > 0 && row.appDay >= (concentration.rewardDay ?? '')
+          ? { rewardDay: row.appDay }
+          : {}),
+      };
+    }
     const activityId = `completion:${row.id}`;
     const hasActivity = activityLog.some(entry => (
       entry.id === activityId ||
@@ -527,6 +605,8 @@ export function applyServerCompletions(prev: AppState, completions: ServerComple
     activityLog,
     keysHistory,
     potentialHistory,
+    memory,
+    concentration,
     lastCompletedDate: latestCompletion && (
       !prev.lastCompletedDate ||
       new Date(latestCompletion).getTime() > new Date(prev.lastCompletedDate).getTime()
@@ -587,6 +667,10 @@ export function applyServerCompletion(
   const now = new Date();
   const nowISO = now.toISOString();
   const source = TECHNIQUE_SOURCES[techniqueId] ?? techniqueId;
+  const completionActivityId = `completion:${result.completedTechniqueId}`;
+  // A retry can legitimately return the original server receipt. Apply its
+  // authoritative totals, but do not mirror the same ledger row locally twice.
+  const alreadyRecorded = prev.activityLog.some((entry) => entry.id === completionActivityId);
   const closedDays = result.closedDays ?? prev.closedDays;
   const updates: Partial<AppState> = {
     keys: result.totalKeys,
@@ -611,25 +695,29 @@ export function applyServerCompletion(
      todayTechniques: techniqueId in prev.todayTechniques
        ? { ...prev.todayTechniques, [techniqueId]: true }
        : prev.todayTechniques,
-    keysHistory: result.keys > 0
+    keysHistory: result.keys > 0 && !alreadyRecorded
       ? [{ date: nowISO, source, amount: result.keys, type: 'earn' as const }, ...prev.keysHistory]
       : prev.keysHistory,
-    potentialHistory: result.potential > 0
+    potentialHistory: result.potential > 0 && !alreadyRecorded
       ? [{ date: nowISO, source, amount: result.potential }, ...prev.potentialHistory]
       : prev.potentialHistory,
-    activityLog: [
-      {
-        id: `completion:${result.completedTechniqueId}`,
-        date: nowISO,
-         type: completionActivityType(techniqueId),
-        keysGained: result.keys,
-        potentialGained: result.potential,
-        details: metadata as ActivityEntry['details'],
-      },
-      ...prev.activityLog,
-    ],
-    lastCompletedDate: nowISO,
-    streakHistory: [{ date: nowISO, value: result.newStreak }, ...prev.streakHistory],
+    activityLog: alreadyRecorded
+      ? prev.activityLog
+      : [
+          {
+            id: completionActivityId,
+            date: nowISO,
+            type: completionActivityType(techniqueId),
+            keysGained: result.keys,
+            potentialGained: result.potential,
+            details: metadata as ActivityEntry['details'],
+          },
+          ...prev.activityLog,
+        ],
+    lastCompletedDate: alreadyRecorded ? prev.lastCompletedDate : nowISO,
+    streakHistory: alreadyRecorded
+      ? prev.streakHistory
+      : [{ date: nowISO, value: result.newStreak }, ...prev.streakHistory],
   };
 
   if (techniqueId === 'T7') {
@@ -908,6 +996,39 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       timezoneOffsetMinutes: new Date().getTimezoneOffset(),
       metadata,
     };
+    const reconcileLostCompletion = async (): Promise<CompleteTechniqueResult | null> => {
+      const { state: serverState, profile, completedTechniques = [] } = await getServerState();
+      const committed = findRecoveredCompletion(completedTechniques, techniqueId, metadata);
+      if (!profile || !committed) return null;
+
+      const applyReconciledState = (previous: AppState): AppState => applyServerCompletions({
+        ...previous,
+        ...(serverState as Partial<AppState> | null),
+        keys: profile.totalKeys,
+        potential: profileDayPotential(profile),
+        closedDays: profile.closedDays,
+        streak: profile.currentStreak,
+        profile,
+      }, completedTechniques);
+
+      const reconciled = applyReconciledState(stateRef.current);
+      stateRef.current = reconciled;
+      setState((previous) => applyReconciledState(previous));
+
+      return {
+        keys: committed.keysAwarded,
+        potential: committed.potentialAwarded,
+        completedTechniqueId: committed.id,
+        newStreak: profile.currentStreak,
+        longestStreak: profile.longestStreak,
+        totalKeys: profile.totalKeys,
+        totalPotential: profileDayPotential(profile),
+        dayClosed: false,
+        closedDays: profile.closedDays,
+        alreadyCompleted: true,
+        recovered: true,
+      };
+    };
     let result: CompleteTechniqueResult;
     try {
       result = await apiCompleteTechnique(input);
@@ -916,7 +1037,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       // idempotency key makes this retry safe for the server ledger.
       if (error instanceof TypeError || (error instanceof Error && "status" in error && Number(error.status) >= 500)) {
         await new Promise((resolve) => window.setTimeout(resolve, 600));
-        result = await apiCompleteTechnique(input);
+        try {
+          // Mark this response so level five can still show a single,
+          // meaningful reward completion after the response was lost.
+          result = { ...await apiCompleteTechnique(input), recovered: true };
+        } catch (retryError) {
+          const recovered = await reconcileLostCompletion().catch(() => null);
+          if (!recovered) throw retryError;
+          result = recovered;
+        }
       } else {
         throw error;
       }

@@ -461,6 +461,16 @@ function AppLogic() {
   }, []);
 
   useEffect(() => {
+    if (!store.isAccountReady || userState !== 'onboarding') return;
+    updateState({
+      userState: 'active',
+      onboardingComplete: true,
+      onboardingStep: 0,
+      onboardingHighlight: [],
+    });
+  }, [store.isAccountReady, updateState, userState]);
+
+  useEffect(() => {
     if (!isAuthLoaded || !isSignedIn || !location.startsWith('/sign-')) return;
     const referralReturn = sessionStorage.getItem('neuro-referral-return');
     if (!referralReturn?.startsWith('/referral/')) return;
@@ -734,8 +744,7 @@ function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-[100dvh] w-full max-w-none mx-auto text-primary relative overflow-hidden flex flex-col" style={APP_BG}>
       <TopBar />
-      <div className="relative z-10 flex-1 overflow-x-hidden overflow-y-auto">{children}</div>
-      <OnboardingTutorial />
+      <div data-testid="app-scroll-shell" className="relative z-10 flex-1 overflow-x-hidden overflow-y-auto">{children}</div>
       <CoachingBubble />
       <NavBar />
       <InstallPrompt />
@@ -746,9 +755,12 @@ function AppLayout({ children }: { children: React.ReactNode }) {
 }
 
 function FullscreenLayout({ children }: { children: React.ReactNode }) {
+  const [location] = useLocation();
+  const ownsSafeArea = location.includes("/read") || location.startsWith("/news/");
+
   return (
-    <div className="min-h-[100dvh] w-full max-w-none mx-auto text-primary relative overflow-hidden flex flex-col" style={APP_BG}>
-      <div className="flex-1 overflow-hidden relative z-10">{children}</div>
+    <div className="fixed inset-0 h-[100dvh] w-full max-w-none mx-auto text-primary relative overflow-hidden overscroll-none flex flex-col" style={APP_BG}>
+      <div className="min-h-0 flex-1 overflow-hidden relative z-10 overscroll-none">{children}</div>
       <DayDoneOverlay />
     </div>
   );
@@ -761,6 +773,7 @@ function Router() {
     location.startsWith('/technique/') ||
     location.startsWith('/sign-in') ||
     location.startsWith('/sign-up') ||
+    location.startsWith('/news/') ||
     location === '/privacy-policy' ||
     location === '/my-progress' ||
     location.includes('/read') ||

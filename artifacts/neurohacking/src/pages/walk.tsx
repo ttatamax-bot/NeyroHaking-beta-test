@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import { useAppStore, getTodayKeysFromSource } from "@/lib/store";
 import { applyLocalCompletion } from "@/lib/store";
 import { TechniqueIntroPanel } from "@/components/TechniqueIntroPanel";
+import { TechniqueGameHeader } from "@/components/TechniqueGameHeader";
 import { MaximInfoModal } from "@/components/MaximInfoModal";
 import { isNativeStepCounter, nativeStepCounter } from "@/lib/step-counter";
 import { motion, AnimatePresence } from "framer-motion";
@@ -296,12 +297,13 @@ export default function Walk() {
     return (
       <div className="flex flex-col h-[100dvh] relative overflow-hidden">
         <div className="relative z-10 flex flex-col h-full">
-          <div className="flex items-center px-4 pt-6 pb-4">
-            <button onClick={() => setLocation('/techniques')} className="p-1 text-tertiary mr-3">
-              <ChevronLeft size={28} />
-            </button>
-            <h1 className="title-l text-primary">Прогулка с эспандером</h1>
-          </div>
+          <TechniqueGameHeader
+            title="Прогулка с эспандером"
+            kind="walk"
+            color="#3DB770"
+            onBack={() => setLocation('/techniques')}
+            backTestId="button-walk-back"
+          />
           <div className="flex-1 flex flex-col justify-center px-4 overflow-y-auto pb-4">
             {isMaxedOut ? (
               <div className="text-center">

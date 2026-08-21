@@ -17,6 +17,7 @@ interface TechniqueArtworkProps {
   done?: boolean;
   highlighted?: boolean;
   pressed?: boolean;
+  bare?: boolean;
 }
 
 const ICON_SIZE = 84;
@@ -279,7 +280,7 @@ function ArtworkSvg({ kind, color, reduced, pressed }: { kind: TechniqueArtworkK
   );
 }
 
-export function TechniqueArtwork({ kind, color, done = false, highlighted = false, pressed = false }: TechniqueArtworkProps) {
+export function TechniqueArtwork({ kind, color, done = false, highlighted = false, pressed = false, bare = false }: TechniqueArtworkProps) {
   const reduced = useReducedMotion();
   const animation = iconMotion(reduced, kind, pressed);
   const rgb = color.slice(1).match(/.{2}/g)?.map((part) => parseInt(part, 16)).join(",") ?? "249,115,22";
@@ -287,23 +288,27 @@ export function TechniqueArtwork({ kind, color, done = false, highlighted = fals
   return (
     <div className="relative flex h-[148px] w-full items-center justify-center">
       <motion.div
-        className="relative flex h-[136px] w-[136px] items-center justify-center overflow-visible rounded-[24px] border"
+        className={`relative flex h-[136px] w-[136px] items-center justify-center overflow-visible ${bare ? "" : "rounded-[24px] border"}`}
         style={{
-          backgroundColor: "#0B1729",
-          backgroundImage: `linear-gradient(145deg, rgba(${rgb},0.28), rgba(${rgb},0.09))`,
-          borderColor: highlighted ? `${color}a6` : `${color}58`,
-          boxShadow: highlighted
-            ? `0 0 0 2px ${color}26, 0 0 28px ${color}32, inset 0 1px 0 rgba(255,255,255,0.12)`
-            : `0 0 20px ${color}16, inset 0 1px 0 rgba(255,255,255,0.08)`,
+          ...(bare
+            ? { color, filter: `drop-shadow(0 0 12px ${color}88)` }
+            : {
+                backgroundColor: "#0B1729",
+                backgroundImage: `linear-gradient(145deg, rgba(${rgb},0.28), rgba(${rgb},0.09))`,
+                borderColor: highlighted ? `${color}a6` : `${color}58`,
+                boxShadow: highlighted
+                  ? `0 0 0 2px ${color}26, 0 0 28px ${color}32, inset 0 1px 0 rgba(255,255,255,0.12)`
+                  : `0 0 20px ${color}16, inset 0 1px 0 rgba(255,255,255,0.08)`,
+              }),
         }}
-        animate={reduced ? undefined : pressed
+        animate={bare || reduced ? undefined : pressed
           ? { scale: 0.91, y: 2, rotate: -1.2 }
           : { y: [0, -3, 0], scale: [1, 1, 1] }}
         transition={pressed
           ? { duration: 0.18, ease: "easeOut" }
           : { duration: highlighted ? 2.8 : 4.8, repeat: Infinity, ease: "easeInOut" }}
       >
-        <motion.div
+        {!bare && <motion.div
           aria-hidden="true"
           className="pointer-events-none absolute h-20 w-20 rounded-full blur-2xl"
           style={{ background: `rgba(${rgb},0.42)` }}
@@ -313,14 +318,14 @@ export function TechniqueArtwork({ kind, color, done = false, highlighted = fals
           transition={pressed
             ? { duration: 0.48, ease: "easeOut" }
             : { duration: highlighted ? 2.2 : 4.2, repeat: Infinity, ease: "easeInOut" }}
-        />
-        <motion.div
+        />}
+        {!bare && <motion.div
           aria-hidden="true"
           className="pointer-events-none absolute inset-2 rounded-[16px] border"
           style={{ borderColor: `${color}26` }}
           animate={reduced ? undefined : { opacity: [0.35, 0.8, 0.35], scale: [0.98, 1, 0.98] }}
           transition={{ duration: 3.4, repeat: Infinity, ease: "easeInOut" }}
-        />
+        />}
         <motion.div
           className="relative z-10"
           {...animation}
@@ -328,7 +333,7 @@ export function TechniqueArtwork({ kind, color, done = false, highlighted = fals
         >
           <ArtworkSvg kind={kind} color={color} reduced={reduced} pressed={pressed} />
         </motion.div>
-        {done && (
+        {!bare && done && (
           <motion.span
             initial={{ scale: 0, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}

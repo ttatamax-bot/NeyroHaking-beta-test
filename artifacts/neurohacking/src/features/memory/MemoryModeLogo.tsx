@@ -2,7 +2,13 @@ import { motion } from "framer-motion";
 import type { MemoryMode } from "./config";
 import { MemorySymbol } from "./MemorySymbol";
 
-export function MemoryModeLogo({ mode, large = false }: { mode: MemoryMode; large?: boolean }) {
+export function MemoryModeLogo({
+  mode,
+  large = false,
+}: {
+  mode: MemoryMode;
+  large?: boolean;
+}) {
   const cellClass = large ? "h-5 w-5 rounded-[6px]" : "h-3.5 w-3.5 rounded-[4px]";
   const digitClass = large ? "h-8 w-7 rounded-[8px] text-base" : "h-6 w-5 rounded-[6px] text-xs";
   const symbolClass = large ? "h-8 w-7 rounded-[8px] text-base" : "h-6 w-5 rounded-[6px] text-xs";
@@ -13,9 +19,9 @@ export function MemoryModeLogo({ mode, large = false }: { mode: MemoryMode; larg
         {["4", "7", "1"].map((digit) => (
           <motion.span
             key={digit}
-            animate={{ y: [0, large ? -5 : -3, 0], opacity: [0.72, 1, 0.72] }}
-            transition={{ duration: 2.2, repeat: Infinity, delay: Number(digit) * 0.04 }}
-            className={`flex items-center justify-center border border-orange-400/45 bg-orange-500/[.12] font-semibold text-orange-300 ${digitClass}`}
+            animate={large ? undefined : { y: [0, -3, 0], opacity: [0.72, 1, 0.72] }}
+            transition={large ? undefined : { duration: 2.2, repeat: Infinity, delay: Number(digit) * 0.04 }}
+            className={`flex items-center justify-center font-semibold text-orange-300 border border-orange-400/45 bg-orange-500/[.12] ${digitClass}`}
           >
             {digit}
           </motion.span>
@@ -32,8 +38,8 @@ export function MemoryModeLogo({ mode, large = false }: { mode: MemoryMode; larg
           return (
             <motion.span
               key={cell}
-              animate={{ scale: [1, active ? (large ? 1.2 : 1.14) : 1, 1], opacity: [0.68, 1, 0.68] }}
-              transition={{ duration: 2.1, repeat: Infinity, delay: cell * 0.06 }}
+              animate={large ? undefined : { scale: [1, active ? 1.14 : 1, 1], opacity: [0.68, 1, 0.68] }}
+              transition={large ? undefined : { duration: 2.1, repeat: Infinity, delay: cell * 0.06 }}
               className={cellClass}
               style={{
                 background: active ? "#F97316" : "rgba(147,197,253,.14)",
@@ -51,9 +57,9 @@ export function MemoryModeLogo({ mode, large = false }: { mode: MemoryMode; larg
       {(["diamond", "sparkle", "dot"] as const).map((symbol, index) => (
         <motion.span
           key={symbol}
-          animate={{ y: [0, large ? -5 : -3, 0], rotate: [0, index % 2 === 0 ? 5 : -5, 0], opacity: [0.72, 1, 0.72] }}
-          transition={{ duration: 2.2, repeat: Infinity, delay: index * 0.12 }}
-          className={`flex items-center justify-center border border-orange-400/45 bg-orange-500/[.12] text-orange-300 ${symbolClass}`}
+          animate={large ? undefined : { y: [0, -3, 0], rotate: [0, index % 2 === 0 ? 5 : -5, 0], opacity: [0.72, 1, 0.72] }}
+          transition={large ? undefined : { duration: 2.2, repeat: Infinity, delay: index * 0.12 }}
+          className={`flex items-center justify-center text-orange-300 border border-orange-400/45 bg-orange-500/[.12] ${symbolClass}`}
         >
           <MemorySymbol symbol={symbol} className={large ? "h-5 w-5" : "h-4 w-4"} />
         </motion.span>

@@ -28,8 +28,6 @@ export function ConcentrationHubPage() {
     isSignedIn,
     isAccountReady,
     concentration,
-    concentrationHubOnboardingSeen,
-    updateState,
     keys,
   } = useAppStore();
 
@@ -46,15 +44,15 @@ export function ConcentrationHubPage() {
   };
 
   return (
-    <div className="relative">
+    <div className="relative h-full min-h-0 min-w-0 overflow-x-hidden">
       <ConcentrationHub
         purchasedModes={concentration.purchasedModes}
+        bestLevels={concentration.bestLevels}
         rewardAwardedToday={concentration.rewardDay === currentConcentrationDay()}
         onBack={() => setLocation("/techniques")}
         onOpenMode={(mode) => setLocation(`/technique/concentration/${mode}`)}
         onPurchase={openPreview}
-        showOnboarding={!concentrationHubOnboardingSeen}
-        onOnboardingComplete={() => updateState({ concentrationHubOnboardingSeen: true })}
+        showOnboarding={false}
       />
       {previewMode && !isSignedIn && keys === 0 && <span className="sr-only">В режиме preview доступны демонстрационные ключи.</span>}
     </div>
@@ -77,13 +75,8 @@ export function ConcentrationModePage() {
   } = useAppStore();
   const [error, setError] = useState<string | null>(null);
   const [isPurchasing, setIsPurchasing] = useState(false);
-  const returnToHub = () => {
-    if (window.sessionStorage.getItem("concentration-reward-pending") === "1") {
-      window.sessionStorage.removeItem("concentration-reward-pending");
-      window.sessionStorage.setItem("concentration-reward-flight", "1");
-    }
-    setLocation("/technique/concentration");
-  };
+  const [leaderboardRefreshKey, setLeaderboardRefreshKey] = useState(0);
+  const returnToHub = () => setLocation("/technique/concentration");
   const previewKeys = previewMode && !isSignedIn ? (keys > 0 ? keys : 5000) : isSignedIn ? keys : undefined;
 
   if (!import.meta.env.DEV && isSignedIn && !isAccountReady) {
@@ -100,13 +93,16 @@ export function ConcentrationModePage() {
   }) => {
     setError(null);
     try {
-      await completeTechnique("T8", {
+      const result = await completeTechnique("T8", {
         mode: completedMode,
         level,
         ...stats,
       });
+      setLeaderboardRefreshKey((value) => value + 1);
+      return result;
     } catch {
       setError("Не удалось сохранить этот уровень. Проверь соединение и повтори попытку.");
+      return undefined;
     }
   };
 
@@ -117,7 +113,6 @@ export function ConcentrationModePage() {
         purchased={purchased}
         bestLevel={bestLevel}
         keysBalance={previewKeys}
-        rewardAwardedToday={concentration.rewardDay === currentConcentrationDay()}
         isPurchasing={isPurchasing}
         onPurchase={async (selectedMode) => {
           if (previewMode && !isSignedIn) {
@@ -152,12 +147,9 @@ export function ConcentrationModePage() {
           }
         }}
         onBack={returnToHub}
-        onLevelFiveComplete={() => {
-          window.sessionStorage.setItem("concentration-reward-pending", "1");
-        }}
-        onBestLevelUpdate={(completedMode, level, stats) => {
-          void saveLevel(completedMode, level, stats);
-        }}
+        onBestLevelUpdate={saveLevel}
+        isSignedIn={isSignedIn}
+        leaderboardRefreshKey={leaderboardRefreshKey}
       />
       {error && (
         <div className="fixed bottom-5 left-4 right-4 z-40 mx-auto max-w-[358px] rounded-[14px] border border-rose-300/25 bg-[#3b1820] px-4 py-3 text-sm text-rose-100" role="alert">

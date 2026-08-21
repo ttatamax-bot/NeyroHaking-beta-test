@@ -5,7 +5,7 @@ import { useAppStore } from "@/lib/store";
 import { ScreenTransition } from "@/components/ScreenTransition";
 import { BackButton } from "@/components/BackButton";
 import { ChevronRight, Bell, User, Copy, Check, Gift, Loader2 } from "lucide-react";
-import { ApiError, createReferral } from "@/lib/api";
+import { ApiError, createReferral, updateServerProfile } from "@/lib/api";
 import {
   DEVELOPER_MODE_EVENT,
   getDeveloperMode,
@@ -77,6 +77,10 @@ export default function Settings() {
   const [referralCopied, setReferralCopied] = useState(false);
   const [referralError, setReferralError] = useState<string | null>(null);
   const { isSignedIn, user } = useUser();
+  const { profile, updateState } = useAppStore();
+  const [nickname, setNickname] = useState(profile?.nickname ?? "");
+  const [nicknameBusy, setNicknameBusy] = useState(false);
+  const [nicknameMessage, setNicknameMessage] = useState<string | null>(null);
   const email = user?.primaryEmailAddress?.emailAddress ?? null;
   const isReferralAdmin = email?.toLowerCase() === 'ttatamax@gmail.com';
   const isDevAccount = isDeveloperAccount(email);
@@ -85,6 +89,28 @@ export default function Settings() {
   useEffect(() => {
     setDeveloperModeState(getDeveloperMode(email));
   }, [email]);
+
+  useEffect(() => {
+    if (profile?.nickname) setNickname(profile.nickname);
+  }, [profile?.nickname]);
+
+  const saveNickname = async () => {
+    const normalized = nickname.trim();
+    if (!/^[\p{L}\p{N}][\p{L}\p{N}_.-]{2,23}$/u.test(normalized) || nicknameBusy) return;
+    setNicknameBusy(true);
+    setNicknameMessage(null);
+    try {
+      const nextProfile = await updateServerProfile({ nickname: normalized });
+      updateState({ profile: nextProfile });
+      setNicknameMessage("Никнейм сохранён.");
+    } catch (error) {
+      setNicknameMessage(error instanceof ApiError && error.status === 409
+        ? "Этот никнейм уже занят."
+        : "Не удалось сохранить никнейм.");
+    } finally {
+      setNicknameBusy(false);
+    }
+  };
 
   useEffect(() => {
     const syncDeveloperMode = () => setDeveloperModeState(getDeveloperMode(email));
@@ -199,6 +225,32 @@ export default function Settings() {
             </button>
           )}
           {referralError && <p className="body-s text-red-300 mt-2">{referralError}</p>}
+        </div>
+      )}
+
+      {isSignedIn && (
+        <div className="mb-4 rounded-[16px] border border-border bg-surface-1 p-4">
+          <div className="body text-primary">Публичный никнейм</div>
+          <p className="body-s mt-1 text-secondary">Так тебя видят в таблицах лидеров.</p>
+          <div className="mt-3 flex gap-2">
+            <input
+              value={nickname}
+              onChange={(event) => { setNickname(event.target.value); setNicknameMessage(null); }}
+              maxLength={24}
+              className="min-w-0 flex-1 rounded-[11px] border border-border bg-surface-2 px-3 text-sm text-primary outline-none focus:border-blue-400"
+              aria-label="Публичный никнейм"
+            />
+            <button
+              type="button"
+              onClick={saveNickname}
+              disabled={nicknameBusy || !/^[\p{L}\p{N}][\p{L}\p{N}_.-]{2,23}$/u.test(nickname.trim())}
+              className="rounded-[11px] px-3 text-sm font-semibold text-white disabled:opacity-45"
+              style={{ background: "var(--accent-blue, #2563EB)" }}
+            >
+              {nicknameBusy ? "…" : "Сохранить"}
+            </button>
+          </div>
+          {nicknameMessage && <p className="body-s mt-2 text-secondary">{nicknameMessage}</p>}
         </div>
       )}
 

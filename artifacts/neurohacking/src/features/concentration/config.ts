@@ -45,7 +45,7 @@ export const CONCENTRATION_MODES: ConcentrationModeMeta[] = [
     title: "Поиск",
     shortTitle: "Поиск",
     onboarding: "Найди один нужный объект среди большой сетки похожих отвлекающих фигур за ограниченное время.",
-    previewHint: "Сетка остаётся большой, а время поиска сокращается и объекты становятся похожее.",
+    previewHint: "Сетка становится плотнее, а отвлекающие фигуры всё сильнее похожи на цель.",
     previewExample: "10×10 · 1 цель",
   },
 ];
@@ -104,20 +104,12 @@ export function searchGridSizeForLevel(level: number): number {
   return 10;
 }
 
-export function searchTimeForLevel(level: number): number {
-  if (level <= 1) return 8500;
-  if (level === 2) return 8200;
-  if (level === 3) return 7900;
-  if (level === 4) return 7600;
-  return Math.max(6500, 7300 - Math.max(0, level - 5) * 120);
+export function searchTimeForLevel(_level: number): number {
+  return 8500;
 }
 
 export function searchObjectCountForLevel(level: number): number {
-  if (level <= 1) return 18;
-  if (level === 2) return 26;
-  if (level === 3) return 36;
-  if (level === 4) return 48;
-  return Math.min(72, 58 + Math.max(0, level - 5) * 4);
+  return searchGridSizeForLevel(level) ** 2;
 }
 
 export function randomUniqueIndexes(total: number, count: number): number[] {

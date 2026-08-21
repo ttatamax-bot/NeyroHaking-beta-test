@@ -974,7 +974,12 @@ export default function Home() {
             <button
               className="btn-grad btn-shimmer w-full h-[58px] rounded-[16px] title-s flex items-center justify-center gap-2"
               onClick={() => {
-                updateState({ userState: 'onboarding', onboardingStep: 0 });
+                updateState({
+                  userState: 'active',
+                  onboardingComplete: true,
+                  onboardingStep: 0,
+                  onboardingHighlight: [],
+                });
                 setLocation('/techniques');
               }}
             >
@@ -995,7 +1000,7 @@ export default function Home() {
   }
 
   return (
-    <div className="relative h-[calc(100dvh-60px)] overflow-x-hidden overflow-y-auto overscroll-contain pb-[110px]" onScroll={handleHomeScroll}>
+    <div data-testid="home-scroll-container" className="relative h-[calc(100dvh-60px)] overflow-x-hidden overflow-y-auto overscroll-contain pb-[110px]" onScroll={handleHomeScroll}>
       <div className="relative z-10">
 
         <div className="flex items-center justify-between px-6 pt-[38px] pb-1">

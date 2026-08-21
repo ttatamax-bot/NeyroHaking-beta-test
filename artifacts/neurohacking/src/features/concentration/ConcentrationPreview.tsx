@@ -9,6 +9,7 @@ import {
   type ConcentrationMode,
 } from "./config";
 import { ConcentrationModeLogo } from "./ConcentrationModeLogo";
+import { MemorySymbol } from "../memory/MemorySymbol";
 
 interface ConcentrationPreviewProps {
   mode: ConcentrationMode;
@@ -61,17 +62,17 @@ function PreviewVisual({ mode }: { mode: ConcentrationMode }) {
     <div className="mx-auto grid w-[226px] grid-cols-10 gap-1.5" aria-label="Пример поиска">
       {Array.from({ length: 100 }, (_, index) => {
         const target = index === 47;
+        const rotations = [-24, -18, -12, -8, 8, 12, 18, 24];
+        const rotation = target ? 0 : rotations[index % rotations.length];
+        const symbol = target || index % 5 !== 0 ? "triangle" : index % 10 === 0 ? "half" : "diamond";
         return (
           <span
             key={index}
-            className="flex aspect-square items-center justify-center rounded-[4px] border text-[9px]"
-            style={{
-              color: target ? "#FFD29A" : "rgba(183,206,228,.52)",
-              background: target ? "rgba(249,115,22,.24)" : "rgba(147,197,253,.06)",
-              borderColor: target ? CONCENTRATION_ACCENT_BORDER : "rgba(147,197,253,.1)",
-            }}
+            className="flex aspect-square items-center justify-center text-[#b7cee4]/60"
           >
-            {target ? "△" : "○"}
+            <span style={{ transform: `rotate(${rotation}deg) scale(${target ? 1 : index % 3 === 0 ? 0.86 : 0.94})` }}>
+              <MemorySymbol symbol={symbol} className="h-3.5 w-3.5" />
+            </span>
           </span>
         );
       })}

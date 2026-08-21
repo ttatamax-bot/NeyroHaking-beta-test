@@ -4,6 +4,7 @@ import { ApiError } from "@/lib/api";
 import { useAppStore } from "@/lib/store";
 import { applyLocalCompletion } from "@/lib/store";
 import { TechniqueIntroPanel } from "@/components/TechniqueIntroPanel";
+import { TechniqueGameHeader } from "@/components/TechniqueGameHeader";
 import { MaximInfoModal } from "@/components/MaximInfoModal";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, Pause, Play, Brain } from "lucide-react";
@@ -190,12 +191,13 @@ export default function Meditation() {
     return (
       <div className="flex flex-col h-[100dvh] relative overflow-hidden">
         <div className="relative z-10 flex flex-col h-full">
-          <div className="flex items-center px-4 pt-6 pb-4">
-            <button onClick={() => setLocation('/techniques')} className="p-1 text-tertiary mr-3">
-              <ChevronLeft size={28} />
-            </button>
-            <h1 className="title-l text-primary">Медитация</h1>
-          </div>
+          <TechniqueGameHeader
+            title="Медитация"
+            kind="meditation"
+            color="#06B6D4"
+            onBack={() => setLocation('/techniques')}
+            backTestId="button-meditation-back"
+          />
           <div className="flex-1 flex flex-col justify-center px-4 overflow-y-auto pb-4">
               <p className="body text-secondary mb-8 leading-relaxed">
                 Квадратное дыхание: вдох — задержка — выдох — задержка. 4 секунды каждая фаза.

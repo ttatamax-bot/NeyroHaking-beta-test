@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import { useAppStore, getTodayKeysFromSource, getTodayPotentialFromSource } from "@/lib/store";
 import { applyLocalCompletion } from "@/lib/store";
 import { TechniqueIntroPanel } from "@/components/TechniqueIntroPanel";
+import { TechniqueGameHeader } from "@/components/TechniqueGameHeader";
 import { MaximInfoModal } from "@/components/MaximInfoModal";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, Plus, X, Pause, Play, Brain } from "lucide-react";
@@ -417,12 +418,13 @@ export default function Hobby() {
   return (
     <div className="flex flex-col h-[100dvh] relative overflow-hidden">
       <div className="relative z-10 flex flex-col h-full">
-        <div className="flex items-center px-4 pt-6 pb-4">
-          <button onClick={() => setLocation('/techniques')} className="p-1 text-tertiary mr-3">
-            <ChevronLeft size={28} />
-          </button>
-          <h1 className="title-l text-primary">Хобби</h1>
-        </div>
+        <TechniqueGameHeader
+          title="Хобби"
+          kind="hobby"
+          color="#DC576C"
+          onBack={() => setLocation('/techniques')}
+          backTestId="button-hobby-back"
+        />
         <div className="flex-1 overflow-y-auto px-4 pb-8">
           {list.length === 0 && !addingNew && (
             <p className="body text-secondary mb-6 leading-relaxed">

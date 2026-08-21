@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import { useAppStore } from "@/lib/store";
 import { applyLocalCompletion } from "@/lib/store";
 import { TechniqueIntroPanel } from "@/components/TechniqueIntroPanel";
+import { TechniqueGameHeader } from "@/components/TechniqueGameHeader";
 import { motion } from "framer-motion";
 import { Moon, ChevronLeft, Lock } from "lucide-react";
 
@@ -111,12 +112,13 @@ export default function Sleep() {
   return (
     <div className="flex flex-col h-[100dvh] relative overflow-hidden">
       <div className="relative z-10 flex flex-col h-full px-4">
-        <div className="flex items-center pt-6 pb-4">
-          <button onClick={() => setLocation('/techniques')} className="p-1 text-tertiary mr-3">
-            <ChevronLeft size={28} />
-          </button>
-          <h1 className="title-l text-primary">Сон</h1>
-        </div>
+        <TechniqueGameHeader
+          title="Сон"
+          kind="sleep"
+          color="#3B82F6"
+          onBack={() => setLocation('/techniques')}
+          backTestId="button-sleep-back"
+        />
 
         <div className="flex-1 flex flex-col justify-center">
           <div className="flex justify-center mb-8">
