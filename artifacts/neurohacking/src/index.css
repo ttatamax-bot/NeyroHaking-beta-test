@@ -3,6 +3,7 @@
 @import "tw-animate-css";
 @plugin "@tailwindcss/typography";
 
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
@@ -165,6 +166,9 @@
     position: relative;
     isolation: isolate;
     overflow: hidden;
+    filter: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
     background: #0b2035;
     box-shadow:
       0 0 0 1px rgba(255,255,255,.035),
@@ -177,24 +181,15 @@
     transition: none;
   }
 
-  .concentration-timer-hand {
-    transform-box: view-box;
-    transform-origin: 128px 128px;
-    animation: concentration-timer-hand-spin 3.6s linear infinite;
-    will-change: transform;
-  }
-
-  @keyframes concentration-timer-hand-spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
-  }
-
   .game-card::before {
     content: "";
     position: absolute;
     inset: 0;
     z-index: 0;
     opacity: .95;
+    filter: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
     background-image:
       linear-gradient(135deg, rgba(255,255,255,.045), transparent 30%),
       linear-gradient(180deg, rgba(25,58,83,.34), transparent 38%);
@@ -206,6 +201,9 @@
     inset: 0;
     z-index: 1;
     pointer-events: none;
+    filter: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
     border: 1px solid rgba(122,169,199,.34);
     border-radius: inherit;
     background: transparent;
@@ -218,9 +216,48 @@
     z-index: 1;
   }
 
+  /*
+   * Game cards must stay optically sharp. Framer Motion can write an inline
+   * filter on a card child during a transition; keep this scoped to the
+   * Memory/Concentration game roots so other screens retain their entrance
+   * blur animations and the mode-logo motion remains untouched.
+   */
+  [data-testid^="memory-game-"] .game-card *,
+  [data-testid^="concentration-game-"] .game-card * {
+    filter: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  [data-testid^="memory-game-"] .game-card,
+  [data-testid^="concentration-game-"] .game-card {
+    animation: none !important;
+    transition: none !important;
+    will-change: auto !important;
+  }
+
+  [data-testid^="memory-game-"] .game-card::before,
+  [data-testid^="memory-game-"] .game-card::after,
+  [data-testid^="concentration-game-"] .game-card::before,
+  [data-testid^="concentration-game-"] .game-card::after {
+    animation: none !important;
+    filter: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    transform: none !important;
+  }
+
+  [data-testid^="memory-game-"] .level-step-active::after,
+  [data-testid^="memory-game-"] .level-step-failed::after,
+  [data-testid^="concentration-game-"] .level-step-active::after,
+  [data-testid^="concentration-game-"] .level-step-failed::after {
+    animation: none !important;
+    opacity: 0 !important;
+    transform: none !important;
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .game-card::after { opacity: .52; }
-    .concentration-timer-hand { animation: none; }
   }
 
   .level-step {
@@ -292,6 +329,33 @@
     background: #081a2c;
     border: 1px solid rgba(148,190,224,.16);
     box-shadow: inset 0 1px 0 rgba(255,255,255,.045), inset 0 -18px 30px rgba(1,8,17,.35);
+  }
+
+  .tracking-recovery-card {
+    filter: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    border-color: rgba(249, 115, 22, .92) !important;
+    box-shadow:
+      0 0 0 1px rgba(249, 115, 22, .34),
+      0 0 24px rgba(249, 74, 0, .38),
+      0 0 56px rgba(249, 115, 22, .16),
+      inset 0 1px 0 rgba(255, 210, 125, .22),
+      inset 0 -24px 42px rgba(2, 10, 21, .32);
+  }
+
+  .tracking-recovery-card .game-instrument,
+  .tracking-recovery-card button {
+    filter: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  .tracking-recovery-label,
+  .tracking-recovery-copy,
+  .tracking-recovery-count {
+    color: #ffb45e;
+    text-shadow: 0 0 7px rgba(249, 115, 22, .8), 0 0 18px rgba(249, 74, 0, .42);
   }
 
   .ritual-surface {
