@@ -19,6 +19,7 @@ import {
   migrateLegacyState,
   stripNonAuthoritativeState,
 } from "../services/legacyMigration.js";
+import { buildLeaderboardView } from "../lib/leaderboard.js";
 import { createCompatibleRouter } from "./compatRouter.js";
 import { z } from "zod";
 
@@ -73,6 +74,13 @@ const MEMORY_COST = 400;
 const CONCENTRATION_MODES = ["signals", "tracking", "search"] as const;
 type ConcentrationMode = typeof CONCENTRATION_MODES[number];
 const CONCENTRATION_COST = 400;
+
+const LEADERBOARD_MODES = [...MEMORY_MODES, ...CONCENTRATION_MODES] as const;
+type LeaderboardMode = typeof LEADERBOARD_MODES[number];
+
+function leaderboardTechnique(mode: LeaderboardMode): "T7" | "T8" {
+  return MEMORY_MODES.includes(mode as MemoryMode) ? "T7" : "T8";
+}
 
 function memoryState(value: unknown): {
   purchasedModes: MemoryMode[];
@@ -187,6 +195,58 @@ router.get("/me/profile", async (req, res) => {
   const clerkId = requireUser(req, res);
   if (!clerkId) return;
   res.json(await getProfile((await getUser(clerkId)).id));
+});
+
+router.get("/leaderboards/:mode", async (req, res) => {
+  const clerkId = requireUser(req, res);
+  if (!clerkId) return;
+  const parsed = z.object({ mode: z.enum(LEADERBOARD_MODES) }).safeParse(req.params);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Invalid leaderboard mode" });
+    return;
+  }
+
+  const user = await getUser(clerkId);
+  const mode = parsed.data.mode;
+  const techniqueId = leaderboardTechnique(mode);
+  const rows = await db.execute(sql`
+    WITH practice_rows AS (
+      SELECT
+        c.user_id,
+        (c.metadata->>'level')::integer AS level,
+        c.completed_at
+      FROM completed_techniques c
+      WHERE c.technique_id = ${techniqueId}
+        AND c.metadata->>'mode' = ${mode}
+        AND (c.metadata->>'level') ~ '^[0-9]+$'
+    ),
+    best AS (
+      SELECT user_id, MAX(level) AS max_level
+      FROM practice_rows
+      GROUP BY user_id
+    )
+    SELECT
+      b.user_id,
+      COALESCE(NULLIF(TRIM(p.nickname), ''), 'Игрок') AS nickname,
+      b.max_level,
+      MIN(r.completed_at) AS first_reached_at
+    FROM best b
+    JOIN practice_rows r ON r.user_id = b.user_id AND r.level = b.max_level
+    JOIN user_profiles p ON p.user_id = b.user_id
+    GROUP BY b.user_id, p.nickname, b.max_level
+    ORDER BY b.max_level DESC, first_reached_at ASC, b.user_id ASC
+  `);
+
+  const leaderboard = buildLeaderboardView(rows.rows as Array<{
+    user_id: number | string;
+    nickname: string;
+    max_level: number | string;
+    first_reached_at: string | Date;
+  }>, user.id);
+  res.json({
+    mode,
+    ...leaderboard,
+  });
 });
 
 router.post("/me/profile", async (req, res) => {
