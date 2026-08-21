@@ -1,6 +1,11 @@
-const BASE_URL = import.meta.env.VITE_API_BASE_URL
-  ? import.meta.env.VITE_API_BASE_URL.replace(/\/$/, '')
-  : `${import.meta.env.BASE_URL.replace(/\/$/, '')}/api`;
+// Vite always provides import.meta.env in the browser build. Keeping the
+// lookup defensive also lets the state-recovery assertions import this module
+// directly in Node without changing the runtime API base path.
+const viteEnv = import.meta.env ?? {};
+const basePath = typeof viteEnv.BASE_URL === 'string' ? viteEnv.BASE_URL : '';
+const BASE_URL = typeof viteEnv.VITE_API_BASE_URL === 'string' && viteEnv.VITE_API_BASE_URL
+  ? viteEnv.VITE_API_BASE_URL.replace(/\/$/, '')
+  : `${basePath.replace(/\/$/, '')}/api`;
 
 export const API_BASE = BASE_URL.endsWith('/api') ? BASE_URL : `${BASE_URL}/api`;
 
@@ -220,6 +225,26 @@ export async function updateServerProfile(input: UpdateProfileInput): Promise<Se
   return apiPost<ServerProfile>('/me/profile', input);
 }
 
+export interface LeaderboardEntry {
+  position: number;
+  userId: number;
+  nickname: string;
+  maxLevel: number;
+  firstReachedAt: string;
+}
+
+export interface LeaderboardResult {
+  mode: MemoryMode | ConcentrationMode;
+  champion: LeaderboardEntry | null;
+  entries: LeaderboardEntry[];
+  me: LeaderboardEntry | null;
+  totalPlayers: number;
+}
+
+export async function getLeaderboard(mode: MemoryMode | ConcentrationMode): Promise<LeaderboardResult> {
+  return apiGet<LeaderboardResult>(`/leaderboards/${encodeURIComponent(mode)}`);
+}
+
 export interface CompletedTechnique {
   id: number;
   userId: number;
@@ -253,6 +278,8 @@ export interface CompleteTechniqueResult {
   dayClosed: boolean;
   closedDays: number;
   alreadyCompleted?: boolean;
+  /** The original response was lost and this result came from a safe retry or /me recovery. */
+  recovered?: boolean;
 }
 
 export async function completeTechnique(input: CompleteTechniqueInput): Promise<CompleteTechniqueResult> {
