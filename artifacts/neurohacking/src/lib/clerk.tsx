@@ -4,12 +4,16 @@ import {
   useClerk,
   useUser,
 } from "@clerk/react";
+import { publishableKeyFromHost } from "@clerk/react/internal";
 import { useLocation } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
-const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
+const clerkPubKey = publishableKeyFromHost(
+  window.location.hostname,
+  import.meta.env.VITE_CLERK_PUBLISHABLE_KEY,
+);
 const clerkProxyUrl = import.meta.env.VITE_CLERK_PROXY_URL;
 
 function stripBase(path: string): string {
