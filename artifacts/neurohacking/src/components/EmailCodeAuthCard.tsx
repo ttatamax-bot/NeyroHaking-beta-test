@@ -1,4 +1,5 @@
-import { ArrowLeft, Mail, RefreshCw, Sparkles } from "lucide-react";
+import { ArrowLeft, RefreshCw } from "lucide-react";
+import { MemoryTechniqueLogo } from "./MemoryTechniqueLogo";
 
 export type EmailCodeAuthStep = "email" | "code";
 export type EmailLinkAuthStep = EmailCodeAuthStep;
@@ -55,14 +56,8 @@ export function EmailCodeAuthCard({
         }}
       >
         <div className="mb-7 flex flex-col items-center text-center">
-          <div
-            className="mb-4 flex h-12 w-12 items-center justify-center rounded-[16px]"
-            style={{
-              background: "linear-gradient(135deg, rgba(37,99,235,0.32), rgba(96,165,250,0.12))",
-              border: "1px solid rgba(96,165,250,0.3)",
-            }}
-          >
-            {isCodeStep ? <Mail size={22} className="text-blue-light" /> : <Sparkles size={22} className="text-blue-light" />}
+          <div className="mb-4 flex h-[72px] w-[72px] items-center justify-center">
+            <MemoryTechniqueLogo size={72} loading />
           </div>
           <h1 className="title-l text-primary">
             {isCodeStep ? "Введи код" : isSignUp ? "Регистрация" : "Вход"}
