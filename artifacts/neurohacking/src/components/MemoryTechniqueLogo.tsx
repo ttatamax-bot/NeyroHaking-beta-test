@@ -1,5 +1,9 @@
 import { motion } from "framer-motion";
-import memoryLogoUrl from "@assets/image_110_1787419254606.png";
+
+// Keep the original logo on a stable public URL. Importing it from
+// attached_assets produces a hashed Vite URL that can fail in Vercel's
+// auth/loading route.
+const memoryLogoUrl = "/memory-logo.png";
 
 interface MemoryTechniqueLogoProps {
   size?: number;
