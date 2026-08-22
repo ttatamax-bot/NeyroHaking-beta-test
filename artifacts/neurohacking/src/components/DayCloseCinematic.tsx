@@ -307,18 +307,24 @@ export default function DayCloseCinematic({
         }
         .close-haze {
           position: absolute;
-          width: 78%;
-          height: 78%;
+           width: 86%;
+           height: 86%;
           border-radius: 50%;
-          background: rgba(249, 115, 22, .22);
+           background: radial-gradient(circle, rgba(249, 115, 22, .2) 0%, rgba(249, 115, 22, .1) 42%, transparent 76%);
           opacity: .72;
           transform: scale(.72);
+           filter: blur(18px);
+           -webkit-mask-image: radial-gradient(circle, #000 0%, #000 48%, rgba(0,0,0,.72) 62%, transparent 82%);
+           mask-image: radial-gradient(circle, #000 0%, #000 48%, rgba(0,0,0,.72) 62%, transparent 82%);
         }
         .close-haze-blue {
-          width: 120%;
-          height: 120%;
-          background: rgba(37, 99, 235, .14);
+           width: 128%;
+           height: 128%;
+           background: radial-gradient(circle, rgba(37, 99, 235, .14) 0%, rgba(37, 99, 235, .08) 44%, transparent 78%);
           opacity: .66;
+           filter: blur(24px);
+           -webkit-mask-image: radial-gradient(circle, #000 0%, #000 44%, rgba(0,0,0,.66) 60%, transparent 82%);
+           mask-image: radial-gradient(circle, #000 0%, #000 44%, rgba(0,0,0,.66) 60%, transparent 82%);
         }
         .close-ring {
           position: absolute;
