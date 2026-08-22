@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import memoryLogoUrl from "@/assets/memory-logo.png";
+import memoryLogoUrl from "@assets/image_110_1787419254606.png";
 
 interface MemoryTechniqueLogoProps {
   size?: number;
@@ -31,8 +31,22 @@ export function MemoryTechniqueLogo({ size = 76, loading = false, className = ""
         }}
       />
 
+      <motion.img
+        src={memoryLogoUrl}
+        alt=""
+        className="absolute inset-0 z-0 h-full w-full rounded-full object-cover"
+        decoding="async"
+        fetchPriority="high"
+        animate={{ filter: ["saturate(1.08) brightness(1.05) drop-shadow(0 0 8px rgba(249,115,22,.55))", "saturate(1.28) brightness(1.2) drop-shadow(0 0 18px rgba(255,196,72,.9))", "saturate(1.08) brightness(1.05) drop-shadow(0 0 8px rgba(249,115,22,.55))"] }}
+        transition={{ duration: loading ? 2 : 3, repeat: Infinity, ease: "easeInOut" }}
+        style={{
+          mixBlendMode: "screen",
+          objectPosition: "center",
+        }}
+      />
+
       <motion.div
-        className="absolute -inset-[9%] rounded-full border"
+        className="absolute z-[1] -inset-[9%] rounded-full border"
         animate={{ rotate: 360 }}
         transition={{ duration: loading ? 8 : 12, repeat: Infinity, ease: "linear" }}
         style={{
@@ -45,7 +59,7 @@ export function MemoryTechniqueLogo({ size = 76, loading = false, className = ""
       />
 
       <motion.div
-        className="absolute inset-0 overflow-hidden rounded-full"
+        className="absolute inset-0 z-[1] overflow-hidden rounded-full"
         animate={{ rotate: -360 }}
         transition={{ duration: loading ? 13 : 18, repeat: Infinity, ease: "linear" }}
         style={{
@@ -55,23 +69,8 @@ export function MemoryTechniqueLogo({ size = 76, loading = false, className = ""
         }}
       />
 
-      <motion.img
-          src={memoryLogoUrl}
-          alt=""
-          className="absolute inset-0 h-full w-full object-contain"
-          decoding="async"
-          fetchPriority="high"
-          animate={{ filter: ["saturate(1.08) brightness(1.05) drop-shadow(0 0 8px rgba(249,115,22,.55))", "saturate(1.28) brightness(1.2) drop-shadow(0 0 18px rgba(255,196,72,.9))", "saturate(1.08) brightness(1.05) drop-shadow(0 0 8px rgba(249,115,22,.55))"] }}
-          transition={{ duration: loading ? 2 : 3, repeat: Infinity, ease: "easeInOut" }}
-          style={{
-            mixBlendMode: loading ? "normal" : "screen",
-            maskImage: loading ? "none" : "radial-gradient(ellipse at center, #000 30%, rgba(0,0,0,.98) 58%, transparent 78%)",
-            WebkitMaskImage: loading ? "none" : "radial-gradient(ellipse at center, #000 30%, rgba(0,0,0,.98) 58%, transparent 78%)",
-          }}
-        />
-
       <div
-        className="pointer-events-none absolute inset-0 overflow-hidden"
+        className="pointer-events-none absolute inset-0 z-[2] overflow-hidden"
         style={{
           maskImage: "radial-gradient(ellipse at center, #000 30%, rgba(0,0,0,.98) 58%, transparent 78%)",
           WebkitMaskImage: "radial-gradient(ellipse at center, #000 30%, rgba(0,0,0,.98) 58%, transparent 78%)",
