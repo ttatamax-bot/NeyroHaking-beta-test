@@ -741,14 +741,17 @@ function DayDoneOverlay() {
 }
 
 function AppLayout({ children }: { children: React.ReactNode }) {
+  const { isAccountReady } = useAppStore();
+  const showAppChrome = isAccountReady;
+
   return (
     <div className="min-h-[100dvh] w-full max-w-none mx-auto text-primary relative overflow-hidden flex flex-col" style={APP_BG}>
-      <TopBar />
+      {showAppChrome && <TopBar />}
       <div data-testid="app-scroll-shell" className="relative z-10 flex-1 overflow-x-hidden overflow-y-auto">{children}</div>
-      <CoachingBubble />
-      <NavBar />
-      <InstallPrompt />
-      <DevResetButton />
+      {showAppChrome && <CoachingBubble />}
+      {showAppChrome && <NavBar />}
+      {showAppChrome && <InstallPrompt />}
+      {showAppChrome && <DevResetButton />}
       <DayDoneOverlay />
     </div>
   );
