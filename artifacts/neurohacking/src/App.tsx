@@ -745,7 +745,7 @@ function AppLayout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
   const { accountLoadError, isAccountReady } = useAppStore();
   const isAcademyRoute = location === "/academy";
-  const hideAppChrome = isAcademyRoute || Boolean(accountLoadError) || !isAccountReady;
+  const hideAppChrome = Boolean(accountLoadError) || (!isAccountReady && !isAcademyRoute);
 
   return (
     <div className="min-h-[100dvh] w-full max-w-none mx-auto text-primary relative overflow-hidden flex flex-col" style={APP_BG}>
@@ -754,7 +754,7 @@ function AppLayout({ children }: { children: React.ReactNode }) {
       {!hideAppChrome && <CoachingBubble />}
       {!hideAppChrome && <NavBar />}
       {!hideAppChrome && <InstallPrompt />}
-      {!hideAppChrome && <DevResetButton />}
+      {!hideAppChrome && !isAcademyRoute && <DevResetButton />}
       <DayDoneOverlay />
     </div>
   );
