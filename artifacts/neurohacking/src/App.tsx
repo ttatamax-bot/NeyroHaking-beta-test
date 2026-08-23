@@ -743,16 +743,18 @@ function DayDoneOverlay() {
 
 function AppLayout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
+  const { accountLoadError, isAccountReady } = useAppStore();
   const isAcademyRoute = location === "/academy";
+  const hideAppChrome = isAcademyRoute || Boolean(accountLoadError) || !isAccountReady;
 
   return (
     <div className="min-h-[100dvh] w-full max-w-none mx-auto text-primary relative overflow-hidden flex flex-col" style={APP_BG}>
-      {!isAcademyRoute && <TopBar />}
+      {!hideAppChrome && <TopBar />}
       <div data-testid="app-scroll-shell" className="relative z-10 flex-1 overflow-x-hidden overflow-y-auto">{children}</div>
-      <CoachingBubble />
-      {!isAcademyRoute && <NavBar />}
-      <InstallPrompt />
-      {!isAcademyRoute && <DevResetButton />}
+      {!hideAppChrome && <CoachingBubble />}
+      {!hideAppChrome && <NavBar />}
+      {!hideAppChrome && <InstallPrompt />}
+      {!hideAppChrome && <DevResetButton />}
       <DayDoneOverlay />
     </div>
   );
