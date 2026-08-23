@@ -80,6 +80,8 @@
   html {
     background-color: #0F2035;
     min-height: 100%;
+    margin: 0;
+    border: 0;
   }
 
   body {
@@ -88,11 +90,16 @@
     letter-spacing: 0.015em;
     background: #0F2035;
     min-height: 100dvh;
+    margin: 0;
+    border: 0;
     overscroll-behavior: none;
   }
 
   #root {
+    width: 100%;
     min-height: 100dvh;
+    margin: 0;
+    border: 0;
   }
 }
 
