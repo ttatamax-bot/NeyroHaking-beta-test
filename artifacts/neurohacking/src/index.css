@@ -101,6 +101,25 @@
     margin: 0;
     border: 0;
   }
+
+  /*
+   * Home and Academy scroll their own inner viewport. Keep the blue
+   * atmosphere attached to that viewport instead of the scrolling content.
+   * The fixed pseudo-element also avoids background-attachment quirks on iOS.
+   */
+  .viewport-glow-scroll::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background: radial-gradient(
+      ellipse 80% 55% at 50% -5%,
+      rgba(37, 99, 235, 0.32) 0%,
+      rgba(59, 130, 246, 0.12) 45%,
+      transparent 65%
+    );
+  }
 }
 
 @layer utilities {

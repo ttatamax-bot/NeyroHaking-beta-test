@@ -505,7 +505,7 @@ import { ringRotationTarget, ringRotationTransition, useSmoothRingBurstRotation 
       <div
         ref={academyScrollRef}
         data-testid="academy-scroll-container"
-        className="h-[calc(100dvh-60px)] overflow-y-auto overscroll-none px-4 pb-20"
+        className="viewport-glow-scroll h-[calc(100dvh-60px)] overflow-y-auto overscroll-none px-4 pb-20"
         onScroll={handleScroll}
       >
         <motion.div
