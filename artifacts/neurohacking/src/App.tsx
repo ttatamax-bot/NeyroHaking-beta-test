@@ -10,6 +10,7 @@ import {
 } from "@/lib/auth-transition";
 import { NavBar } from "@/components/NavBar";
 import { TopBar } from "@/components/TopBar";
+import { DataLoadingScreen } from "@/components/DataLoadingScreen";
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { InstallPrompt } from "@/components/InstallPrompt";
@@ -741,14 +742,17 @@ function DayDoneOverlay() {
 }
 
 function AppLayout({ children }: { children: React.ReactNode }) {
+  const [location] = useLocation();
+  const isAcademyRoute = location === "/academy";
+
   return (
     <div className="min-h-[100dvh] w-full max-w-none mx-auto text-primary relative overflow-hidden flex flex-col" style={APP_BG}>
-      <TopBar />
+      {!isAcademyRoute && <TopBar />}
       <div data-testid="app-scroll-shell" className="relative z-10 flex-1 overflow-x-hidden overflow-y-auto">{children}</div>
       <CoachingBubble />
-      <NavBar />
+      {!isAcademyRoute && <NavBar />}
       <InstallPrompt />
-      <DevResetButton />
+      {!isAcademyRoute && <DevResetButton />}
       <DayDoneOverlay />
     </div>
   );
@@ -767,7 +771,11 @@ function FullscreenLayout({ children }: { children: React.ReactNode }) {
 }
 
 function Router() {
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
+  const { isLoaded: isAuthLoaded } = useAuthInfo();
+  const isAuthRoute =
+    location.startsWith('/sign-in') ||
+    location.startsWith('/sign-up');
   const isFullscreen =
     location.startsWith('/profile-setup') ||
     location.startsWith('/technique/') ||
@@ -779,6 +787,7 @@ function Router() {
     location.includes('/read') ||
     location.startsWith('/referral/');
   const Layout = isFullscreen ? FullscreenLayout : AppLayout;
+
   return (
     <>
       <AppLogic />
