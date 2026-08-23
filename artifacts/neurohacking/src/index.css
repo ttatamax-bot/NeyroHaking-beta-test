@@ -80,43 +80,20 @@
   html {
     background-color: #0F2035;
     min-height: 100%;
-    margin: 0;
-    border: 0;
   }
 
   body {
     @apply font-sans antialiased text-[#FFFFFF];
     font-size: 18px;
     letter-spacing: 0.015em;
-    background:
-      radial-gradient(
-        ellipse 80% 55% at 50% -5%,
-        rgba(37, 99, 235, 0.32) 0%,
-        rgba(59, 130, 246, 0.12) 45%,
-        transparent 65%
-      ),
-      #0F2035;
-    background-attachment: fixed;
-    background-repeat: no-repeat;
-    background-size: 100% 620px, 100% 100%;
+    background: #0F2035;
     min-height: 100dvh;
-    margin: 0;
-    border: 0;
     overscroll-behavior: none;
   }
 
   #root {
-    width: 100%;
     min-height: 100dvh;
-    margin: 0;
-    border: 0;
   }
-
-  /*
-   * Home and Academy scroll their own inner viewport. Keep the blue
-   * atmosphere attached to that viewport instead of the scrolling content.
-   * The fixed pseudo-element also avoids background-attachment quirks on iOS.
-   */
 }
 
 @layer utilities {

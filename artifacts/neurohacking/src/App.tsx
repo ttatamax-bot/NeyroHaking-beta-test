@@ -645,18 +645,14 @@ function AppLogic() {
 }
 
 export const APP_BG: React.CSSProperties = {
-  background: 'transparent',
+  background: `
+    radial-gradient(ellipse 80% 55% at 50% -5%, rgba(37,99,235,0.32) 0%, rgba(59,130,246,0.12) 45%, transparent 65%),
+    #0F2035`,
 };
 
 function AnimatedBgOverlay() {
   return (
     <>
-      <div
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          background: 'radial-gradient(ellipse 80% 55% at 50% -5%, rgba(37,99,235,0.32) 0%, rgba(59,130,246,0.12) 45%, transparent 65%)',
-        }}
-      />
       <motion.div className="absolute inset-0 pointer-events-none z-0"
         animate={{ opacity: [0.4, 0.7, 0.5, 0.7, 0.4], x: [0, 15, -8, 10, 0] }}
         transition={{ duration: 24, repeat: Infinity, ease: 'easeInOut' }}
@@ -745,17 +741,14 @@ function DayDoneOverlay() {
 }
 
 function AppLayout({ children }: { children: React.ReactNode }) {
-  const { isAccountReady } = useAppStore();
-  const showAppChrome = isAccountReady;
-
   return (
     <div className="min-h-[100dvh] w-full max-w-none mx-auto text-primary relative overflow-hidden flex flex-col" style={APP_BG}>
-      {showAppChrome && <TopBar />}
+      <TopBar />
       <div data-testid="app-scroll-shell" className="relative z-10 flex-1 overflow-x-hidden overflow-y-auto">{children}</div>
-      {showAppChrome && <CoachingBubble />}
-      {showAppChrome && <NavBar />}
-      {showAppChrome && <InstallPrompt />}
-      {showAppChrome && <DevResetButton />}
+      <CoachingBubble />
+      <NavBar />
+      <InstallPrompt />
+      <DevResetButton />
       <DayDoneOverlay />
     </div>
   );

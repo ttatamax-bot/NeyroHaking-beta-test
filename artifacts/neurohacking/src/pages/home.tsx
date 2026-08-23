@@ -1000,7 +1000,7 @@ export default function Home() {
   }
 
   return (
-    <div data-testid="home-scroll-container" className="viewport-glow-scroll relative h-[calc(100dvh-60px)] overflow-x-hidden overflow-y-auto overscroll-contain pb-[110px]" onScroll={handleHomeScroll}>
+    <div data-testid="home-scroll-container" className="relative h-[calc(100dvh-60px)] overflow-x-hidden overflow-y-auto overscroll-contain pb-[110px]" onScroll={handleHomeScroll}>
       <div className="relative z-10">
 
         <div className="flex items-center justify-between px-6 pt-[38px] pb-1">
