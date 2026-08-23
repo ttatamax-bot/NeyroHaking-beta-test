@@ -17,7 +17,7 @@ export function TopBar() {
     location === '/keys-stats' ||
     location === '/potential-stats';
 
-  if (!isAcademyRoute || isArticleRoute || isReadMode || userState === 'new' || userState === 'dayDone') return null;
+  if (!isAcademyRoute || isArticleRoute || isReadMode) return null;
 
   const displayPotential = Math.round(Math.min(100, Math.max(0, Number(potential) || 0)));
   const displayStreak = Math.max(0, Math.round(Number(streak) || 0));
