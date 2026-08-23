@@ -505,7 +505,7 @@ import { ringRotationTarget, ringRotationTransition, useSmoothRingBurstRotation 
       <div
         ref={academyScrollRef}
         data-testid="academy-scroll-container"
-        className="h-[calc(100dvh-60px)] overflow-y-auto overscroll-none px-4 pb-20"
+         className="h-[100dvh] overflow-y-auto overscroll-none px-4 pb-20"
         onScroll={handleScroll}
       >
         <motion.div
@@ -554,7 +554,7 @@ import { ringRotationTarget, ringRotationTransition, useSmoothRingBurstRotation 
               >
                 <motion.button
                   onClick={() => !isOnboarding && setLocation(`/article/${a.id}`)}
-                  className="group relative flex w-full flex-col overflow-hidden rounded-[20px] p-4 text-left transition-[filter] active:brightness-110"
+                   className="group relative flex h-[240px] w-full flex-col overflow-hidden rounded-[20px] p-4 text-left transition-[filter] active:brightness-110"
                   whileHover={{ y: -2, scale: 1.006 }}
                   whileTap={{ scale: 0.968, y: 3, rotateX: -3, filter: "brightness(1.18) saturate(1.14)" }}
                   transition={{ type: "spring", stiffness: 420, damping: 25, mass: 0.65 }}
@@ -670,11 +670,11 @@ import { ringRotationTarget, ringRotationTransition, useSmoothRingBurstRotation 
                    />
                 </div>
                 <div className="relative z-10 mt-1 min-w-0">
-                  <h3 className="title-s w-full text-primary leading-snug"
+                   <h3 className="title-s line-clamp-3 w-full text-primary leading-snug"
                     style={{ opacity: 0.96 }}>
                     {a.title}
                   </h3>
-                  <p className="body-s mt-1 text-secondary leading-tight line-clamp-2"
+                   <p className="body-s mt-1 line-clamp-2 text-secondary leading-tight"
                     style={{ opacity: 0.74 }}>
                     {a.desc}
                   </p>
