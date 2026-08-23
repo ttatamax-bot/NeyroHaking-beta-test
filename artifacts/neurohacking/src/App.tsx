@@ -645,7 +645,7 @@ function AppLogic() {
 }
 
 export const APP_BG: React.CSSProperties = {
-  background: '#0F2035',
+  background: 'transparent',
 };
 
 function AnimatedBgOverlay() {
@@ -678,14 +678,6 @@ function AnimatedBgOverlay() {
         transition={{ duration: 26, repeat: Infinity, ease: 'easeInOut', delay: 12 }}
         style={{ background: `radial-gradient(ellipse 40% 30% at 80% 75%, rgba(236,72,153,0.08) 0%, transparent 65%)` }} />
     </>
-  );
-}
-
-function AppBackdrop() {
-  return (
-    <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden" aria-hidden="true">
-      <AnimatedBgOverlay />
-    </div>
   );
 }
 
@@ -758,7 +750,6 @@ function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-[100dvh] w-full max-w-none mx-auto text-primary relative overflow-hidden flex flex-col" style={APP_BG}>
-      <AppBackdrop />
       {showAppChrome && <TopBar />}
       <div data-testid="app-scroll-shell" className="relative z-10 flex-1 overflow-x-hidden overflow-y-auto">{children}</div>
       {showAppChrome && <CoachingBubble />}
@@ -776,7 +767,6 @@ function FullscreenLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="fixed inset-0 h-[100dvh] w-full max-w-none mx-auto text-primary relative overflow-hidden overscroll-none flex flex-col" style={APP_BG}>
-      <AppBackdrop />
       <div className="min-h-0 flex-1 overflow-hidden relative z-10 overscroll-none">{children}</div>
       <DayDoneOverlay />
     </div>
