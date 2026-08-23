@@ -51,6 +51,7 @@ export function NavBar() {
   }, [safeIdx]);
 
   const isOnboarding = userState === 'onboarding';
+  const isAcademyRoute = location === '/academy';
 
   const hiddenRoutes = [
     '/technique/sleep', '/technique/visualization', '/technique/meditation',
@@ -61,9 +62,11 @@ export function NavBar() {
 
   const isHidden =
     goalFormOpen ||
-    userState === 'new' ||
-    userState === 'dayDone' ||
-    userState === 'onboarding' ||
+    (!isAcademyRoute && (
+      userState === 'new' ||
+      userState === 'dayDone' ||
+      userState === 'onboarding'
+    )) ||
     hiddenRoutes.some(r => location.startsWith(r)) ||
     location.includes('/article/');
 
