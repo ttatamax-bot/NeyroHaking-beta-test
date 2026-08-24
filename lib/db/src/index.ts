@@ -43,6 +43,12 @@ function normalizePostgresConnectionString(value: string): string {
 
 export const pool = new Pool({
   connectionString: normalizePostgresConnectionString(databaseUrl),
+  // Supabase's transaction pooler requires TLS from serverless runtimes.
+  // psql negotiates this automatically, while node-postgres does not.
+  ...(databaseUrl.includes("supabase.com")
+    ? { ssl: { rejectUnauthorized: false } }
+    : {}),
+  connectionTimeoutMillis: 10_000,
 });
 export const db = drizzle(pool, { schema });
 
