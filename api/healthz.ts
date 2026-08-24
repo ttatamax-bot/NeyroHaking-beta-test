@@ -13,7 +13,7 @@ export default async function healthz(_req: unknown, res: HealthResponse) {
   let databaseSchema = false;
   let databaseError: string | null = null;
 
-  if (process.env.DATABASE_URL) {
+  if (process.env.DATABASE_URL || process.env.LEGACY_DATABASE_URL) {
     try {
       const { pool } = await import("../lib/db/src/index.js");
       await pool.query("select 1");
@@ -50,7 +50,7 @@ export default async function healthz(_req: unknown, res: HealthResponse) {
     status: healthy ? "ok" : "degraded",
     runtime: "vercel",
     configuration: {
-      database: Boolean(process.env.DATABASE_URL),
+      database: Boolean(process.env.DATABASE_URL || process.env.LEGACY_DATABASE_URL),
       clerkSecret: Boolean(process.env.CLERK_SECRET_KEY),
       clerkPublishable: Boolean(process.env.CLERK_PUBLISHABLE_KEY),
     },
