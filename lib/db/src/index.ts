@@ -4,9 +4,16 @@ import * as schema from "./schema/index.js";
 
 const { Pool } = pg;
 
-if (!process.env.DATABASE_URL) {
+// Preview uses the legacy database so local account hydration sees the
+// existing data. Vercel production should use its explicitly configured
+// DATABASE_URL when both variables are present.
+const databaseUrl = process.env.NODE_ENV === "production"
+  ? (process.env.DATABASE_URL || process.env.LEGACY_DATABASE_URL)
+  : (process.env.LEGACY_DATABASE_URL || process.env.DATABASE_URL);
+
+if (!databaseUrl) {
   throw new Error(
-    "DATABASE_URL must be set. Did you forget to provision a database?",
+    "DATABASE_URL or LEGACY_DATABASE_URL must be set. Did you forget to provision a database?",
   );
 }
 
@@ -35,7 +42,7 @@ function normalizePostgresConnectionString(value: string): string {
 }
 
 export const pool = new Pool({
-  connectionString: normalizePostgresConnectionString(process.env.DATABASE_URL),
+  connectionString: normalizePostgresConnectionString(databaseUrl),
 });
 export const db = drizzle(pool, { schema });
 
