@@ -228,6 +228,7 @@ function GoalCarousel({
   const slots = [0, 1, 2].map((index) => goals[index] ?? null);
   const move = (direction: number) => setActiveIndex((current) => (current + direction + 3) % 3);
   const horizontalOffset = typeof window !== "undefined" && window.innerWidth < 768 ? 132 : 158;
+  const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
 
   return (
     <div className="relative -mx-4 min-h-[238px] overflow-visible px-1 pb-2 pt-2">
@@ -293,10 +294,14 @@ function GoalCarousel({
                 x: offset * horizontalOffset,
                 y: isActive ? 0 : 10,
                 scale: isActive ? .98 : .77,
-                rotateY: offset * -22,
-                rotateZ: offset * (offset > 0 ? 1.4 : -1.4),
+                rotateY: isMobile ? 0 : offset * -22,
+                rotateZ: isMobile ? 0 : offset * (offset > 0 ? 1.4 : -1.4),
               }}
-              transition={{ duration: reduced ? 0 : .55, ease: EASE }}
+              transition={{
+                duration: reduced ? 0 : .55,
+                ease: EASE,
+                opacity: { duration: reduced ? 0 : .08, ease: "linear" },
+              }}
               className="absolute left-1/2 top-0 flex h-[204px] w-[70vw] max-w-[276px] -translate-x-1/2 flex-col rounded-[18px] p-4 text-left shadow-[0_18px_45px_rgba(0,0,0,.42)]"
               style={{
                 zIndex: 3 - Math.abs(offset),
@@ -357,6 +362,7 @@ function ProgressCarousel({
   const safeIndex = ((activeIndex % items.length) + items.length) % items.length;
   const move = (direction: number) => setActiveIndex((current) => (current + direction + items.length) % items.length);
   const horizontalOffset = typeof window !== "undefined" && window.innerWidth < 768 ? 88 : 108;
+  const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
   return (
      <div className="relative -mx-4 min-h-[184px] overflow-visible px-1 pb-4 pt-2">
        <motion.div className="relative mx-auto h-[158px] w-full max-w-[540px]" style={{ perspective: "760px", touchAction: "pan-y" }}
@@ -410,8 +416,8 @@ function ProgressCarousel({
              else onOpen(route);
            }}
            className="absolute left-1/2 top-0 flex h-[154px] w-[42vw] max-w-[164px] -translate-x-1/2 flex-col justify-between rounded-[20px] border p-3"
-           animate={{ opacity: isActive ? 1 : .62, x: offset * horizontalOffset, y: isActive ? 0 : 8, scale: isActive ? 1 : .78, rotateY: offset * -20, rotateZ: offset * (offset > 0 ? 1 : -1) }}
-           transition={{ duration: .45, ease: EASE }}
+           animate={{ opacity: isActive ? 1 : .62, x: offset * horizontalOffset, y: isActive ? 0 : 8, scale: isActive ? 1 : .78, rotateY: isMobile ? 0 : offset * -20, rotateZ: isMobile ? 0 : offset * (offset > 0 ? 1 : -1) }}
+           transition={{ duration: .45, ease: EASE, opacity: { duration: .08, ease: "linear" } }}
           style={{
             zIndex: 3 - Math.abs(offset),
              background: "linear-gradient(155deg, #122c45 0%, #0c2035 72%)",
