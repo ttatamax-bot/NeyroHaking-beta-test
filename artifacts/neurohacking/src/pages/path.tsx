@@ -315,7 +315,7 @@ function GoalCarousel({
               <SteelDetails color={accent.color} />
               {goal ? (
                 <>
-                  <span className="relative z-10 mb-4 flex items-center justify-between">
+                  <span className="relative z-10 mb-4 flex w-full items-center justify-between">
                     <span className="flex h-12 w-12 items-center justify-center rounded-[14px]" style={{ color: accent.color, background: accent.soft, border: `1px solid ${accent.border}` }}>
                       <GoalIcon iconId={goal.icon} size={25} />
                     </span>
@@ -324,10 +324,10 @@ function GoalCarousel({
                     </span>
                   </span>
                   <h3 className="relative z-10 line-clamp-2 text-[19px] font-semibold leading-tight tracking-[-.02em] text-[#F59E0B]">{goal.name}</h3>
-                  <div className="relative z-10 mt-auto"><GoalMetrics hours={stats.hours} visualizations={stats.visualizations} accent={accent} /></div>
+                  <div className="relative z-10 mt-auto w-full"><GoalMetrics hours={stats.hours} visualizations={stats.visualizations} accent={accent} /></div>
                 </>
               ) : (
-                <span className="relative z-10 flex h-full flex-col items-center justify-center gap-3 text-center" style={{ color: accent.color }}>
+                <span className="relative z-10 flex h-full w-full flex-col items-center justify-center gap-3 text-center" style={{ color: accent.color }}>
                   <span className="flex h-12 w-12 items-center justify-center rounded-full border border-dashed" style={{ borderColor: accent.border, background: accent.soft }}><Plus size={22} /></span>
                   <span className="text-[12px] uppercase tracking-[.14em]">Добавить цель</span>
                 </span>
@@ -426,11 +426,11 @@ function ProgressCarousel({
           }}
         >
           <SteelDetails color={color} compact />
-           <span className="relative z-10 flex min-h-[94px] flex-1 items-center justify-center gap-3" style={{ color }}>
+           <span className="relative z-10 flex min-h-[94px] w-full flex-1 items-center justify-center gap-3" style={{ color }}>
              <span className="num shrink-0 leading-none text-amber-50" style={{ fontSize: valueSize }}>{value}</span>
              <Icon className="shrink-0" size={62} strokeWidth={1.5} aria-hidden="true" />
            </span>
-            <span className="relative z-10 block px-1 pb-0.5 text-center">
+             <span className="relative z-10 block w-full px-1 pb-0.5 text-center">
               <span className="block text-[10px] uppercase leading-[1.15] tracking-[.08em] text-white/55">{label}</span>
            </span>
         </motion.button>
