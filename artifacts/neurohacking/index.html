@@ -20,7 +20,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="НейроХакинг" />
-    <link rel="preload" as="image" href="%BASE_URL%memory-logo-transparent.png?v=2" type="image/png" />
+    <link rel="preload" as="image" href="/memory-logo.png?v=3" type="image/png" />
     <style>
       html, body {
         background: #0F2035;
@@ -39,6 +39,8 @@
         color: #f6f3ed;
         opacity: 1;
         transition: opacity .2s ease;
+        min-height: 100vh;
+        min-height: 100svh;
       }
       #app-boot-loader.is-ready {
         opacity: 0;
@@ -169,7 +171,14 @@
     <div id="app-boot-loader" role="status" aria-live="polite">
       <div class="app-boot-loader__content">
         <div class="app-boot-loader__logo-wrap">
-          <img class="app-boot-loader__logo" src="%BASE_URL%memory-logo-transparent.png?v=2" alt="" onerror="this.onerror=null;this.src='%BASE_URL%memory-logo.png?v=2'" />
+          <img
+            class="app-boot-loader__logo"
+            src="/memory-logo.png?v=3"
+            alt=""
+            decoding="sync"
+            fetchpriority="high"
+            onerror="this.onerror=null;this.src='/memory-logo-transparent.png?v=3'"
+          />
         </div>
         <p class="app-boot-loader__label">Загружаем твои данные…</p>
         <div class="app-boot-loader__dots" aria-hidden="true">
@@ -179,6 +188,6 @@
       </div>
     </div>
     <div id="root"></div>
-    <script type="module" src="%BASE_URL%src/main.tsx"></script>
+    <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
