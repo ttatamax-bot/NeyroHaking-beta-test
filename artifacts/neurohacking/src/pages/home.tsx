@@ -8,11 +8,15 @@ import { DEV_POTENTIAL_EVENT, getDevPotential } from "@/lib/dev-potential";
 import { hasDeveloperTools } from "@/lib/developer-mode";
 import { useAuthInfo } from "@/lib/clerk";
 import { ringRotationTarget, ringRotationTransition, useSmoothRingBurstRotation } from "@/lib/ring-burst";
+import { SurveyModal } from "@/components/SurveyModal";
+import { getSurveyStatus } from "@/lib/api";
 
 const NEWS_ITEMS = [
-  { id: '1', title: "Новая техника нейровизуализации", description: "Обновлён алгоритм прохождения техники T2 — визуализация теперь более структурированная и точная.", date: "28.05.2026" },
-  { id: '2', title: "Важно о серии", description: "Серия сохраняется после выполнения любой техники за день. Следи за этим.", date: "20.05.2026" },
-  { id: '3', title: "Академия пополнилась", description: "Добавлены новые статьи по нейробиологии дофамина и силе воли.", date: "10.05.2026" },
+  { id: 'survey', title: "Исследование продуктивности", description: "Ответь на 20 вопросов о своих целях. За прохождение ты получишь 1200 ключей.", date: "СЕГОДНЯ", featured: true },
+  { id: 'keys-potential-economy', title: "Новая экономика ключей и потенциала", description: "Теперь потенциал начисляется за закрытие дня на 100%. Разбираемся, как выполнить все техники и получить награду.", date: "25.08.2026" },
+  { id: 'account-sync', title: "Аккаунт сохраняет твой прогресс", description: "Создай аккаунт, чтобы не потерять ключи, серии и выполненные техники и продолжать с любого устройства.", date: "24.08.2026" },
+  { id: 'memory-concentration', title: "Добавлены техники памяти и концентрации", description: "Внутри каждой техники — несколько практик, а результаты можно сравнивать в таблице лидеров.", date: "23.08.2026" },
+  { id: 'visual-refresh', title: "Полное обновление визуала", description: "Путь, техники, Академия и главная получили новую визуальную систему — больше ясности, движения и энергии.", date: "22.08.2026" },
 ];
 
 const SCALE_BAR_COUNT = 12;
@@ -337,10 +341,12 @@ function NewsCardVisualMotion({
   children,
   newsIdx,
   stackProgress,
+  featured = false,
 }: {
   children: React.ReactNode;
   newsIdx: number;
   stackProgress: number;
+  featured?: boolean;
 }) {
   const hasMounted = useRef(false);
   const stackRelease = 1 - stackProgress;
@@ -357,9 +363,11 @@ function NewsCardVisualMotion({
       style={{
         transformOrigin: "top center",
         transformStyle: "preserve-3d",
-        background: 'linear-gradient(135deg, rgba(245,158,11,0.22) 0%, rgba(255,255,255,0.035) 52%, rgba(0,0,0,0.1)), #3E2E1D',
-        border: '1px solid rgba(245,158,11,0.34)',
-        boxShadow: '0 8px 32px rgba(0,0,0,0.68), 0 0 0 1px rgba(255,255,255,0.1), 0 1px 0 rgba(255,237,213,0.09) inset',
+        background: featured
+          ? 'linear-gradient(135deg, rgba(37,99,235,0.36) 0%, rgba(249,115,22,0.18) 58%, rgba(8,22,43,0.3)), #17345A'
+          : 'linear-gradient(135deg, rgba(245,158,11,0.22) 0%, rgba(255,255,255,0.035) 52%, rgba(0,0,0,0.1)), #3E2E1D',
+        border: featured ? '1px solid rgba(147,197,253,0.5)' : '1px solid rgba(245,158,11,0.34)',
+        boxShadow: '0 1px 0 rgba(255,237,213,0.09) inset',
         willChange: "transform, opacity, filter",
       }}
       initial={{
@@ -395,10 +403,12 @@ export function PotentialScale({
   value,
   hideReadout = false,
   maxActiveHeightScale = 1,
+  decorativeOnly = false,
 }: {
   value: number;
   hideReadout?: boolean;
   maxActiveHeightScale?: number;
+  decorativeOnly?: boolean;
 }) {
   const displayValue = Math.round(Math.min(100, Math.max(0, value)));
   const [animatedValue, setAnimatedValue] = useState(0);
@@ -478,14 +488,6 @@ export function PotentialScale({
         animate={{ opacity: [.3 * glowFactor, .58 * glowFactor, .3 * glowFactor], scale: [.97, 1.02, .97] }}
           transition={{ duration: 4.2 * speedFactor, repeat: Infinity, ease: 'easeInOut' }}
       />
-      {visualValue >= 100 && (
-        <motion.div
-          className="pointer-events-none absolute inset-[-38px] rounded-[56px]"
-          style={{ background: 'radial-gradient(ellipse at center, rgba(255,250,235,.24), rgba(255,237,170,.10) 36%, transparent 72%)' }}
-          animate={{ opacity: [.45, .95, .45], scale: [.96, 1.04, .96] }}
-          transition={{ duration: 3.2 * speedFactor, repeat: Infinity, ease: 'easeInOut' }}
-        />
-      )}
       <motion.div
         className="pointer-events-none absolute inset-0"
         style={{ rotate: burstRotation, transformOrigin: "50% 120px" }}
@@ -706,7 +708,7 @@ export function PotentialScale({
           transition={{ duration: (2.7 + index * .15) * speedFactor, delay: particle.delay, repeat: Infinity, ease: 'easeInOut' }}
         />
       ))}
-      <div className="relative z-[1] h-[365px] pt-[64px] mt-[2px] mb-[2px]">
+      {!decorativeOnly && <div className="relative z-[1] h-[365px] pt-[64px] mt-[2px] mb-[2px]">
         <div className="relative flex h-[116px] items-center justify-center gap-[13px]" role="img" aria-label={`Шкала потенциала: ${activeBars} из ${SCALE_BAR_COUNT} полосок активны`}>
           {Array.from({ length: SCALE_BAR_COUNT }, (_, index) => {
             const isActive = index < activeBars;
@@ -797,7 +799,7 @@ export function PotentialScale({
             </span>
           </div>
         )}
-      </div>
+      </div>}
       {!hideReadout && (
         <p
           className="pointer-events-none absolute left-0 right-0 top-[318px] z-[1] text-center uppercase"
@@ -825,6 +827,8 @@ export default function Home() {
   const { email: authEmail } = useAuthInfo();
   const [, setLocation] = useLocation();
   const [accountWaitExpired, setAccountWaitExpired] = useState(false);
+  const [surveyOpen, setSurveyOpen] = useState(false);
+  const [surveyCompleted, setSurveyCompleted] = useState(false);
 
   const { weekday, date } = getTodayLabels();
   const developerToolsEnabled = hasDeveloperTools(authEmail, isSignedIn);
@@ -836,6 +840,11 @@ export default function Home() {
 
   const waitingForAccount =
     !import.meta.env.DEV && (!isAuthLoaded || (isSignedIn && !isAccountReady));
+
+  useEffect(() => {
+    if (!isSignedIn || !isAccountReady) return;
+    getSurveyStatus().then((status) => setSurveyCompleted(status.completed)).catch(() => undefined);
+  }, [isSignedIn, isAccountReady]);
 
   useEffect(() => {
     if (!waitingForAccount) {
@@ -929,16 +938,6 @@ export default function Home() {
       <div className="relative flex flex-col min-h-[100dvh] overflow-hidden">
         <div className="absolute inset-0 pointer-events-none">
           <div style={{
-            position: 'absolute', top: '-15%', left: '50%', transform: 'translateX(-50%)',
-            width: '160%', height: '80%',
-            background: 'radial-gradient(ellipse 65% 55% at 52% 20%, rgba(37,99,235,0.60) 0%, rgba(37,99,235,0.26) 42%, transparent 68%)',
-          }} />
-          <div style={{
-            position: 'absolute', top: '0%', left: '30%', transform: 'translateX(-50%)',
-            width: '70%', height: '45%',
-            background: 'radial-gradient(ellipse, rgba(96,165,250,0.26) 0%, transparent 65%)',
-          }} />
-          <div style={{
             position: 'absolute', bottom: 0, left: 0, right: 0, height: '45%',
             background: 'linear-gradient(to top, #0F2035 30%, transparent)',
           }} />
@@ -1001,6 +1000,15 @@ export default function Home() {
 
   return (
     <div data-testid="home-scroll-container" className="relative h-[calc(100dvh-60px)] overflow-x-hidden overflow-y-auto overscroll-contain pb-[110px]" onScroll={handleHomeScroll}>
+      <div
+        className="pointer-events-none absolute inset-x-0 top-0 z-0 h-[560px]"
+        aria-hidden="true"
+        style={{
+          background: `
+            radial-gradient(ellipse 80% 55% at 50% -5%, rgba(37,99,235,0.32) 0%, rgba(59,130,246,0.12) 45%, transparent 65%),
+            #0F2035`,
+        }}
+      />
       <div className="relative z-10">
 
         <div className="flex items-center justify-between px-6 pt-[38px] pb-1">
@@ -1060,6 +1068,11 @@ export default function Home() {
                     type="button"
                     onClick={() => {
                       if (!isRead) updateState(prev => ({ readNews: [...prev.readNews, item.id] }));
+                       if (i === 0) {
+                         if (isSignedIn && !surveyCompleted) setSurveyOpen(true);
+                         else if (!isSignedIn) setLocation('/sign-in');
+                         return;
+                       }
                       setLocation(`/news/${item.id}`);
                     }}
                     className="group relative min-h-[196px] w-full overflow-visible rounded-[20px] p-0 text-left transition-[filter] active:brightness-110"
@@ -1067,7 +1080,7 @@ export default function Home() {
                     whileTap={{ scale: 0.968, y: 3, rotateX: -3, filter: "brightness(1.18) saturate(1.14)" }}
                     transition={{ type: "spring", stiffness: 420, damping: 25, mass: 0.65 }}
                   >
-                    <NewsCardVisualMotion newsIdx={i} stackProgress={newsStackProgress}>
+                     <NewsCardVisualMotion newsIdx={i} stackProgress={newsStackProgress} featured={item.featured}>
                        <motion.div
                          className="pointer-events-none absolute -right-16 -top-16 h-48 w-48"
                          style={{ rotate: burstRotation }}
@@ -1104,6 +1117,11 @@ export default function Home() {
                           {item.title}
                         </h3>
                       </div>
+                       {item.featured && (
+                         <span className="relative z-10 mt-3 inline-flex w-fit rounded-full border border-orange-200/35 bg-orange-300/15 px-2.5 py-1 label text-orange-100">
+                           НАГРАДА · 1200 КЛЮЧЕЙ
+                         </span>
+                       )}
                       <span
                         className="caption absolute right-10 top-4 z-10"
                         style={{ color: 'rgba(255,228,181,.72)' }}
@@ -1129,6 +1147,16 @@ export default function Home() {
         </section>
 
       </div>
+      {surveyOpen && (
+        <SurveyModal
+          onClose={() => setSurveyOpen(false)}
+          onComplete={(keys) => {
+            setSurveyCompleted(true);
+            setSurveyOpen(false);
+            if (keys) updateState((prev) => ({ keys: prev.keys + keys }));
+          }}
+        />
+      )}
     </div>
   );
 }
