@@ -36,16 +36,21 @@ export function buildLeaderboardView(
     || new Date(String(a.first_reached_at)).getTime() - new Date(String(b.first_reached_at)).getTime()
     || Number(a.user_id) - Number(b.user_id)
   )).map((row, index) => ({
-    position: index + 1,
+    position: index,
     userId: Number(row.user_id),
     nickname: String(row.nickname),
     maxLevel: Number(row.max_level),
     firstReachedAt: new Date(String(row.first_reached_at)).toISOString(),
   }));
 
+  const entries = ordered.slice(1, visibleLimit + 1).map((entry, index) => ({
+    ...entry,
+    position: index + 1,
+  }));
+
   return {
     champion: ordered[0] ?? null,
-    entries: ordered.slice(0, visibleLimit),
+    entries,
     me: ordered.find((entry) => entry.userId === userId) ?? null,
     totalPlayers: ordered.length,
   };
