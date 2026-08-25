@@ -482,6 +482,11 @@ function AppLogic() {
   const [, setAuthTransitionTick] = useState(0);
 
   useEffect(() => {
+    if (!isAuthLoaded || !store.isAccountReady) return;
+    window.dispatchEvent(new Event('neuro-app-ready'));
+  }, [isAuthLoaded, store.isAccountReady]);
+
+  useEffect(() => {
     document.documentElement.classList.add('dark');
   }, []);
 
@@ -767,7 +772,7 @@ function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <div data-testid="app-layout" className="app-shell min-h-[100dvh] w-full max-w-none mx-auto text-primary relative overflow-hidden flex flex-col" style={APP_BG}>
       <TopBar />
-      <div data-testid="app-scroll-shell" className="app-shell-content relative z-10 flex-1 overflow-x-hidden overflow-y-auto">{children}</div>
+      <div data-testid="app-scroll-shell" className="app-shell-content relative z-10 min-h-0 flex-1 overflow-x-hidden overflow-y-auto">{children}</div>
       <CoachingBubble />
       <NavBar />
       <InstallPrompt />
