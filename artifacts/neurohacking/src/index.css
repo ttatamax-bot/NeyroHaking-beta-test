@@ -608,6 +608,19 @@
     min-width: 0;
     width: 100%;
   }
+
+  .path-hero {
+    width: 100vw;
+    margin-left: calc(50% - 50vw);
+    padding-left: 16px;
+  }
+
+  .path-carousel {
+    width: 100vw;
+    max-width: none;
+    margin-left: calc(50% - 50vw);
+    margin-right: 0;
+  }
 }
 
 @media (min-width: 768px) {
