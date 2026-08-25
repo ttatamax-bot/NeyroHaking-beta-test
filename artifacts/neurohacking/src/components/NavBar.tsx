@@ -17,7 +17,7 @@ const ARTICLE_IDS = ['A1', 'A2', 'A3', 'A4', 'A5', 'A6', 'A7', 'A8'];
 
 export function NavBar() {
   const [location, setLocation] = useLocation();
-  const { userState, readNews, unlockedArticles, readArticles, goalFormOpen } = useAppStore();
+  const { userState, readNews, unlockedArticles, readArticles, goalFormOpen, isAuthLoaded, isAccountReady } = useAppStore();
 
   const activeIdx = TABS.findIndex(t =>
     t.path === '/' ? location === '/' : location.startsWith(t.path)
@@ -51,7 +51,6 @@ export function NavBar() {
   }, [safeIdx]);
 
   const isOnboarding = userState === 'onboarding';
-  const isAcademyRoute = location === '/academy';
 
   const hiddenRoutes = [
     '/technique/sleep', '/technique/visualization', '/technique/meditation',
@@ -62,11 +61,11 @@ export function NavBar() {
 
   const isHidden =
     goalFormOpen ||
-    (!isAcademyRoute && (
-      userState === 'new' ||
-      userState === 'dayDone' ||
-      userState === 'onboarding'
-    )) ||
+    !isAuthLoaded ||
+    !isAccountReady ||
+    userState === 'new' ||
+    userState === 'dayDone' ||
+    userState === 'onboarding' ||
     hiddenRoutes.some(r => location.startsWith(r)) ||
     location.includes('/article/');
 
@@ -93,13 +92,14 @@ export function NavBar() {
 
       <div
         data-testid="bottom-navigation"
-        className="fixed left-0 right-0 z-50 flex justify-center"
+        className="app-nav fixed left-0 right-0 z-50 flex justify-center"
         style={{ bottom: 'max(20px, env(safe-area-inset-bottom, 20px))', padding: '0 16px' }}
       >
-        <div className="w-full max-w-none">
+        <div className="app-nav-inner w-full">
           <div
-            className="relative h-[62px] flex items-center justify-around"
+            className="app-nav-pill relative h-[62px] flex items-center justify-around"
             style={{
+              ['--active-nav-index' as string]: safeIdx,
               borderRadius: 22,
               background: 'linear-gradient(135deg, rgba(245,158,11,0.22) 0%, rgba(245,158,11,0.08) 100%)',
               border: '1px solid rgba(245,158,11,1)',
@@ -143,6 +143,7 @@ export function NavBar() {
               return (
                 <button
                   key={tab.path}
+                  data-testid={`nav-item-${tab.path === "/" ? "home" : tab.path.slice(1)}`}
                   onClick={() => {
                     if (isOnboarding) return;
                     const curIdx = TABS.findIndex(t =>
@@ -152,7 +153,7 @@ export function NavBar() {
                     setSlideDir(newIdx - curIdx);
                     setLocation(tab.path);
                   }}
-                  className="flex-1 h-full flex flex-col items-center justify-center gap-[3px]"
+                  className="app-nav-tab flex-1 h-full flex flex-col items-center justify-center gap-[3px]"
                   style={{ position: 'relative', zIndex: 1 }}
                 >
                   <motion.div
@@ -168,7 +169,7 @@ export function NavBar() {
                       />
                     )}
                   </motion.div>
-                  <motion.span
+                  <motion.span className="app-nav-label"
                     animate={{ scale: isActive ? 1.14 : 1 }}
                     transition={{ type: 'spring', stiffness: 400, damping: 22 }}
                     style={{
