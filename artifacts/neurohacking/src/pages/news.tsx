@@ -3,25 +3,38 @@ import { useAppStore } from "@/lib/store";
 import { useEffect } from "react";
 import { motion } from "framer-motion";
 import { ChevronLeft } from "lucide-react";
+import { useDevTextEditor } from "@/components/DevTextEditor";
 
 const NEWS_DATA: Record<string, { title: string; desc: string; date: string; content: string }> = {
-  "1": {
-    title: "Новая техника нейровизуализации",
-    desc: "Обновлён алгоритм прохождения техники T2 — визуализация теперь более структурированная.",
-    date: "2026-05-28",
-    content: "Мы обновили подход к технике T2. Ранее визуализация могла быть хаотичной, теперь она разделена на 5 строгих вопросов. Это помогает сфокусировать работу префронтальной коры и усилить эмоциональный отклик.\n\nПробуйте новый формат в разделе Техники."
+  "keys-potential-economy": {
+    title: "Новая экономика ключей и потенциала",
+    desc: "Теперь потенциал начисляется за закрытие дня на 100%.",
+    date: "2026-08-25",
+    content: "Мы полностью обновили экономику приложения. Потенциал теперь начисляется за закрытие дня на 100%, а ключи выдаются за каждый такой завершённый день.\n\nЧтобы закрыть день, выполни все шесть ежедневных техник: планирование, нейровизуализацию, медитацию, прогулку, хобби и сон. Каждая техника добавляет свой процент потенциала. Когда шкала достигает 100%, день считается закрытым, а награда начисляется автоматически.\n\nТак система поощряет не отдельный случайный шаг, а полноценный день заботы о себе."
   },
-  "2": {
-    title: "Важно о серии",
-    desc: "Серия сохраняется только если ты завершил день через технику Сон. Следи за этим.",
-    date: "2026-05-20",
-    content: "Многие пользователи забывают закрывать день техникой Сон. Важно понимать: система фиксирует день только после осознанного завершения. Если ты выполнил 5 техник, но не нажал «Завершить день» в Сне — прогресс серии сбрасывается.\n\nЭто не баг, это дисциплина."
+  "account-sync": {
+    title: "Аккаунт сохраняет твой прогресс",
+    desc: "Ключи, серии и выполненные техники доступны на любом устройстве.",
+    date: "2026-08-24",
+    content: "Теперь ты можешь создать аккаунт и сохранить свой прогресс: ключи, потенциал, серии, цели и выполненные техники привязываются к профилю.\n\nПосле входа данные восстанавливаются автоматически, поэтому можно продолжить путь с другого устройства и не начинать заново. Если соединение временно прервётся, приложение покажет состояние синхронизации и попробует повторить загрузку."
   },
-  "3": {
-    title: "Академия пополнилась",
-    desc: "Добавлены новые статьи по нейробиологии дофамина и силе воли.",
-    date: "2026-05-10",
-    content: "Открыт доступ к новым материалам в Академии. Узнайте, как система вознаграждения управляет вашими решениями и почему мотивация проигрывает дисциплине на длинной дистанции.\n\nСтатьи уже доступны для разблокировки за ключи."
+  "memory-concentration": {
+    title: "Добавлены техники памяти и концентрации",
+    desc: "Несколько практик внутри каждой техники и таблица лидеров.",
+    date: "2026-08-23",
+    content: "В приложении появились новые направления для тренировки памяти и концентрации. Внутри каждой техники собрано несколько практик: выбирай подходящую под задачу, выполняй её и постепенно собирай свой результат.\n\nУ каждой практики своя механика и свой способ проверить прогресс. А таблица лидеров добавляет здоровый азарт: сравнивай результаты с другими участниками, следи за своим местом и возвращайся к тренировкам, чтобы подняться выше."
+  },
+  "visual-refresh": {
+    title: "Полное обновление визуала",
+    desc: "Новая визуальная система для Пути, техник, Академии и главной.",
+    date: "2026-08-22",
+    content: "Мы полностью обновили визуальный язык НейроХакинга. На главной появились более выразительные карточки новостей, мягкое свечение, глубина и понятнее расставленные акценты.\n\nВ Пути ракета, кольца и glow показывают движение и прогресс, а карточки целей помогают быстро увидеть следующий шаг. В техниках карточки стали компактнее и аккуратнее: на широких экранах они стоят в две колонки, а на мобильном складываются в удобный стек.\n\nВ Академии сохранили эффект наслаивания карточек, добавили больше структуры и воздуха. Все разделы теперь выглядят как части одной системы — спокойной, энергичной и понятной с первого взгляда."
+  },
+  "survey": {
+    title: "Исследование продуктивности",
+    desc: "20 вопросов о целях и привычках в обмен на 1200 ключей.",
+    date: "2026-08-25",
+    content: "Эта карточка открывает одноразовую исследовательскую анкету. Отвечай подробно и честно: правильных ответов нет.\n\nПосле полного заполнения ты получишь 1200 ключей. Если выйти из анкеты, промежуточные ответы не сохраняются."
   },
 };
 
@@ -29,13 +42,30 @@ export default function NewsArticle() {
   const { id } = useParams<{ id: string }>();
   const [, setLocation] = useLocation();
   const { readNews, updateState } = useAppStore();
+  const devText = useDevTextEditor();
   const article = NEWS_DATA[id || ''];
+  const title = article
+    ? devText.text({ id: `news.${id}.title`, area: "news", label: `${id} · заголовок`, source: article.title, value: article.title })
+    : "";
+  const contentParagraphs = article?.content.split("\n\n") ?? [];
 
   useEffect(() => {
+    if (article && import.meta.env.DEV) {
+      devText.registerFields([
+        { id: `news.${id}.title`, area: "news", label: `${id} · заголовок`, source: article.title, value: article.title },
+        ...contentParagraphs.map((paragraph, index) => ({
+          id: `news.${id}.content.${index}`,
+          area: "news" as const,
+          label: `${id} · абзац ${index + 1}`,
+          source: paragraph,
+          value: paragraph,
+        })),
+      ]);
+    }
     if (id && !readNews.includes(id)) {
       updateState(prev => ({ readNews: [...prev.readNews, id] }));
     }
-  }, [id]);
+  }, [id, article]);
 
   if (!article) {
     return (
@@ -65,7 +95,17 @@ export default function NewsArticle() {
           >
             <ChevronLeft size={26} />
           </button>
-          <span className="body-s min-w-0 flex-1 truncate text-primary">{article.title}</span>
+          <span
+            className="body-s min-w-0 flex-1 truncate text-primary"
+            contentEditable={import.meta.env.DEV && devText.enabled}
+            suppressContentEditableWarning
+            onBlur={(event) => devText.updateDraft(
+              { id: `news.${id}.title`, area: "news", label: `${id} · заголовок`, source: article.title, value: article.title },
+              event.currentTarget.textContent ?? title,
+            )}
+          >
+            {title}
+          </span>
         </div>
       </div>
 
@@ -82,7 +122,16 @@ export default function NewsArticle() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.12, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
         >
-          {article.title}
+          <span
+            contentEditable={import.meta.env.DEV && devText.enabled}
+            suppressContentEditableWarning
+            onBlur={(event) => devText.updateDraft(
+              { id: `news.${id}.title`, area: "news", label: `${id} · заголовок`, source: article.title, value: article.title },
+              event.currentTarget.textContent ?? title,
+            )}
+          >
+            {title}
+          </span>
         </motion.h1>
         <motion.span
           className="caption mb-8 block text-primary"
@@ -94,17 +143,30 @@ export default function NewsArticle() {
         </motion.span>
 
         <div className="space-y-4">
-          {article.content.split("\n\n").map((paragraph, i) => (
+          {contentParagraphs.map((paragraph, i) => {
+            const paragraphField = {
+              id: `news.${id}.content.${i}`,
+              area: "news" as const,
+              label: `${id} · абзац ${i + 1}`,
+              source: paragraph,
+              value: paragraph,
+            };
+            const paragraphValue = devText.text(paragraphField);
+            return (
             <motion.p
               key={i}
               className="body text-primary leading-relaxed"
+              contentEditable={import.meta.env.DEV && devText.enabled}
+              suppressContentEditableWarning
+              onBlur={(event) => devText.updateDraft(paragraphField, event.currentTarget.textContent ?? paragraphValue)}
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: Math.min(i * 0.04, 0.6) }}
             >
-              {paragraph}
+              {paragraphValue}
             </motion.p>
-          ))}
+            );
+          })}
         </div>
       </motion.div>
 

@@ -55,6 +55,7 @@ import SignUpPage from "@/pages/sign-up";
 import ProfileSetup from "@/pages/profile-setup";
 import ReferralPage from "@/pages/referral";
 import SurveyAdmin from "@/pages/survey-admin";
+import { DevTextProvider } from "@/components/DevTextEditor";
 
 const queryClient = new QueryClient();
 
@@ -786,10 +787,11 @@ function AppLayout({ children }: { children: React.ReactNode }) {
 function FullscreenLayout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
   const ownsSafeArea = location.includes("/read") || location.startsWith("/news/");
+  const isTechniqueScreen = location.startsWith("/technique/");
 
   return (
     <div data-testid="fullscreen-layout" className="fullscreen-shell fixed inset-0 h-[100dvh] w-full max-w-none mx-auto text-primary relative overflow-hidden overscroll-none flex flex-col" style={APP_BG}>
-      <div className="min-h-0 flex-1 overflow-hidden relative z-10 overscroll-none">{children}</div>
+      <div className={`min-h-0 flex-1 overflow-hidden relative z-10 overscroll-none ${isTechniqueScreen ? "technique-fullscreen-content" : ""}`}>{children}</div>
       <DayDoneOverlay />
     </div>
   );
@@ -866,7 +868,9 @@ function App() {
           <ClerkQueryClientCacheInvalidator />
           <TooltipProvider>
             <AppProvider>
-              <Router />
+              <DevTextProvider>
+                <Router />
+              </DevTextProvider>
             </AppProvider>
           </TooltipProvider>
         </QueryClientProvider>

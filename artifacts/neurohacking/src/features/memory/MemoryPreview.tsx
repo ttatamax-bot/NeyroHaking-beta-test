@@ -1,7 +1,9 @@
 import { ArrowRight, Check, ChevronLeft, LockKeyhole, Sparkles } from "lucide-react";
 import { motion } from "framer-motion";
+import { useEffect } from "react";
 import { MemoryModeLogo } from "./MemoryModeLogo";
 import { MemorySymbol } from "./MemorySymbol";
+import { useDevTextEditor } from "@/components/DevTextEditor";
 import {
   MEMORY_ACCENT,
   MEMORY_ACCENT_BORDER,
@@ -82,13 +84,30 @@ function PreviewVisual({ mode }: { mode: MemoryMode }) {
 
 export function MemoryPreview({ mode, keysBalance, isPurchasing = false, onPurchase, onBack }: MemoryPreviewProps) {
   const meta = memoryModeMeta(mode);
+  const devText = useDevTextEditor();
+  const textValue = (id: string, label: string, source: string) =>
+    devText.text({ id: `memory.${mode}.${id}`, area: "memory", label: `${mode} · ${label}`, source, value: source });
+  const title = textValue("title", "заголовок", meta.title);
+  const shortTitle = textValue("shortTitle", "короткий заголовок", meta.shortTitle);
+  const previewHint = textValue("previewHint", "подсказка превью", meta.previewHint);
+  const previewExample = textValue("previewExample", "пример", meta.previewExample);
+  useEffect(() => {
+    if (import.meta.env.DEV) {
+      devText.registerFields([
+        { id: `memory.${mode}.title`, area: "memory", label: `${mode} · заголовок`, source: meta.title, value: meta.title },
+        { id: `memory.${mode}.shortTitle`, area: "memory", label: `${mode} · короткий заголовок`, source: meta.shortTitle, value: meta.shortTitle },
+        { id: `memory.${mode}.previewHint`, area: "memory", label: `${mode} · подсказка превью`, source: meta.previewHint, value: meta.previewHint },
+        { id: `memory.${mode}.previewExample`, area: "memory", label: `${mode} · пример`, source: meta.previewExample, value: meta.previewExample },
+      ]);
+    }
+  }, [mode]);
   const cannotAfford = keysBalance !== undefined && keysBalance < MEMORY_KEYS_COST;
 
   return (
     <motion.section
       initial={{ opacity: 0, y: 14 }}
       animate={{ opacity: 1, y: 0 }}
-      className="relative flex min-h-[100dvh] flex-col overflow-y-auto px-5 pb-8 pt-8"
+      className="relative flex h-full min-h-0 flex-col overflow-x-hidden overflow-y-auto px-5 pb-8 pt-8"
       data-testid={`memory-preview-${mode}`}
     >
       <div className="mb-8 flex items-center justify-between">
@@ -103,7 +122,7 @@ export function MemoryPreview({ mode, keysBalance, isPurchasing = false, onPurch
             className="font-medium uppercase leading-none tracking-[0.12em]"
             style={{ color: MEMORY_ACCENT, fontSize: 12 }}
           >
-            {meta.shortTitle}
+            {shortTitle}
           </span>
         </div>
         <span className="w-8" />
@@ -115,7 +134,7 @@ export function MemoryPreview({ mode, keysBalance, isPurchasing = false, onPurch
           <PreviewVisual mode={mode} />
         </div>
         <p className="body-s mt-4 text-secondary">
-          Информация держится на экране ровно <span className="text-primary">2 секунды</span>. С каждым уровнем её становится больше, но темп не меняется.
+           {previewHint}
         </p>
       </div>
 
@@ -156,7 +175,7 @@ export function MemoryPreview({ mode, keysBalance, isPurchasing = false, onPurch
         {cannotAfford && <p className="caption mt-3 text-right text-secondary">Недостаточно ключей</p>}
       </div>
       <div className="sr-only" aria-live="polite" data-testid="text-preview-state">
-        {meta.previewExample}
+         {previewExample}
       </div>
     </motion.section>
   );
@@ -164,10 +183,18 @@ export function MemoryPreview({ mode, keysBalance, isPurchasing = false, onPurch
 
 export function MemoryModeFacts({ mode }: { mode: MemoryMode }) {
   const meta = memoryModeMeta(mode);
+  const devText = useDevTextEditor();
+  const previewExample = devText.text({
+    id: `memory.${mode}.previewExample`,
+    area: "memory",
+    label: `${mode} · пример`,
+    source: meta.previewExample,
+    value: meta.previewExample,
+  });
   return (
     <div className="mt-3 flex items-center gap-2 text-xs text-secondary">
       <Check size={14} style={{ color: MEMORY_ACCENT }} />
-      <span>{meta.previewExample}</span>
+        <span>{previewExample}</span>
     </div>
   );
 }

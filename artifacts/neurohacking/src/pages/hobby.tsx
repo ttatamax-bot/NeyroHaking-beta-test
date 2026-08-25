@@ -353,7 +353,7 @@ export default function Hobby() {
             </button>
             <h1 className="title-l text-primary">{selectedHobby}</h1>
           </div>
-          <div className="flex-1 flex flex-col justify-center px-4 pb-4">
+          <div className="technique-content-column flex-1 flex flex-col justify-center pb-4">
             <p className="title-s text-primary mb-4">Что у тебя не получается в этом хобби?</p>
             <Input value={challengeInput} onChange={e => setChallengeInput(e.target.value)}
               placeholder="Например: взять аккорд F" autoFocus
@@ -386,7 +386,7 @@ export default function Hobby() {
             </button>
             <h1 className="title-l text-primary">{selectedHobby}</h1>
           </div>
-          <div className="flex-1 flex flex-col justify-center px-4 overflow-y-auto pb-4">
+          <div className="technique-content-column flex-1 flex flex-col justify-center overflow-y-auto pb-4">
             {activeChallenge && (
               <div className="mb-6 px-4 py-3 rounded-[12px]" style={{ background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)' }}>
                 <p className="caption text-warning">🎯 Твой вызов: «{activeChallenge}»</p>
@@ -425,7 +425,7 @@ export default function Hobby() {
           onBack={() => setLocation('/techniques')}
           backTestId="button-hobby-back"
         />
-        <div className="flex-1 overflow-y-auto px-4 pb-8">
+        <div className="technique-content-column flex-1 overflow-y-auto pb-8">
           {list.length === 0 && !addingNew && (
             <p className="body text-secondary mb-6 leading-relaxed">
               Добавь хобби в список — чтение, рисование, музыка, программирование. Каждую сессию выбирай, чем занимаешься.

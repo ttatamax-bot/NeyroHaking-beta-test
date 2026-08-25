@@ -1,5 +1,6 @@
 import { ArrowRight, Check, ChevronLeft, Crosshair, LockKeyhole, Sparkles } from "lucide-react";
 import { motion } from "framer-motion";
+import { useEffect } from "react";
 import {
   CONCENTRATION_ACCENT,
   CONCENTRATION_ACCENT_BORDER,
@@ -10,6 +11,7 @@ import {
 } from "./config";
 import { ConcentrationModeLogo } from "./ConcentrationModeLogo";
 import { MemorySymbol } from "../memory/MemorySymbol";
+import { useDevTextEditor } from "@/components/DevTextEditor";
 
 interface ConcentrationPreviewProps {
   mode: ConcentrationMode;
@@ -82,13 +84,30 @@ function PreviewVisual({ mode }: { mode: ConcentrationMode }) {
 
 export function ConcentrationPreview({ mode, keysBalance, isPurchasing = false, onPurchase, onBack }: ConcentrationPreviewProps) {
   const meta = concentrationModeMeta(mode);
+  const devText = useDevTextEditor();
+  const textValue = (id: string, label: string, source: string) =>
+    devText.text({ id: `concentration.${mode}.${id}`, area: "concentration", label: `${mode} · ${label}`, source, value: source });
+  const title = textValue("title", "заголовок", meta.title);
+  const shortTitle = textValue("shortTitle", "короткий заголовок", meta.shortTitle);
+  const previewHint = textValue("previewHint", "подсказка превью", meta.previewHint);
+  const previewExample = textValue("previewExample", "пример", meta.previewExample);
+  useEffect(() => {
+    if (import.meta.env.DEV) {
+      devText.registerFields([
+        { id: `concentration.${mode}.title`, area: "concentration", label: `${mode} · заголовок`, source: meta.title, value: meta.title },
+        { id: `concentration.${mode}.shortTitle`, area: "concentration", label: `${mode} · короткий заголовок`, source: meta.shortTitle, value: meta.shortTitle },
+        { id: `concentration.${mode}.previewHint`, area: "concentration", label: `${mode} · подсказка превью`, source: meta.previewHint, value: meta.previewHint },
+        { id: `concentration.${mode}.previewExample`, area: "concentration", label: `${mode} · пример`, source: meta.previewExample, value: meta.previewExample },
+      ]);
+    }
+  }, [mode]);
   const cannotAfford = keysBalance !== undefined && keysBalance < CONCENTRATION_KEYS_COST;
 
   return (
     <motion.section
       initial={{ opacity: 0, y: 14 }}
       animate={{ opacity: 1, y: 0 }}
-      className="relative flex min-h-[100dvh] flex-col overflow-y-auto px-5 pb-8 pt-8"
+      className="relative flex h-full min-h-0 flex-col overflow-x-hidden overflow-y-auto px-5 pb-8 pt-8"
       data-testid={`concentration-preview-${mode}`}
     >
       <div className="mb-8 flex items-center justify-between">
@@ -99,7 +118,7 @@ export function ConcentrationPreview({ mode, keysBalance, isPurchasing = false, 
         ) : <span />}
         <div className="flex flex-col items-center gap-1">
           <ConcentrationModeLogo mode={mode} large />
-          <span className="font-medium uppercase leading-none tracking-[0.12em]" style={{ color: CONCENTRATION_ACCENT, fontSize: 12 }}>{meta.shortTitle}</span>
+          <span className="font-medium uppercase leading-none tracking-[0.12em]" style={{ color: CONCENTRATION_ACCENT, fontSize: 12 }}>{shortTitle}</span>
         </div>
         <span className="w-8" />
       </div>
@@ -109,7 +128,7 @@ export function ConcentrationPreview({ mode, keysBalance, isPurchasing = false, 
         <div className="min-h-[126px] content-center rounded-[18px] border border-white/[.06] bg-[#091a2d] px-3 py-5">
           <PreviewVisual mode={mode} />
         </div>
-        <p className="body-s mt-4 text-secondary">{meta.previewHint}</p>
+         <p className="body-s mt-4 text-secondary">{previewHint}</p>
       </div>
 
       <div className="mb-6 grid grid-cols-2 gap-2">
@@ -146,17 +165,25 @@ export function ConcentrationPreview({ mode, keysBalance, isPurchasing = false, 
         </div>
         {cannotAfford && <p className="caption mt-3 text-right text-secondary">Недостаточно ключей</p>}
       </div>
-      <div className="sr-only" aria-live="polite" data-testid="text-concentration-preview-state">{meta.previewExample}</div>
+       <div className="sr-only" aria-live="polite" data-testid="text-concentration-preview-state">{previewExample}</div>
     </motion.section>
   );
 }
 
 export function ConcentrationModeFacts({ mode }: { mode: ConcentrationMode }) {
   const meta = concentrationModeMeta(mode);
+  const devText = useDevTextEditor();
+  const previewExample = devText.text({
+    id: `concentration.${mode}.previewExample`,
+    area: "concentration",
+    label: `${mode} · пример`,
+    source: meta.previewExample,
+    value: meta.previewExample,
+  });
   return (
     <div className="mt-3 flex items-center gap-2 text-xs text-secondary">
       <Check size={14} style={{ color: CONCENTRATION_ACCENT }} />
-      <span>{meta.previewExample}</span>
+       <span>{previewExample}</span>
     </div>
   );
 }

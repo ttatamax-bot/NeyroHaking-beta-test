@@ -304,7 +304,7 @@ export default function Walk() {
             onBack={() => setLocation('/techniques')}
             backTestId="button-walk-back"
           />
-          <div className="flex-1 flex flex-col justify-center px-4 overflow-y-auto pb-4">
+          <div className="technique-content-column flex-1 flex flex-col justify-center overflow-y-auto pb-4">
             {isMaxedOut ? (
               <div className="text-center">
                 <p className="title-s text-primary mb-2">Лимит ключей за сегодня</p>

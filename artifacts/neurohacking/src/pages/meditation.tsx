@@ -198,7 +198,7 @@ export default function Meditation() {
             onBack={() => setLocation('/techniques')}
             backTestId="button-meditation-back"
           />
-          <div className="flex-1 flex flex-col justify-center px-4 overflow-y-auto pb-4">
+          <div className="technique-content-column flex-1 flex flex-col justify-center overflow-y-auto pb-4">
               <p className="body text-secondary mb-8 leading-relaxed">
                 Квадратное дыхание: вдох — задержка — выдох — задержка. 4 секунды каждая фаза.
               </p>

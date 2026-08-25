@@ -10,6 +10,7 @@ import { useAuthInfo } from "@/lib/clerk";
 import { ringRotationTarget, ringRotationTransition, useSmoothRingBurstRotation } from "@/lib/ring-burst";
 import { SurveyModal } from "@/components/SurveyModal";
 import { getSurveyStatus } from "@/lib/api";
+import { useDevTextEditor } from "@/components/DevTextEditor";
 
 const NEWS_ITEMS = [
   { id: 'survey', title: "Исследование продуктивности", description: "Ответь на 20 вопросов о своих целях. За прохождение ты получишь 1200 ключей.", date: "СЕГОДНЯ", featured: true },
@@ -813,6 +814,7 @@ export function PotentialScale({
 }
 
 export default function Home() {
+  const devText = useDevTextEditor();
   const {
     userState,
     potential,
@@ -837,6 +839,14 @@ export default function Home() {
   const ringBurst = false;
   const burstRotation = useSmoothRingBurstRotation();
   const newsScrollFrame = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    devText.registerFields(NEWS_ITEMS.flatMap((item) => [
+      { id: `news.${item.id}.title`, area: "news" as const, label: `${item.id} · заголовок`, source: item.title, value: item.title },
+      { id: `news.${item.id}.description`, area: "news" as const, label: `${item.id} · описание`, source: item.description, value: item.description },
+    ]));
+  }, []);
 
   const waitingForAccount =
     !import.meta.env.DEV && (!isAuthLoaded || (isSignedIn && !isAccountReady));
@@ -1061,6 +1071,8 @@ export default function Home() {
 
           <div className="news-stack-list relative z-10 space-y-3 overflow-x-hidden">
             {NEWS_ITEMS.map((item, i) => {
+              const title = devText.text({ id: `news.${item.id}.title`, area: "news", label: `${item.id} · заголовок`, source: item.title, value: item.title });
+              const description = devText.text({ id: `news.${item.id}.description`, area: "news", label: `${item.id} · описание`, source: item.description, value: item.description });
               const isRead = readNews.includes(item.id);
               return (
                 <NewsCardMotion key={item.id} newsIdx={i}>
@@ -1114,7 +1126,7 @@ export default function Home() {
                        </motion.div>
                       <div className="relative z-10 flex items-start justify-between gap-3 pr-20">
                         <h3 className="title-s min-w-0 flex-1 text-primary leading-snug">
-                          {item.title}
+                          {title}
                         </h3>
                       </div>
                        {item.featured && (
@@ -1136,7 +1148,7 @@ export default function Home() {
                         />
                       )}
                       <p className="relative z-10 mt-2 line-clamp-3 text-secondary body-s leading-relaxed">
-                        {item.description}
+                        {description}
                       </p>
                     </NewsCardVisualMotion>
                   </motion.button>
