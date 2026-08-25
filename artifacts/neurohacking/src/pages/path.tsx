@@ -233,7 +233,7 @@ function GoalCarousel({
   return (
     <div className="relative -mx-4 min-h-[238px] overflow-visible px-1 pb-2 pt-2">
       <motion.div
-        className="relative mx-auto h-[218px] w-full max-w-[540px] overflow-visible"
+        className="path-carousel relative mx-auto h-[218px] w-full max-w-[540px] overflow-visible"
         style={{ perspective: "760px", touchAction: "pan-y" }}
         onWheelCapture={(event) => {
           const delta = event.deltaX || (event.shiftKey ? event.deltaY : 0);
@@ -313,7 +313,6 @@ function GoalCarousel({
               aria-label={goal ? (isActive ? `Открыть цель ${goal.name}` : `Выбрать цель ${goal.name}`) : "Добавить цель"}
             >
               <SteelDetails color={accent.color} />
-              <span className="pointer-events-none absolute -right-10 -top-12 h-32 w-32 rounded-full blur-3xl" style={{ background: accent.color, opacity: isActive ? .2 : .08 }} />
               {goal ? (
                 <>
                   <span className="relative z-10 mb-4 flex items-center justify-between">
@@ -365,7 +364,7 @@ function ProgressCarousel({
   const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
   return (
      <div className="relative -mx-4 min-h-[184px] overflow-visible px-1 pb-4 pt-2">
-       <motion.div className="relative mx-auto h-[158px] w-full max-w-[540px]" style={{ perspective: "760px", touchAction: "pan-y" }}
+       <motion.div className="path-carousel relative mx-auto h-[158px] w-full max-w-[540px]" style={{ perspective: "760px", touchAction: "pan-y" }}
         onWheelCapture={(event) => {
           const delta = event.deltaX || (event.shiftKey ? event.deltaY : 0);
           if (Math.abs(delta) > 2) {
@@ -753,7 +752,7 @@ export default function Path() {
     <div ref={scrollRef} data-testid="path-scroll-container" className="path-page relative h-full min-h-0 overflow-x-hidden overflow-y-auto overscroll-x-none overscroll-y-none px-4 pb-[max(112px,calc(88px+env(safe-area-inset-bottom)))] pt-0">
       <Atmosphere />
       <div className="relative z-10">
-        <motion.section initial={{ opacity: 0, y: -18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .8, ease: EASE }} className="flex items-center justify-start gap-2 pb-1 pt-12">
+        <motion.section initial={{ opacity: 0, y: -18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .8, ease: EASE }} className="path-hero flex items-center justify-start gap-2 pb-1 pt-12">
           <PathRocket reduced={Boolean(reduced)} />
           <h1
             className="shrink-0 whitespace-nowrap text-left uppercase tracking-wider"
