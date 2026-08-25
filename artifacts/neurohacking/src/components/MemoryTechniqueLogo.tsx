@@ -1,7 +1,5 @@
 import { motion } from "framer-motion";
-// Use the public asset for the first frame as well as the fallback. This
-// keeps the loading logo identical in Vite, Vercel, and the mobile webview.
-const memoryLogoUrl = "/memory-logo.png";
+import memoryLogoUrl from "@/assets/memory-logo.png";
 
 interface MemoryTechniqueLogoProps {
   size?: number;
@@ -61,10 +59,6 @@ export function MemoryTechniqueLogo({ size = 76, loading = false, className = ""
           src={memoryLogoUrl}
           alt=""
           className="absolute inset-0 h-full w-full object-contain"
-          onError={(event) => {
-            const image = event.currentTarget;
-            image.src = "/memory-logo.png?v=3";
-          }}
           decoding="async"
           fetchPriority="high"
           animate={{ filter: ["saturate(1.08) brightness(1.05) drop-shadow(0 0 8px rgba(249,115,22,.55))", "saturate(1.28) brightness(1.2) drop-shadow(0 0 18px rgba(255,196,72,.9))", "saturate(1.08) brightness(1.05) drop-shadow(0 0 8px rgba(249,115,22,.55))"] }}
