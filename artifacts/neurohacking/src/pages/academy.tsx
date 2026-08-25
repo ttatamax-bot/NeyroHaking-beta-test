@@ -55,7 +55,7 @@ import { ringRotationTarget, ringRotationTransition, useSmoothRingBurstRotation 
   const CARD_SHADOW = '0 8px 32px rgba(0,0,0,0.68), 0 0 0 1px rgba(255,255,255,0.1)';
 
   const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
-  const ARTICLE_STACK_OFFSET = 76;
+  const ARTICLE_STACK_OFFSET = 96;
   const ARTICLE_STACK_RELEASE = 300;
   const POTENTIAL_PARTICLES = [
     { left: '7%', top: '18%', size: 5, color: '#F97316', delay: 0 },
@@ -395,19 +395,29 @@ import { ringRotationTarget, ringRotationTransition, useSmoothRingBurstRotation 
     children,
     articleIdx,
     stackOffset,
+    stackRelease,
     perspectiveTilt,
     stackTilt,
   }: {
     children: ReactNode;
     articleIdx: number;
     stackOffset: number;
+    stackRelease: number;
     perspectiveTilt: number;
     stackTilt: number;
   }) {
     const hasMounted = useRef(false);
+    const [isWideLayout, setIsWideLayout] = useState(false);
+    const wideColumnStackIndex = Math.floor(articleIdx / 2);
+    const wideStackOffset = wideColumnStackIndex * ARTICLE_STACK_OFFSET;
 
     useEffect(() => {
       hasMounted.current = true;
+      const media = window.matchMedia("(min-width: 768px)");
+      const syncLayout = () => setIsWideLayout(media.matches);
+      syncLayout();
+      media.addEventListener("change", syncLayout);
+      return () => media.removeEventListener("change", syncLayout);
     }, []);
 
     return (
@@ -421,18 +431,18 @@ import { ringRotationTarget, ringRotationTransition, useSmoothRingBurstRotation 
         }}
         initial={{
           opacity: 0,
-          y: 58 - stackOffset,
-          rotateX: perspectiveTilt + 18,
-          rotateZ: stackTilt + (articleIdx % 2 === 0 ? -2.5 : 2.5),
+          y: isWideLayout ? 24 - wideStackOffset : 58 - stackOffset,
+          rotateX: isWideLayout ? 0 : perspectiveTilt + 18,
+          rotateZ: 0,
           scale: 0.94,
           filter: "blur(7px)",
           transformPerspective: 560,
         }}
         animate={{
           opacity: 1,
-          y: -stackOffset,
-          rotateX: perspectiveTilt,
-          rotateZ: stackTilt,
+          y: isWideLayout ? -wideStackOffset * stackRelease : -stackOffset,
+          rotateX: isWideLayout ? 0 : perspectiveTilt,
+          rotateZ: 0,
           scale: 1,
           filter: "blur(0px)",
           transformPerspective: 560,
@@ -505,7 +515,7 @@ import { ringRotationTarget, ringRotationTransition, useSmoothRingBurstRotation 
       <div
         ref={academyScrollRef}
         data-testid="academy-scroll-container"
-         className="h-[calc(100dvh-60px)] overflow-y-auto overscroll-none px-4 pb-20"
+         className="h-[calc(100dvh-60px)] overflow-x-hidden overflow-y-auto overscroll-none px-4 pb-20"
         onScroll={handleScroll}
       >
         <motion.div
@@ -525,7 +535,7 @@ import { ringRotationTarget, ringRotationTransition, useSmoothRingBurstRotation 
         <motion.div
           animate={{ opacity: dimArticles ? 0.2 : 1 }}
           transition={{ duration: 0.25 }}
-          className="article-stack-list relative z-10 space-y-3"
+          className="article-stack-list relative z-10 flex flex-col gap-3"
         >
           {ARTICLES.map((a, articleIdx) => {
             const isUnlocked = a.id === 'A1'
@@ -549,14 +559,15 @@ import { ringRotationTarget, ringRotationTransition, useSmoothRingBurstRotation 
                 key={a.id}
                 articleIdx={articleIdx}
                 stackOffset={stackOffset}
+                stackRelease={stackRelease}
                 perspectiveTilt={perspectiveTilt}
                 stackTilt={stackTilt}
               >
                 <motion.button
                   onClick={() => !isOnboarding && setLocation(`/article/${a.id}`)}
-                   className="group relative flex h-[240px] w-full flex-col overflow-hidden rounded-[20px] p-4 text-left transition-[filter] active:brightness-110"
+                   className="group relative flex h-[224px] w-full flex-col overflow-hidden rounded-[20px] p-4 text-left transition-[filter] active:brightness-110"
                   whileHover={{ y: -2, scale: 1.006 }}
-                  whileTap={{ scale: 0.968, y: 3, rotateX: -3, filter: "brightness(1.18) saturate(1.14)" }}
+                   whileTap={{ scale: 0.968, y: 3, filter: "brightness(1.18) saturate(1.14)" }}
                   transition={{ type: "spring", stiffness: 420, damping: 25, mass: 0.65 }}
                   style={{
                     transformOrigin: "top center",
@@ -670,11 +681,11 @@ import { ringRotationTarget, ringRotationTransition, useSmoothRingBurstRotation 
                    />
                 </div>
                 <div className="relative z-10 mt-1 min-w-0">
-                   <h3 className="title-s line-clamp-3 w-full text-primary leading-snug"
+                  <h3 className="title-s w-full text-primary leading-snug"
                     style={{ opacity: 0.96 }}>
                     {a.title}
                   </h3>
-                   <p className="body-s mt-1 line-clamp-2 text-secondary leading-tight"
+                  <p className="body-s mt-1 text-secondary leading-tight line-clamp-2"
                     style={{ opacity: 0.74 }}>
                     {a.desc}
                   </p>
