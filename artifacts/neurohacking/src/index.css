@@ -80,6 +80,7 @@
   html {
     background-color: #0F2035;
     min-height: 100%;
+    overflow-x: hidden;
   }
 
   body {
@@ -89,10 +90,20 @@
     background: #0F2035;
     min-height: 100dvh;
     overscroll-behavior: none;
+    overflow-x: hidden;
   }
 
   #root {
     min-height: 100dvh;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  #app-boot-loader {
+    min-height: 100vh;
+    min-height: 100svh;
+    min-height: 100dvh;
+    padding-bottom: env(safe-area-inset-bottom);
   }
 }
 
@@ -467,6 +478,7 @@
   .article-stack-card {
     backface-visibility: hidden;
     transform-style: preserve-3d;
+    min-width: 0;
   }
 
   .technique-stack-list {
@@ -479,6 +491,10 @@
     transform-style: preserve-3d;
   }
 
+  .practice-card-stack {
+    min-width: 0;
+  }
+
   .news-stack-list {
     perspective: 1100px;
     transform-style: preserve-3d;
@@ -486,6 +502,11 @@
 
   .news-stack-card {
     backface-visibility: hidden;
+    transform-style: preserve-3d;
+  }
+
+  .path-goal-stack {
+    perspective: 1100px;
     transform-style: preserve-3d;
   }
 
@@ -550,9 +571,206 @@
   }
 }
 
+/* Responsive product shell:
+   keep the compact phone experience, but give iPad and macOS their own
+   workspace instead of rendering a phone-width app in the middle of the page. */
+.app-shell-content {
+  min-width: 0;
+  width: 100%;
+}
+
+@media (max-width: 767px) {
+  .path-page {
+    /* The shell owns the viewport height; do not subtract nav height twice. */
+    height: 100%;
+    min-height: 0;
+  }
+
+  .path-page > .relative.z-10 {
+    min-width: 0;
+    width: 100%;
+  }
+}
+
 @media (min-width: 768px) {
-  body { display: grid; place-items: center; }
-  #root { width: min(100%, 440px); min-height: 100dvh; }
+  .app-shell {
+    padding-left: 92px;
+  }
+
+  .app-shell-content {
+    max-width: 1280px;
+    margin-inline: auto;
+    padding-inline: 32px;
+  }
+
+  .app-nav {
+    top: 0;
+    bottom: 0 !important;
+    right: auto;
+    width: 92px;
+    padding: 0 !important;
+    align-items: center;
+  }
+
+  .app-nav-inner {
+    max-width: none;
+    padding: 0 10px;
+  }
+
+  .app-nav-pill {
+    height: auto !important;
+    min-height: 344px;
+    flex-direction: column;
+    justify-content: center !important;
+    gap: 10px;
+    padding: 12px 0;
+    border-radius: 24px !important;
+  }
+
+  .app-nav-pill > div:first-child {
+    top: calc(12px + var(--active-nav-index, 0) * 78px) !important;
+    left: 8px !important;
+    width: calc(100% - 16px) !important;
+    height: 68px !important;
+    bottom: auto !important;
+  }
+
+  .app-nav-tab {
+    flex: none !important;
+    width: 100%;
+    height: 68px !important;
+    gap: 7px !important;
+  }
+
+  .app-nav-label {
+    font-size: 11px !important;
+  }
+
+  .techniques-content {
+    max-width: 920px;
+  }
+
+  .technique-stack-list {
+    grid-template-columns: repeat(3, minmax(180px, 228px)) !important;
+    column-gap: 22px !important;
+  }
+
+  .technique-stack-list > * {
+    width: 100% !important;
+  }
+
+  .practice-card-stack {
+    width: min(100%, 760px);
+    margin-inline: auto;
+  }
+
+  [data-testid="path-scroll-container"],
+  [data-testid="home-scroll-container"],
+  [data-testid="academy-scroll-container"] {
+    max-width: 1120px;
+    margin-inline: auto;
+  }
+
+  [data-testid="academy-scroll-container"] {
+    padding-inline: 0;
+  }
+
+  [data-testid="path-scroll-container"] > .relative.z-10,
+  [data-testid="home-scroll-container"] > .relative.z-10 {
+    max-width: 920px;
+    margin-inline: auto;
+  }
+
+  .article-stack-list {
+    max-width: 760px;
+    margin-inline: auto;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(280px, 1fr));
+    column-gap: 22px;
+    row-gap: 0;
+    align-items: start;
+  }
+
+  .article-stack-list > .article-stack-card {
+    width: 100%;
+    height: 196px;
+    min-height: 196px;
+  }
+
+  .article-stack-list > .article-stack-card > button {
+    height: 100%;
+    min-height: 0;
+  }
+
+  .article-stack-list > :last-child {
+    grid-column: 1 / -1;
+    margin-top: 18px;
+  }
+}
+
+@media (min-width: 1200px) {
+  .app-shell {
+    padding-left: 244px;
+  }
+
+  .app-shell-content {
+    max-width: 1480px;
+    padding-inline: 56px;
+  }
+
+  .app-nav {
+    width: 244px;
+    padding: 0 24px !important;
+  }
+
+  .app-nav-inner {
+    padding: 0;
+  }
+
+  .app-nav-pill {
+    min-height: 0;
+    padding: 12px 8px;
+    gap: 4px;
+    border-radius: 24px !important;
+  }
+
+  .app-nav-pill > div:first-child {
+    top: calc(12px + var(--active-nav-index, 0) * 64px) !important;
+    left: 8px !important;
+    width: calc(100% - 16px) !important;
+    height: 60px !important;
+  }
+
+  .app-nav-tab {
+    height: 60px !important;
+    flex-direction: row !important;
+    justify-content: flex-start !important;
+    padding-inline: 20px;
+    gap: 14px !important;
+  }
+
+  .app-nav-label {
+    font-size: 14px !important;
+    letter-spacing: .01em !important;
+  }
+
+  [data-testid="path-scroll-container"] > .relative.z-10,
+  [data-testid="home-scroll-container"] > .relative.z-10 {
+    max-width: 980px;
+  }
+
+  .techniques-content {
+    max-width: 980px;
+  }
+
+  .technique-stack-list {
+    grid-template-columns: repeat(3, 236px) !important;
+    column-gap: 28px !important;
+  }
+
+  .technique-stack-list > * {
+    min-height: 190px !important;
+  }
 }
 
 button, a, input, textarea, [role="button"] {
