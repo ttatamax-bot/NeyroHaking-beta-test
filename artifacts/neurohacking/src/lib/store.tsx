@@ -29,6 +29,7 @@ export interface Goal {
   id: string;
   name: string;
   description: string;
+  icon?: string;
   createdAt: string;
   status: 'active' | 'completed' | 'cancelled';
   completedAt?: string;
