@@ -227,6 +227,7 @@ function GoalCarousel({
   const safeIndex = ((activeIndex % 3) + 3) % 3;
   const slots = [0, 1, 2].map((index) => goals[index] ?? null);
   const move = (direction: number) => setActiveIndex((current) => (current + direction + 3) % 3);
+  const horizontalOffset = typeof window !== "undefined" && window.innerWidth < 768 ? 132 : 158;
 
   return (
     <div className="relative -mx-4 min-h-[238px] overflow-visible px-1 pb-2 pt-2">
@@ -289,7 +290,7 @@ function GoalCarousel({
               initial={{ opacity: 0, y: 12, scale: .9 }}
               animate={{
                 opacity: isActive ? 1 : .62,
-                x: offset * 158,
+                x: offset * horizontalOffset,
                 y: isActive ? 0 : 10,
                 scale: isActive ? .98 : .77,
                 rotateY: offset * -22,
@@ -355,6 +356,7 @@ function ProgressCarousel({
   const pointerStart = useRef<{ x: number; y: number } | null>(null);
   const safeIndex = ((activeIndex % items.length) + items.length) % items.length;
   const move = (direction: number) => setActiveIndex((current) => (current + direction + items.length) % items.length);
+  const horizontalOffset = typeof window !== "undefined" && window.innerWidth < 768 ? 88 : 108;
   return (
      <div className="relative -mx-4 min-h-[184px] overflow-visible px-1 pb-4 pt-2">
        <motion.div className="relative mx-auto h-[158px] w-full max-w-[540px]" style={{ perspective: "760px", touchAction: "pan-y" }}
@@ -408,7 +410,7 @@ function ProgressCarousel({
              else onOpen(route);
            }}
            className="absolute left-1/2 top-0 flex h-[154px] w-[42vw] max-w-[164px] -translate-x-1/2 flex-col justify-between rounded-[20px] border p-3"
-           animate={{ opacity: isActive ? 1 : .62, x: offset * 108, y: isActive ? 0 : 8, scale: isActive ? 1 : .78, rotateY: offset * -20, rotateZ: offset * (offset > 0 ? 1 : -1) }}
+           animate={{ opacity: isActive ? 1 : .62, x: offset * horizontalOffset, y: isActive ? 0 : 8, scale: isActive ? 1 : .78, rotateY: offset * -20, rotateZ: offset * (offset > 0 ? 1 : -1) }}
            transition={{ duration: .45, ease: EASE }}
           style={{
             zIndex: 3 - Math.abs(offset),
