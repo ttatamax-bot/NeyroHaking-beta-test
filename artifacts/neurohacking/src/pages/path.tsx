@@ -742,7 +742,7 @@ export default function Path() {
   const selectedIcon = selectedGoal ? getGoalIcon(selectedGoal.icon) : null;
 
   return (
-    <div ref={scrollRef} data-testid="path-scroll-container" className="relative h-[calc(100dvh-60px)] overflow-x-hidden overflow-y-auto overscroll-x-none overscroll-y-none px-4 pb-28 pt-0">
+    <div ref={scrollRef} data-testid="path-scroll-container" className="path-page relative h-full min-h-0 overflow-x-hidden overflow-y-auto overscroll-x-none overscroll-y-none px-4 pb-[max(112px,calc(88px+env(safe-area-inset-bottom)))] pt-0">
       <Atmosphere />
       <div className="relative z-10">
         <motion.section initial={{ opacity: 0, y: -18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .8, ease: EASE }} className="flex items-center justify-start gap-2 pb-1 pt-12">
