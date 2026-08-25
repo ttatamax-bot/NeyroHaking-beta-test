@@ -347,3 +347,38 @@ export interface LegacyMigrationResult {
 export async function migrateLegacyState(input: LegacyMigrationInput): Promise<LegacyMigrationResult> {
   return apiPost<LegacyMigrationResult>('/me/migrate-legacy', input);
 }
+
+export interface SurveyAnswers {
+  q1Age: string;
+  q2Occupations: string[];
+  q2Other?: string;
+  q3GoalStatus: string;
+  q4Goal?: string;
+  q5CurrentTime?: string;
+  q6DesiredTime?: string;
+  q7FailureSituation: string;
+  q8AfterWeeks: string;
+  q9Distraction: string;
+  q10AfterPostponing: string;
+  q11StablePeriod: string;
+  q12WhatChanged: string;
+  q13OneChange: string;
+  q14FutureAbility: string;
+  q15Tried: string;
+  q16WhatHelped: string;
+  q17SpentMoney: string;
+  q18HelpfulPurchase: string;
+  q20Telegram?: string;
+}
+
+export async function getSurveyStatus(): Promise<{ completed: boolean; reward: number }> {
+  return apiGet('/survey/status');
+}
+export async function submitSurvey(answers: SurveyAnswers): Promise<{
+  completed: boolean;
+  alreadyCompleted: boolean;
+  reward: number;
+  totalKeys: number;
+}> {
+  return apiPost('/survey/submit', answers);
+}
