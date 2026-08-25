@@ -10,7 +10,6 @@ import {
 } from "@/lib/auth-transition";
 import { NavBar } from "@/components/NavBar";
 import { TopBar } from "@/components/TopBar";
-import { DataLoadingScreen } from "@/components/DataLoadingScreen";
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { InstallPrompt } from "@/components/InstallPrompt";
@@ -24,6 +23,7 @@ import {
 } from "@/lib/dev-potential";
 import { hasDeveloperTools } from "@/lib/developer-mode";
 import DayCloseCinematic from "@/components/DayCloseCinematic";
+import { DEV_SURVEY_REWARD_PREVIEW_EVENT, SurveyRewardCinematic } from "@/components/SurveyRewardCinematic";
 import { dayCloseReward } from "@workspace/economy";
 
 import Home from "@/pages/home";
@@ -54,6 +54,7 @@ import SignInPage from "@/pages/sign-in";
 import SignUpPage from "@/pages/sign-up";
 import ProfileSetup from "@/pages/profile-setup";
 import ReferralPage from "@/pages/referral";
+import SurveyAdmin from "@/pages/survey-admin";
 
 const queryClient = new QueryClient();
 
@@ -437,6 +438,12 @@ function DevResetButton() {
         </button>
       </div>
       <button
+        onClick={() => window.dispatchEvent(new Event(DEV_SURVEY_REWARD_PREVIEW_EVENT))}
+        style={{ background: 'rgba(234,88,12,0.94)', color: '#fff', borderRadius: 8, padding: '4px 10px', fontSize: 11, fontWeight: 700, letterSpacing: '0.03em', border: '1px solid rgba(255,255,255,0.2)', backdropFilter: 'blur(8px)', boxShadow: '0 2px 8px rgba(0,0,0,0.5)' }}
+      >
+        DEV: катсцена ключей
+      </button>
+      <button
         onClick={() => { localStorage.clear(); window.location.href = '/'; }}
         style={{ background: 'rgba(220,38,38,0.9)', color: '#fff', borderRadius: 8, padding: '4px 10px', fontSize: 11, fontWeight: 700, letterSpacing: '0.03em', border: '1px solid rgba(255,255,255,0.2)', backdropFilter: 'blur(8px)', boxShadow: '0 2px 8px rgba(0,0,0,0.5)' }}
       >
@@ -444,6 +451,23 @@ function DevResetButton() {
       </button>
     </div>
   );
+}
+
+function SurveyRewardPreviewOverlay() {
+  const { isSignedIn, email } = useAuthInfo();
+  const developerToolsEnabled = hasDeveloperTools(email, isSignedIn);
+  const [isPlaying, setIsPlaying] = useState(false);
+
+  useEffect(() => {
+    if (!developerToolsEnabled) return undefined;
+    const handlePreview = () => setIsPlaying(true);
+    window.addEventListener(DEV_SURVEY_REWARD_PREVIEW_EVENT, handlePreview);
+    return () => window.removeEventListener(DEV_SURVEY_REWARD_PREVIEW_EVENT, handlePreview);
+  }, [developerToolsEnabled]);
+
+  if (!developerToolsEnabled || !isPlaying) return null;
+
+  return <SurveyRewardCinematic amount={1200} onComplete={() => setIsPlaying(false)} />;
 }
 
 function AppLogic() {
@@ -646,9 +670,7 @@ function AppLogic() {
 }
 
 export const APP_BG: React.CSSProperties = {
-  background: `
-    radial-gradient(ellipse 80% 55% at 50% -5%, rgba(37,99,235,0.32) 0%, rgba(59,130,246,0.12) 45%, transparent 65%),
-    #0F2035`,
+  background: '#0F2035',
 };
 
 function AnimatedBgOverlay() {
@@ -742,20 +764,16 @@ function DayDoneOverlay() {
 }
 
 function AppLayout({ children }: { children: React.ReactNode }) {
-  const [location] = useLocation();
-  const { accountLoadError, isAccountReady } = useAppStore();
-  const isAcademyRoute = location === "/academy";
-  const hideAppChrome = Boolean(accountLoadError) || (!isAccountReady && !isAcademyRoute);
-
   return (
-    <div className="min-h-[100dvh] w-full max-w-none mx-auto text-primary relative overflow-hidden flex flex-col" style={APP_BG}>
-      {!hideAppChrome && <TopBar />}
-      <div data-testid="app-scroll-shell" className="relative z-10 flex-1 overflow-x-hidden overflow-y-auto">{children}</div>
-      {!hideAppChrome && <CoachingBubble />}
-      {!hideAppChrome && <NavBar />}
-      {!hideAppChrome && <InstallPrompt />}
-      {!hideAppChrome && !isAcademyRoute && <DevResetButton />}
+    <div data-testid="app-layout" className="app-shell min-h-[100dvh] w-full max-w-none mx-auto text-primary relative overflow-hidden flex flex-col" style={APP_BG}>
+      <TopBar />
+      <div data-testid="app-scroll-shell" className="app-shell-content relative z-10 flex-1 overflow-x-hidden overflow-y-auto">{children}</div>
+      <CoachingBubble />
+      <NavBar />
+      <InstallPrompt />
+      <DevResetButton />
       <DayDoneOverlay />
+      <SurveyRewardPreviewOverlay />
     </div>
   );
 }
@@ -765,7 +783,7 @@ function FullscreenLayout({ children }: { children: React.ReactNode }) {
   const ownsSafeArea = location.includes("/read") || location.startsWith("/news/");
 
   return (
-    <div className="fixed inset-0 h-[100dvh] w-full max-w-none mx-auto text-primary relative overflow-hidden overscroll-none flex flex-col" style={APP_BG}>
+    <div data-testid="fullscreen-layout" className="fullscreen-shell fixed inset-0 h-[100dvh] w-full max-w-none mx-auto text-primary relative overflow-hidden overscroll-none flex flex-col" style={APP_BG}>
       <div className="min-h-0 flex-1 overflow-hidden relative z-10 overscroll-none">{children}</div>
       <DayDoneOverlay />
     </div>
@@ -773,11 +791,7 @@ function FullscreenLayout({ children }: { children: React.ReactNode }) {
 }
 
 function Router() {
-  const [location, setLocation] = useLocation();
-  const { isLoaded: isAuthLoaded } = useAuthInfo();
-  const isAuthRoute =
-    location.startsWith('/sign-in') ||
-    location.startsWith('/sign-up');
+  const [location] = useLocation();
   const isFullscreen =
     location.startsWith('/profile-setup') ||
     location.startsWith('/technique/') ||
@@ -786,10 +800,14 @@ function Router() {
     location.startsWith('/news/') ||
     location === '/privacy-policy' ||
     location === '/my-progress' ||
+    location === '/history' ||
+    location === '/streak' ||
+    location === '/keys-stats' ||
+    location === '/potential-stats' ||
     location.includes('/read') ||
-    location.startsWith('/referral/');
+    location.startsWith('/referral/') ||
+    location === '/admin/survey';
   const Layout = isFullscreen ? FullscreenLayout : AppLayout;
-
   return (
     <>
       <AppLogic />
@@ -823,6 +841,7 @@ function Router() {
         <Route path="/privacy-policy" component={PrivacyPolicy} />
         <Route path="/my-progress" component={MyProgress} />
         <Route path="/referral/:code" component={ReferralPage} />
+         <Route path="/admin/survey" component={SurveyAdmin} />
         <Route path="/sign-in/*?" component={SignInPage} />
         <Route path="/sign-up/*?" component={SignUpPage} />
         <Route>
