@@ -81,7 +81,16 @@ export async function apiGet<T = unknown>(path: string): Promise<T> {
     headers: await requestHeaders({}, forceRefresh),
   });
   let response = await request();
-  if (response.status === 401 && authTokenProvider) response = await request(true);
+  if (response.status === 401 && authTokenProvider) {
+    response = await request(true);
+    // On a hard reload Clerk can finish restoring its session just after the
+    // forced token refresh. Give that short-lived race one final retry before
+    // surfacing an authentication error to the app.
+    if (response.status === 401) {
+      await new Promise((resolve) => window.setTimeout(resolve, 650));
+      response = await request(true);
+    }
+  }
   return handleResponse(response);
 }
 
